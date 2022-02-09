@@ -1,6 +1,6 @@
 use crate::error::{ProtocolError, TransError};
 use crate::frame;
-use anyhow::{ensure, Context};
+use anyhow::Context;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tracing::{debug, error};
@@ -58,7 +58,7 @@ impl Connection {
             Ok(())
         } else {
             debug!(?version, expected_version = ?PROTOCOL_VERSION, "Version negotiation failed, unsupported version");
-            return Err(ProtocolError::OtherCloseConnection.into());
+            Err(ProtocolError::OtherCloseConnection.into())
         }
     }
 }
