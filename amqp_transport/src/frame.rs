@@ -8,7 +8,7 @@ mod frame_type {
     pub const METHOD: u8 = 1;
     pub const HEADER: u8 = 2;
     pub const BODY: u8 = 3;
-    pub const HEARTBEAT: u8 = 4;
+    pub const HEARTBEAT: u8 = 8;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
