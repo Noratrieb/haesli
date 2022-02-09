@@ -1,8 +1,5 @@
-[workspace]
-members = ["./amqp_transport"]
-
 [package]
-name = "amqp"
+name = "amqp_transport"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.53"
-amqp_transport = { path = "./amqp_transport" }
 tokio = { version = "1.16.1", features = ["full"] }
 tracing = "0.1.30"
 tracing-subscriber = "0.3.8"
