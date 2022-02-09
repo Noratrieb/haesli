@@ -1,4 +1,5 @@
 mod connection;
+mod frame;
 
 use crate::connection::Connection;
 use anyhow::Result;
