@@ -1,5 +1,5 @@
 #[derive(Debug, thiserror::Error)]
-pub enum ConError {
+pub enum TransError {
     #[error("{0}")]
     Invalid(#[from] ProtocolError),
     #[error("connection error: `{0}`")]
@@ -24,6 +24,10 @@ pub enum ConException {
     FrameError,
     #[error("503 Command invalid")]
     CommandInvalid,
+    #[error("503 Syntax error")]
+    SyntaxError,
+    #[error("504 Channel error")]
+    ChannelError,
 }
 
 #[derive(Debug, thiserror::Error)]

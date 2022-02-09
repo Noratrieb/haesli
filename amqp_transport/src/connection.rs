@@ -1,4 +1,4 @@
-use crate::error::{ConError, ProtocolError};
+use crate::error::{ProtocolError, TransError};
 use crate::frame;
 use anyhow::{ensure, Context};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -21,7 +21,7 @@ impl Connection {
         }
     }
 
-    pub async fn run(&mut self) -> Result<(), ConError> {
+    pub async fn run(&mut self) -> Result<(), TransError> {
         self.negotiate_version().await?;
 
         loop {
@@ -30,7 +30,7 @@ impl Connection {
         }
     }
 
-    async fn negotiate_version(&mut self) -> Result<(), ConError> {
+    async fn negotiate_version(&mut self) -> Result<(), TransError> {
         const HEADER_SIZE: usize = 8;
         const PROTOCOL_VERSION: &[u8] = &[0, 9, 1];
         const PROTOCOL_HEADER: &[u8] = b"AMQP\0\0\x09\x01";

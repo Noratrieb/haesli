@@ -1,45 +1,48 @@
-use crate::error::{ConError, ConException, ProtocolError};
+use crate::error::{ConException, ProtocolError, TransError};
 use anyhow::Context;
 use tokio::io::AsyncReadExt;
 
 const REQUIRED_FRAME_END: u8 = 0xCE;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[repr(u8)]
-pub enum FrameType {
-    Method = 1,
-    Header = 2,
-    Body = 3,
-    Heartbeat = 4,
-}
-
-impl TryFrom<u8> for FrameType {
-    type Error = ConError;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        Ok(match value {
-            1 => Self::Method,
-            2 => Self::Header,
-            3 => Self::Body,
-            4 => Self::Heartbeat,
-            _ => return Err(ProtocolError::Fatal.into()),
-        })
-    }
+mod frame_type {
+    pub const METHOD: u8 = 1;
+    pub const HEADER: u8 = 2;
+    pub const BODY: u8 = 3;
+    pub const HEARTBEAT: u8 = 4;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Frame {
-    r#type: FrameType,
+    /// type
+    kind: FrameType,
     channel: u16,
-    size: u32,
     payload: Vec<u8>,
 }
 
-pub async fn read_frame<R>(r: &mut R, max_frame_size: usize) -> Result<Frame, ConError>
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FrameType {
+    /// 1
+    Method { class_id: u16, method_id: u16 },
+    /// 2
+    Header {
+        class_id: u16,
+        /// Unused, must always be 0
+        weight: u16,
+        body_size: u64,
+        /// Ordered from high to low    
+        property_flags: u16,
+    },
+    /// 3
+    Body,
+    /// 4
+    Heartbeat,
+}
+
+pub async fn read_frame<R>(r: &mut R, max_frame_size: usize) -> Result<Frame, TransError>
 where
     R: AsyncReadExt + Unpin,
 {
-    let r#type = r.read_u8().await.context("read type")?;
+    let kind = r.read_u8().await.context("read type")?;
     let channel = r.read_u16().await.context("read channel")?;
     let size = r.read_u32().await.context("read size")?;
 
@@ -56,12 +59,27 @@ where
         return Err(ProtocolError::ConException(ConException::FrameError).into());
     }
 
+    let kind = parse_frame_type(kind, &payload)?;
+
     Ok(Frame {
-        r#type: r#type.try_into()?,
+        kind,
         channel,
-        size,
         payload,
     })
+}
+
+fn parse_frame_type(kind: u8, payload: &[u8], channel: u16) -> Result<FrameType, TransError> {
+    match kind {
+        frame_type::METHOD => todo!(),
+        frame_type::HEARTBEAT => {
+            if channel != 0 {
+                Err(ProtocolError::ConException(ConException::FrameError).into())
+            } else {
+                Ok(FrameType::Heartbeat)
+            }
+        }
+        _ => todo!(),
+    }
 }
 
 #[cfg(test)]
@@ -88,7 +106,7 @@ mod tests {
         assert_eq!(
             frame,
             Frame {
-                r#type: FrameType::Method,
+                kind: FrameType::Method,
                 channel: 0,
                 size: 3,
                 payload: vec![1, 2, 3],
