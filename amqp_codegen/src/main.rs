@@ -104,6 +104,19 @@ fn domain_defs(amqp: &Amqp) -> Result<()> {
 }
 
 fn class_defs(amqp: &Amqp) -> Result<()> {
+    println!("pub enum Class {{");
+    for class in &amqp.classes {
+        let class_name = class.name.to_upper_camel_case();
+        println!("    {class_name}({class_name}),");
+    }
+    println!("}}\n");
+
+    println!(
+        "pub enum TableValue {{
+    
+    "
+    );
+
     for class in &amqp.classes {
         let enum_name = class.name.to_upper_camel_case();
         println!("/// Index {}, handler = {}", class.index, class.handler);
