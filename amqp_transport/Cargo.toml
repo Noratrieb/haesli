@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.53"
 rand = "0.8.4"
+thiserror = "1.0.30"
 tokio = { version = "1.16.1", features = ["full"] }
 tracing = "0.1.30"
 tracing-subscriber = "0.3.8"
