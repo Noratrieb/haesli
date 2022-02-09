@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+mod classes;
 mod connection;
 mod error;
 mod frame;

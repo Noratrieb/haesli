@@ -32,8 +32,8 @@ impl Connection {
 
     async fn negotiate_version(&mut self) -> Result<(), TransError> {
         const HEADER_SIZE: usize = 8;
-        const PROTOCOL_VERSION: &[u8] = &[0, 9, 1];
-        const PROTOCOL_HEADER: &[u8] = b"AMQP\0\0\x09\x01";
+        const SUPPORTED_PROTOCOL_VERSION: &[u8] = &[0, 9, 1];
+        const OWN_PROTOCOL_HEADER: &[u8] = b"AMQP\0\0\x09\x01";
 
         debug!("Negotiating version");
 
@@ -49,15 +49,15 @@ impl Connection {
         let version = &read_header_buf[5..8];
 
         self.stream
-            .write_all(PROTOCOL_HEADER)
+            .write_all(OWN_PROTOCOL_HEADER)
             .await
             .context("write protocol header")?;
 
-        if &read_header_buf[0..5] == b"AMQP\0" && version == PROTOCOL_VERSION {
+        if &read_header_buf[0..5] == b"AMQP\0" && version == SUPPORTED_PROTOCOL_VERSION {
             debug!(?version, "Version negotiation successful");
             Ok(())
         } else {
-            debug!(?version, expected_version = ?PROTOCOL_VERSION, "Version negotiation failed, unsupported version");
+            debug!(?version, expected_version = ?SUPPORTED_PROTOCOL_VERSION, "Version negotiation failed, unsupported version");
             Err(ProtocolError::OtherCloseConnection.into())
         }
     }
