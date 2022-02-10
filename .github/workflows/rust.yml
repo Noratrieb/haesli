@@ -20,7 +20,7 @@ jobs:
       uses: creyD/prettier_action@v4.2
       with:
         dry: true
-        prettier_options: --check **/*.{html,css,js,md} --ignore-path .gitignore
+        prettier_options: --check amqp_dashboard/assets/* --ignore-path .gitignore
     - name: Build
       run: cargo build --verbose
     - name: Run clippy -D clippy::all
@@ -29,3 +29,5 @@ jobs:
       run: cargo fmt --verbose --all -- --check
     - name: Run tests
       run: cargo test --verbose --all
+    - name: Run client integration tests
+      run: cargo xtask tests-js

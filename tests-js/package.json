@@ -5,7 +5,8 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "fmt": "prettier -w ."
+    "fmt": "prettier -w .",
+    "test": "echo '✔️ Everything fine!'"
   },
   "dependencies": {
     "@types/amqplib": "^0.8.2",

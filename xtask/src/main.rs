@@ -1,24 +1,41 @@
+use std::path::PathBuf;
+
 mod codegen;
+mod test_js;
+
+use clap::{Parser, Subcommand};
+
+#[derive(Parser)]
+#[clap(author)]
+struct Args {
+    #[clap(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Generate method definitions/parser/writer
+    Generate,
+    /// Run Javascript integration tests
+    TestJs,
+}
 
 fn main() -> anyhow::Result<()> {
-    let command = std::env::args().nth(1).unwrap_or_else(|| {
-        eprintln!("Error: No task provided");
-        help();
-        std::process::exit(1);
-    });
+    let args: Args = Args::parse();
 
-    match command.as_str() {
-        "generate" | "gen" => codegen::main(),
-        _ => {
-            eprintln!("Unknown command {command}.");
-            Ok(())
-        }
+    match args.command {
+        Commands::Generate => codegen::main(),
+        Commands::TestJs => test_js::main(),
     }
 }
 
-fn help() {
-    println!(
-        "Available tasks:
-   generate, gen - Generate amqp method code in `amqp_transport/src/methods/generated.rs and amqp_core/src/methods/generated.rs"
-    );
+pub fn project_root() -> PathBuf {
+    PathBuf::from(file!())
+        .parent()
+        .expect("src directory path")
+        .parent()
+        .expect("xtask root path")
+        .parent()
+        .expect("project root path")
+        .to_path_buf()
 }
