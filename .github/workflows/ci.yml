@@ -30,4 +30,4 @@ jobs:
     - name: Run tests
       run: cargo test --verbose --all
     - name: Run client integration tests
-      run: cargo xtask tests-js
+      run: cargo xtask test-js

@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "fmt": "prettier -w .",
-    "test": "echo '✔️ Everything fine!'"
+    "test": "node test-all.js"
   },
   "dependencies": {
     "@types/amqplib": "^0.8.2",

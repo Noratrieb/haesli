@@ -8,7 +8,6 @@ mod sasl;
 #[cfg(test)]
 mod tests;
 
-
 use crate::connection::Connection;
 use amqp_core::GlobalData;
 use anyhow::Result;
