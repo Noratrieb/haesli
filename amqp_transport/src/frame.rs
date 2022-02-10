@@ -1,5 +1,6 @@
 use crate::error::{ConException, ProtocolError, Result};
 use anyhow::Context;
+use bytes::Bytes;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::trace;
 
@@ -18,7 +19,7 @@ pub struct Frame {
     pub kind: FrameType,
     pub channel: u16,
     /// Includes the whole payload, also including the metadata from each type.
-    pub payload: Vec<u8>,
+    pub payload: Bytes,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -72,7 +73,7 @@ where
     let frame = Frame {
         kind,
         channel,
-        payload,
+        payload: payload.into(),
     };
 
     trace!(?frame, "Received frame");
@@ -99,6 +100,7 @@ fn parse_frame_type(kind: u8, channel: u16) -> Result<FrameType> {
 #[cfg(test)]
 mod tests {
     use crate::frame::{Frame, FrameType};
+    use bytes::Bytes;
 
     #[tokio::test]
     async fn read_small_body() {
@@ -127,7 +129,7 @@ mod tests {
             Frame {
                 kind: FrameType::Method,
                 channel: 0,
-                payload: vec![1, 2, 3],
+                payload: Bytes::from_static(&[1, 2, 3]),
             }
         );
     }

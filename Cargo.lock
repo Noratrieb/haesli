@@ -58,6 +58,7 @@ dependencies = [
  "amqp_core",
  "amqp_messaging",
  "anyhow",
+ "bytes",
  "criterion",
  "nom",
  "once_cell",

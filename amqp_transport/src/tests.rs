@@ -22,7 +22,7 @@ async fn write_start_ok_frame() {
     let frame = frame::Frame {
         kind: FrameType::Method,
         channel: 0,
-        payload,
+        payload: payload.into(),
     };
 
     let mut output = Vec::new();

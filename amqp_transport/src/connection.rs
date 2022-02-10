@@ -95,7 +95,7 @@ impl Connection {
             &Frame {
                 kind: FrameType::Method,
                 channel,
-                payload,
+                payload: payload.into(),
             },
             &mut self.stream,
         )
