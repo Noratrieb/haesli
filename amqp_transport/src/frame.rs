@@ -1,6 +1,8 @@
 use crate::error::{ConException, ProtocolError, Result};
+use amqp_core::methods::FieldValue;
 use anyhow::Context;
 use bytes::Bytes;
+use smallvec::SmallVec;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::trace;
 
@@ -29,6 +31,21 @@ pub enum FrameType {
     Header = 2,
     Body = 3,
     Heartbeat = 8,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ContentHeader {
+    pub class_id: u16,
+    pub weight: u16,
+    pub body_size: u64,
+    pub property_flags: SmallVec<[u16; 1]>,
+    pub property_fields: Vec<FieldValue>,
+}
+
+impl ContentHeader {
+    pub fn new() -> Self {
+        todo!()
+    }
 }
 
 pub async fn write_frame<W>(frame: &Frame, mut w: W) -> Result<()>

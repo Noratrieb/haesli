@@ -28,7 +28,9 @@ dependencies = [
 name = "amqp_core"
 version = "0.1.0"
 dependencies = [
+ "bytes",
  "parking_lot",
+ "smallvec",
  "uuid",
 ]
 
@@ -64,6 +66,7 @@ dependencies = [
  "once_cell",
  "rand",
  "regex",
+ "smallvec",
  "thiserror",
  "tokio",
  "tracing",
