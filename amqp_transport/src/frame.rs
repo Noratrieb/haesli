@@ -21,9 +21,18 @@ pub struct Frame {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[repr(u8)]
 pub enum FrameType {
+    Method = 1,
+    Header = 2,
+    Body = 3,
+    Heartbeat = 8,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FrameTypeEnum {
     /// 1
-    Method { class_id: u16, method_id: u16 },
+    Method,
     /// 2
     Header {
         class_id: u16,
@@ -33,7 +42,7 @@ pub enum FrameType {
     },
     /// 3
     Body,
-    /// 4
+    /// 8
     Heartbeat,
 }
 
@@ -58,7 +67,7 @@ where
         return Err(ProtocolError::ConException(ConException::FrameError).into());
     }
 
-    let kind = parse_frame_type(kind, &payload, channel)?;
+    let kind = parse_frame_type(kind, channel)?;
 
     Ok(Frame {
         kind,
@@ -67,34 +76,10 @@ where
     })
 }
 
-fn parse_frame_type(kind: u8, payload: &[u8], channel: u16) -> Result<FrameType, TransError> {
+fn parse_frame_type(kind: u8, channel: u16) -> Result<FrameType, TransError> {
     match kind {
-        frame_type::METHOD => {
-            let class_id = u16::from_be_bytes(payload[0..2].try_into().unwrap());
-            let method_id = u16::from_be_bytes(payload[2..4].try_into().unwrap());
-
-            Ok(FrameType::Method {
-                class_id,
-                method_id,
-            })
-        }
-        frame_type::HEADER => {
-            let class_id = u16::from_be_bytes(payload[0..2].try_into().unwrap());
-            let weight = u16::from_be_bytes(payload[2..4].try_into().unwrap());
-            // weight is unused and must always be 0
-            if weight != 0 {
-                return Err(ProtocolError::ConException(ConException::FrameError).into());
-            }
-
-            let body_size = u64::from_be_bytes(payload[4..12].try_into().unwrap());
-            let property_flags = u16::from_be_bytes(payload[12..14].try_into().unwrap());
-
-            Ok(FrameType::Header {
-                class_id,
-                body_size,
-                property_flags,
-            })
-        }
+        frame_type::METHOD => Ok(FrameType::Method),
+        frame_type::HEADER => Ok(FrameType::Header),
         frame_type::BODY => Ok(FrameType::Body),
         frame_type::HEARTBEAT => {
             if channel != 0 {
@@ -103,7 +88,7 @@ fn parse_frame_type(kind: u8, payload: &[u8], channel: u16) -> Result<FrameType,
                 Ok(FrameType::Heartbeat)
             }
         }
-        _ => todo!(),
+        _ => Err(ProtocolError::ConException(ConException::FrameError).into()),
     }
 }
 
@@ -114,17 +99,22 @@ mod tests {
     #[tokio::test]
     async fn read_small_body() {
         let mut bytes: &[u8] = &[
-            /*type*/ 1,
-            /*channel*/ 0,
+            /*type*/
+            1,
+            /*channel*/
             0,
-            /*size*/ 0,
+            0,
+            /*size*/
+            0,
             0,
             0,
             3,
-            /*payload*/ 1,
+            /*payload*/
+            1,
             2,
             3,
-            /*frame-end*/ super::REQUIRED_FRAME_END,
+            /*frame-end*/
+            super::REQUIRED_FRAME_END,
         ];
 
         let frame = super::read_frame(&mut bytes, 10000).await.unwrap();
@@ -133,7 +123,6 @@ mod tests {
             Frame {
                 kind: FrameType::Method,
                 channel: 0,
-                size: 3,
                 payload: vec![1, 2, 3],
             }
         );
