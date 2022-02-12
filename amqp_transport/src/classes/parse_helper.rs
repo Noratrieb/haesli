@@ -39,6 +39,7 @@ pub fn long(input: &[u8]) -> IResult<Long> {
 pub fn longlong(input: &[u8]) -> IResult<Longlong> {
     todo!()
 }
+// todo: doing this using a vec is a bit wasteful, consider not doing that
 pub fn bit(input: &[u8], amount: u8) -> IResult<Vec<Bit>> {
     todo!()
 }

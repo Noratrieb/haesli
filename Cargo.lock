@@ -26,7 +26,6 @@ dependencies = [
 name = "amqp_codegen"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "heck",
  "itertools",
  "strong-xml",

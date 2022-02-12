@@ -14,10 +14,10 @@ mod frame_type {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Frame {
     /// The type of the frame including its parsed metadata.
-    kind: FrameType,
-    channel: u16,
+    pub kind: FrameType,
+    pub channel: u16,
     /// Includes the whole payload, also including the metadata from each type.
-    payload: Vec<u8>,
+    pub payload: Vec<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -27,23 +27,6 @@ pub enum FrameType {
     Header = 2,
     Body = 3,
     Heartbeat = 8,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum FrameTypeEnum {
-    /// 1
-    Method,
-    /// 2
-    Header {
-        class_id: u16,
-        body_size: u64,
-        /// Ordered from high to low    
-        property_flags: u16,
-    },
-    /// 3
-    Body,
-    /// 8
-    Heartbeat,
 }
 
 pub async fn read_frame<R>(r: &mut R, max_frame_size: usize) -> Result<Frame, TransError>

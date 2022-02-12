@@ -1,5 +1,6 @@
 use crate::error::{ProtocolError, TransError};
 use crate::frame;
+use crate::frame::FrameType;
 use anyhow::Context;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -27,6 +28,10 @@ impl Connection {
         loop {
             let frame = frame::read_frame(&mut self.stream, 10000).await?;
             debug!(?frame, "received frame");
+            if frame.kind == FrameType::Method {
+                let class = super::classes::parse_method(&frame.payload)?;
+                debug!(?class, "was method frame");
+            }
         }
     }
 

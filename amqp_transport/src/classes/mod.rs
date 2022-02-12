@@ -1,3 +1,5 @@
+use crate::classes::generated::Class;
+use crate::error::{ConException, ProtocolError, TransError};
 use std::collections::HashMap;
 
 mod generated;
@@ -5,6 +7,7 @@ mod parse_helper;
 
 pub type Table = HashMap<String, FieldValue>;
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum FieldValue {
     Boolean(bool),
     ShortShortInt(i8),
@@ -24,4 +27,20 @@ pub enum FieldValue {
     Timestamp(u64),
     FieldTable(Table),
     Void,
+}
+
+pub use generated::*;
+
+/// Parses the payload of a method frame into the class/method
+pub fn parse_method(payload: &[u8]) -> Result<Class, TransError> {
+    let nom_result = generated::parse::parse_method(payload);
+
+    match nom_result {
+        Ok(([], class)) => Ok(class),
+        Ok((_, _)) => Err(ProtocolError::ConException(ConException::SyntaxError).into()),
+        Err(nom::Err::Incomplete(_)) => {
+            Err(ProtocolError::ConException(ConException::SyntaxError).into())
+        }
+        Err(nom::Err::Failure(err) | nom::Err::Error(err)) => Err(err),
+    }
 }
