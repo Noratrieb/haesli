@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 mod generated;
 mod parse_helper;
+mod write_helper;
 
 pub type Table = HashMap<String, FieldValue>;
 

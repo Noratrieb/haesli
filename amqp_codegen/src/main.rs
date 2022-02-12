@@ -1,9 +1,11 @@
 mod parser;
+mod write;
 
 use crate::parser::codegen_parser;
 use heck::ToUpperCamelCase;
 use std::fs;
 use strong_xml::XmlRead;
+use crate::write::codegen_write;
 
 #[derive(Debug, XmlRead)]
 #[xml(tag = "amqp")]
@@ -87,6 +89,7 @@ fn codegen(amqp: &Amqp) {
     codegen_domain_defs(amqp);
     codegen_class_defs(amqp);
     codegen_parser(amqp);
+    codegen_write(amqp);
 }
 
 fn codegen_domain_defs(amqp: &Amqp) {

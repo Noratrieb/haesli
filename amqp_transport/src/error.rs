@@ -1,9 +1,17 @@
+use std::io::Error;
+
 #[derive(Debug, thiserror::Error)]
 pub enum TransError {
     #[error("{0}")]
     Invalid(#[from] ProtocolError),
     #[error("connection error: `{0}`")]
     Other(#[from] anyhow::Error),
+}
+
+impl From<std::io::Error> for TransError {
+    fn from(err: Error) -> Self {
+        Self::Other(err.into())
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
