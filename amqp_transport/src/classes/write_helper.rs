@@ -27,14 +27,14 @@ pub fn longlong<W: Write>(value: Longlong, writer: &mut W) -> Result<(), TransEr
     Ok(())
 }
 
-pub fn bit<W: Write>(value: Vec<Bit>, writer: &mut W) -> Result<(), TransError> {
+pub fn bit<W: Write>(value: &[Bit], writer: &mut W) -> Result<(), TransError> {
     // accumulate bits into bytes, starting from the least significant bit in each byte
 
     // how many bits have already been packed into `current_buf`
     let mut already_filled = 0;
     let mut current_buf = 0u8;
 
-    for bit in value {
+    for &bit in value {
         if already_filled >= 8 {
             writer.write_all(&[current_buf])?;
             current_buf = 0;

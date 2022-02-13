@@ -5,6 +5,7 @@ use crate::parser::codegen_parser;
 use crate::write::codegen_write;
 use heck::ToUpperCamelCase;
 use std::fs;
+use std::iter::Peekable;
 use strong_xml::XmlRead;
 
 #[derive(Debug, XmlRead)]
@@ -189,6 +190,27 @@ fn snake_case(ident: &str) -> String {
     } else {
         ident.to_snake_case()
     }
+}
+
+fn subsequent_bit_fields<'a>(
+    amqp: &Amqp,
+    bit_field: &'a Field,
+    iter: &mut Peekable<impl Iterator<Item = &'a Field>>,
+) -> Vec<&'a Field> {
+    let mut fields_with_bit = vec![bit_field];
+
+    loop {
+        if iter
+            .peek()
+            .map(|f| resolve_type_from_domain(amqp, field_type(f)) == "bit")
+            .unwrap_or(false)
+        {
+            fields_with_bit.push(iter.next().unwrap());
+        } else {
+            break;
+        }
+    }
+    fields_with_bit
 }
 
 fn invariants<'a>(asserts: impl Iterator<Item = &'a Assert>) -> String {

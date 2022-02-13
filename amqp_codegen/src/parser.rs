@@ -1,5 +1,6 @@
 use crate::{
-    field_type, resolve_type_from_domain, snake_case, Amqp, Assert, Class, Domain, Method,
+    field_type, resolve_type_from_domain, snake_case, subsequent_bit_fields, Amqp, Assert, Class,
+    Domain, Method,
 };
 use heck::{ToSnakeCase, ToUpperCamelCase};
 use itertools::Itertools;
@@ -99,19 +100,7 @@ fn method_parser(amqp: &Amqp, class: &Class, method: &Method) {
             let type_name = resolve_type_from_domain(amqp, field_type(field));
 
             if type_name == "bit" {
-                let mut fields_with_bit = vec![field];
-
-                loop {
-                    if iter
-                        .peek()
-                        .map(|f| resolve_type_from_domain(amqp, field_type(f)) == "bit")
-                        .unwrap_or(false)
-                    {
-                        fields_with_bit.push(iter.next().unwrap());
-                    } else {
-                        break;
-                    }
-                }
+                let fields_with_bit = subsequent_bit_fields(amqp, field, &mut iter);
 
                 let amount = fields_with_bit.len();
                 println!("    let (input, bits) = bit(input, {amount})?;");
@@ -132,7 +121,7 @@ fn method_parser(amqp: &Amqp, class: &Class, method: &Method) {
         }
         let class_name = class_name.to_upper_camel_case();
         let method_name = method.name.to_upper_camel_case();
-        println!("   Ok((input, Class::{class_name}({class_name}::{method_name} {{");
+        println!("    Ok((input, Class::{class_name}({class_name}::{method_name} {{");
         for field in &method.fields {
             let field_name = snake_case(&field.name);
             println!("        {field_name},");
