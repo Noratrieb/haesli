@@ -143,12 +143,14 @@ fn assert_check(assert: &Assert, type_name: &str, var_name: &str) {
     match &*assert.check {
         "notnull" => match type_name {
             "shortstr" | "longstr" => {
-                let cause = "string was null";
-                println!(r#"    if {var_name}.is_empty() {{ fail!("{cause}") }}"#);
+                println!(
+                    r#"    if {var_name}.is_empty() {{ fail!("string was null for field {var_name}") }}"#
+                );
             }
             "short" => {
-                let cause = "number was 0";
-                println!(r#"    if {var_name} == 0 {{ fail!("{cause}") }}"#);
+                println!(
+                    r#"    if {var_name} == 0 {{ fail!("number was 0 for field {var_name}") }}"#
+                );
             }
             _ => unimplemented!(),
         },
@@ -157,13 +159,13 @@ fn assert_check(assert: &Assert, type_name: &str, var_name: &str) {
             println!(
                 r#"    static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"{value}").unwrap());"#
             );
-            let cause = format!("regex `{value}` did not match value");
+            let cause = format!("regex `{value}` did not match value for field {var_name}");
             println!(r#"    if !REGEX.is_match(&{var_name}) {{ fail!(r"{cause}") }}"#);
         }
         "le" => {} // can't validate this here
         "length" => {
             let length = assert.value.as_ref().unwrap();
-            let cause = format!("value is shorter than {length}");
+            let cause = format!("value is shorter than {length} for field {var_name}");
             println!(r#"    if {var_name}.len() > {length} {{ fail!("{cause}") }}"#);
         }
         _ => unimplemented!(),

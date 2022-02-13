@@ -19,7 +19,7 @@ impl<R: Rng> RandomMethod<R> for String {
 
 impl<R: Rng, T: RandomMethod<R>> RandomMethod<R> for Vec<T> {
     fn random(rng: &mut R) -> Self {
-        let len = rng.gen_range(0_usize..10);
+        let len = rng.gen_range(1_usize..10);
         let mut vec = Vec::with_capacity(len);
         (0..len).for_each(|_| vec.push(RandomMethod::random(rng)));
         vec
@@ -97,14 +97,12 @@ fn pack_many_bits() {
     assert_eq!(bits.as_slice(), parsed_bits.as_slice());
 }
 
-#[ignore]
 #[test]
 fn random_ser_de() {
-    const ITERATIONS: usize = 1000;
+    const ITERATIONS: usize = 100000;
     let mut rng = rand::rngs::StdRng::from_seed([0; 32]);
 
     for _ in 0..ITERATIONS {
-        println!("iter");
         let class = Class::random(&mut rng);
         let mut bytes = Vec::new();
 
@@ -137,6 +135,7 @@ fn nested_table() {
             FieldValue::Boolean(true),
         )])),
     )]);
+    eprintln!("{table:?}");
 
     let mut bytes = Vec::new();
     crate::classes::write_helper::table(table.clone(), &mut bytes).unwrap();

@@ -125,22 +125,19 @@ fn server_properties(host: SocketAddr) -> classes::Table {
     }
 
     let host_str = host.ip().to_string();
-    let _host_value = if host_str.len() < 256 {
+    let host_value = if host_str.len() < 256 {
         FieldValue::ShortString(host_str)
     } else {
         FieldValue::LongString(host_str.into())
     };
 
-    // todo: fix
-
-    //HashMap::from([
-    //    ("host".to_string(), host_value),
-    //    ("product".to_string(), ss("no name yet")),
-    //    ("version".to_string(), ss("0.1.0")),
-    //    ("platform".to_string(), ss("microsoft linux")),
-    //    ("copyright".to_string(), ss("MIT")),
-    //    ("information".to_string(), ss("hello reader")),
-    //    ("uwu".to_string(), ss("owo")),
-    //])
-    HashMap::new()
+    HashMap::from([
+        ("host".to_string(), host_value),
+        ("product".to_string(), ss("no name yet")),
+        ("version".to_string(), ss("0.1.0")),
+        ("platform".to_string(), ss("microsoft linux")),
+        ("copyright".to_string(), ss("MIT")),
+        ("information".to_string(), ss("hello reader")),
+        ("uwu".to_string(), ss("owo")),
+    ])
 }

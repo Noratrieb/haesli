@@ -140,7 +140,6 @@ pub fn timestamp(input: &[u8]) -> IResult<Timestamp> {
 
 pub fn table(input: &[u8]) -> IResult<Table> {
     let (input, len) = u32(Big)(input)?;
-
     let (input, values) = count(table_value_pair, usize::try_from(len).unwrap())(input)?;
     let table = HashMap::from_iter(values.into_iter());
     Ok((input, table))
@@ -215,7 +214,12 @@ fn field_value(input: &[u8]) -> IResult<FieldValue> {
     number!(b"T", timestamp, u64(Big), Timestamp, R);
 
     fn field_table(input: &[u8]) -> R {
+        let (input, _) = tag("F")(input)?;
         table(input).map(|(input, value)| (input, FieldValue::FieldTable(value)))
+    }
+
+    fn void(input: &[u8]) -> R {
+        tag("V")(input).map(|(input, _)| (input, FieldValue::Void))
     }
 
     alt((
@@ -235,5 +239,7 @@ fn field_value(input: &[u8]) -> IResult<FieldValue> {
         long_str,
         field_array,
         timestamp,
+        field_table,
+        void,
     ))(input)
 }
