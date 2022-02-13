@@ -7,9 +7,9 @@ pub(crate) fn codegen_write(amqp: &Amqp) {
 use super::*;
 use crate::classes::write_helper::*;
 use crate::error::TransError;
-use tokio::io::AsyncWriteExt;
+use std::io::Write;
 
-pub async fn write_method<W: AsyncWriteExt + Unpin>(class: Class, mut writer: W) -> Result<(), TransError> {{
+pub fn write_method<W: Write>(class: Class, mut writer: W) -> Result<(), TransError> {{
     match class {{"
     );
 
@@ -25,7 +25,7 @@ pub async fn write_method<W: AsyncWriteExt + Unpin>(class: Class, mut writer: W)
                 println!("            {field_name},");
             }
             println!("        }}) => {{");
-            println!("            writer.write_all(&[{class_index}, {method_index}]).await?;");
+            println!("            writer.write_all(&[{class_index}, {method_index}])?;");
             let mut iter = method.fields.iter().peekable();
 
             while let Some(field) = iter.next() {
@@ -38,9 +38,9 @@ pub async fn write_method<W: AsyncWriteExt + Unpin>(class: Class, mut writer: W)
                         let field_name = snake_case(&field.name);
                         print!("{field_name}, ");
                     }
-                    println!("], &mut writer).await?;");
+                    println!("], &mut writer)?;");
                 } else {
-                    println!("            {type_name}({field_name}, &mut writer).await?;");
+                    println!("            {type_name}({field_name}, &mut writer)?;");
                 }
             }
             println!("        }}");

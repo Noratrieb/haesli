@@ -51,11 +51,17 @@ impl Connection {
             locales: vec![],
         });
 
-        let fut = classes::write::write_method(start_method, &mut self.stream);
-        warn!(size = %std::mem::size_of_val(&fut), "that future is big");
-        // todo fix out_buffer buffer things :spiral_eyes:
-        // maybe have a `size` method on `Class` and use `AsyncWrite`? oh god no that's horrible
-        // frame::write_frame(&mut self.stream, Frame {})?;
+        let mut payload = Vec::with_capacity(64);
+        classes::write::write_method(start_method, &mut payload)?;
+        frame::write_frame(
+            &mut self.stream,
+            &Frame {
+                kind: FrameType::Method,
+                channel: 0,
+                payload,
+            },
+        )
+        .await?;
 
         Ok(())
     }
