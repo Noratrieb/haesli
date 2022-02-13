@@ -1,10 +1,9 @@
 use crate::classes::generated::{
     Bit, Long, Longlong, Longstr, Octet, Short, Shortstr, Table, Timestamp,
 };
-use crate::classes::{FieldValue, TableFieldName};
+use crate::classes::FieldValue;
 use crate::error::TransError;
 use anyhow::Context;
-use std::io;
 use std::io::Write;
 
 pub fn octet<W: Write>(value: Octet, writer: &mut W) -> Result<(), TransError> {

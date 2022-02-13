@@ -1,5 +1,6 @@
 mod parser;
 mod write;
+mod random;
 
 use crate::parser::codegen_parser;
 use crate::write::codegen_write;
@@ -7,6 +8,7 @@ use heck::ToUpperCamelCase;
 use std::fs;
 use std::iter::Peekable;
 use strong_xml::XmlRead;
+use crate::random::codegen_random;
 
 #[derive(Debug, XmlRead)]
 #[xml(tag = "amqp")]
@@ -91,6 +93,7 @@ fn codegen(amqp: &Amqp) {
     codegen_class_defs(amqp);
     codegen_parser(amqp);
     codegen_write(amqp);
+    codegen_random(amqp);
 }
 
 fn codegen_domain_defs(amqp: &Amqp) {
