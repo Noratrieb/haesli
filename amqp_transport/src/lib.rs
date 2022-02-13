@@ -22,6 +22,6 @@ pub async fn do_thing_i_guess() -> Result<()> {
 
         let connection = Connection::new(stream);
 
-        tokio::spawn(connection.start());
+        tokio::spawn(connection.open_connection());
     }
 }

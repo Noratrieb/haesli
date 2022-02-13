@@ -1,5 +1,7 @@
 use std::io::Error;
 
+pub type Result<T> = std::result::Result<T, TransError>;
+
 #[derive(Debug, thiserror::Error)]
 pub enum TransError {
     #[error("{0}")]

@@ -1,6 +1,6 @@
-use crate::error::{ConException, ProtocolError, TransError};
+use crate::error::{ConException, ProtocolError, Result, TransError};
 use anyhow::Context;
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 const REQUIRED_FRAME_END: u8 = 0xCE;
 
@@ -20,7 +20,7 @@ pub struct Frame {
     pub payload: Vec<u8>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(u8)]
 pub enum FrameType {
     Method = 1,
@@ -29,7 +29,21 @@ pub enum FrameType {
     Heartbeat = 8,
 }
 
-pub async fn read_frame<R>(r: &mut R, max_frame_size: usize) -> Result<Frame, TransError>
+pub async fn write_frame<W>(mut w: W, frame: &Frame) -> Result<()>
+where
+    W: AsyncWriteExt + Unpin,
+{
+    w.write_u8(frame.kind as u8).await?;
+    w.write_u16(frame.channel).await?;
+    w.write_u32(u32::try_from(frame.payload.len()).context("frame size too big")?)
+        .await?;
+    w.write_all(&frame.payload).await?;
+    w.write_u8(REQUIRED_FRAME_END).await?;
+
+    Ok(())
+}
+
+pub async fn read_frame<R>(r: &mut R, max_frame_size: usize) -> Result<Frame>
 where
     R: AsyncReadExt + Unpin,
 {
@@ -59,7 +73,7 @@ where
     })
 }
 
-fn parse_frame_type(kind: u8, channel: u16) -> Result<FrameType, TransError> {
+fn parse_frame_type(kind: u8, channel: u16) -> Result<FrameType> {
     match kind {
         frame_type::METHOD => Ok(FrameType::Method),
         frame_type::HEADER => Ok(FrameType::Header),
