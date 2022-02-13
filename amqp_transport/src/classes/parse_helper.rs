@@ -25,6 +25,7 @@ impl<T> nom::error::ParseError<T> for TransError {
     }
 }
 
+// todo: make this into fail_err to avoid useless allocations
 pub fn err<S: Into<String>>(msg: S) -> impl FnOnce(Err<TransError>) -> Err<TransError> {
     move |err| {
         let error_level = if matches!(err, nom::Err::Failure(_)) {
