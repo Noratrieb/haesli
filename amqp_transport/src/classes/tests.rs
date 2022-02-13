@@ -11,8 +11,9 @@ pub(crate) trait RandomMethod<R: Rng> {
 }
 
 impl<R: Rng> RandomMethod<R> for String {
-    fn random(_rng: &mut R) -> Self {
-        "randomstring".to_string()
+    fn random(rng: &mut R) -> Self {
+        let n = rng.gen_range(0_u16..9999);
+        format!("string{n}")
     }
 }
 
@@ -47,7 +48,7 @@ impl<R: Rng> RandomMethod<R> for HashMap<String, FieldValue> {
 
 impl<R: Rng> RandomMethod<R> for FieldValue {
     fn random(rng: &mut R) -> Self {
-        let index = rand::thread_rng().gen_range(0_u32..17);
+        let index = rng.gen_range(0_u32..17);
         match index {
             0 => FieldValue::Boolean(RandomMethod::random(rng)),
             1 => FieldValue::ShortShortInt(RandomMethod::random(rng)),
@@ -73,7 +74,6 @@ impl<R: Rng> RandomMethod<R> for FieldValue {
 
 #[test]
 fn pack_few_bits() {
-    rand::thread_rng().gen_range(0..5);
     let bits = [true, false, true];
 
     let mut buffer = [0u8; 2];
@@ -97,18 +97,20 @@ fn pack_many_bits() {
     assert_eq!(bits.as_slice(), parsed_bits.as_slice());
 }
 
+#[ignore]
 #[test]
 fn random_ser_de() {
     const ITERATIONS: usize = 1000;
     let mut rng = rand::rngs::StdRng::from_seed([0; 32]);
 
     for _ in 0..ITERATIONS {
+        println!("iter");
         let class = Class::random(&mut rng);
         let mut bytes = Vec::new();
 
         if let Err(err) = super::write::write_method(class.clone(), &mut bytes) {
-            eprintln!("{class:?}");
-            eprintln!("{err}");
+            eprintln!("{class:#?}");
+            eprintln!("{err:?}");
             panic!("Failed to serialize");
         }
 
@@ -117,11 +119,31 @@ fn random_ser_de() {
                 assert_eq!(class, parsed);
             }
             Err(err) => {
-                eprintln!("{class:?}");
+                eprintln!("{class:#?}");
                 eprintln!("{bytes:?}");
-                eprintln!("{err}");
+                eprintln!("{err:?}");
                 panic!("Failed to deserialize");
             }
         }
     }
+}
+
+#[test]
+fn nested_table() {
+    let table = HashMap::from([(
+        "A".to_string(),
+        FieldValue::FieldTable(HashMap::from([(
+            "B".to_string(),
+            FieldValue::Boolean(true),
+        )])),
+    )]);
+
+    let mut bytes = Vec::new();
+    crate::classes::write_helper::table(table.clone(), &mut bytes).unwrap();
+    eprintln!("{bytes:?}");
+
+    let (rest, parsed_table) = crate::classes::parse_helper::table(&bytes).unwrap();
+
+    assert!(rest.is_empty());
+    assert_eq!(table, parsed_table);
 }

@@ -154,8 +154,9 @@ fn field_value<W: Write>(value: FieldValue, writer: &mut W) -> Result<(), TransE
             writer.write_all(b"T")?;
             writer.write_all(&time.to_be_bytes())?;
         }
-        FieldValue::FieldTable(_) => {
+        FieldValue::FieldTable(value) => {
             writer.write_all(b"F")?;
+            table(value, writer)?;
         }
         FieldValue::Void => {
             writer.write_all(b"V")?;

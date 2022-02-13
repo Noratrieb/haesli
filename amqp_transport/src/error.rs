@@ -35,7 +35,8 @@ pub enum ConException {
     #[error("503 Command invalid")]
     CommandInvalid,
     #[error("503 Syntax error")]
-    SyntaxError,
+    /// A method was received but there was a syntax error. The string stores where it occured.
+    SyntaxError(Vec<String>),
     #[error("504 Channel error")]
     ChannelError,
     #[error("xxx Not decided yet")]

@@ -9,11 +9,15 @@ use nom::error::ErrorKind;
 use nom::multi::count;
 use nom::number::complete::{f32, f64, i16, i32, i64, i8, u16, u32, u64, u8};
 use nom::number::Endianness::Big;
+use nom::Err;
 use std::collections::HashMap;
+
+// todo: remove the debug machinery or change it in a way that actually does what it should lmao
+// I'm probably misusing nom hard
 
 impl<T> nom::error::ParseError<T> for TransError {
     fn from_error_kind(_input: T, _kind: ErrorKind) -> Self {
-        ProtocolError::ConException(ConException::SyntaxError).into()
+        ProtocolError::ConException(ConException::SyntaxError(vec![])).into()
     }
 
     fn append(_input: T, _kind: ErrorKind, other: Self) -> Self {
@@ -21,12 +25,52 @@ impl<T> nom::error::ParseError<T> for TransError {
     }
 }
 
+pub fn err<S: Into<String>>(msg: S) -> impl FnOnce(Err<TransError>) -> Err<TransError> {
+    move |err| {
+        let error_level = if matches!(err, nom::Err::Failure(_)) {
+            Err::Failure
+        } else {
+            Err::Error
+        };
+
+        let msg = msg.into();
+        let stack = match err {
+            Err::Error(e) | Err::Failure(e) => match e {
+                TransError::Invalid(ProtocolError::ConException(ConException::SyntaxError(
+                    mut stack,
+                ))) => {
+                    stack.push(msg);
+                    stack
+                }
+                _ => vec![msg],
+            },
+            _ => vec![msg],
+        };
+        error_level(ProtocolError::ConException(ConException::SyntaxError(stack)).into())
+    }
+}
+pub fn err_other<E, S: Into<String>>(msg: S) -> impl FnOnce(E) -> Err<TransError> {
+    move |_| {
+        Err::Error(ProtocolError::ConException(ConException::SyntaxError(vec![msg.into()])).into())
+    }
+}
+
+pub fn failure<E>(err: Err<E>) -> Err<E> {
+    match err {
+        Err::Incomplete(needed) => Err::Incomplete(needed),
+        Err::Error(e) => Err::Failure(e),
+        Err::Failure(e) => Err::Failure(e),
+    }
+}
+
 #[macro_export]
 macro_rules! fail {
-    () => {
+    ($cause:expr) => {
         return Err(nom::Err::Failure(
-            crate::error::ProtocolError::ConException(crate::error::ConException::SyntaxError)
-                .into(),
+            crate::error::ProtocolError::ConException(crate::error::ConException::SyntaxError(
+                vec![String::from($cause)],
+            ))
+            .into(),
         ))
     };
 }
@@ -79,9 +123,7 @@ pub fn bit(input: &[u8], amount: usize) -> IResult<Vec<Bit>> {
 pub fn shortstr(input: &[u8]) -> IResult<Shortstr> {
     let (input, len) = u8(input)?;
     let (input, str_data) = take(usize::from(len))(input)?;
-    let data = String::from_utf8(str_data.into()).map_err(|_| {
-        nom::Err::Failure(ProtocolError::ConException(ConException::SyntaxError).into())
-    })?;
+    let data = String::from_utf8(str_data.into()).map_err(err_other("shortstr"))?;
     Ok((input, data))
 }
 
@@ -106,7 +148,7 @@ pub fn table(input: &[u8]) -> IResult<Table> {
 
 fn table_value_pair(input: &[u8]) -> IResult<(TableFieldName, FieldValue)> {
     let (input, field_name) = shortstr(input)?;
-    let (input, field_value) = field_value(input)?;
+    let (input, field_value) = field_value(input).map_err(err(format!("field {field_name}")))?;
     Ok((input, (field_name, field_value)))
 }
 
@@ -119,7 +161,7 @@ fn field_value(input: &[u8]) -> IResult<FieldValue> {
         match bool_byte {
             0 => Ok((input, FieldValue::Boolean(false))),
             1 => Ok((input, FieldValue::Boolean(true))),
-            _ => fail!(),
+            value => fail!(format!("invalid bool value {value}")),
         }
     }
 

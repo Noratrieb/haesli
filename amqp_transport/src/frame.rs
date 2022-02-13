@@ -1,4 +1,4 @@
-use crate::error::{ConException, ProtocolError, Result, TransError};
+use crate::error::{ConException, ProtocolError, Result};
 use anyhow::Context;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::debug;

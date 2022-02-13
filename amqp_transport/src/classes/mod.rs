@@ -41,9 +41,15 @@ pub fn parse_method(payload: &[u8]) -> Result<generated::Class, TransError> {
 
     match nom_result {
         Ok(([], class)) => Ok(class),
-        Ok((_, _)) => Err(ProtocolError::ConException(ConException::SyntaxError).into()),
+        Ok((_, _)) => Err(ProtocolError::ConException(ConException::SyntaxError(vec![
+            "could not consume all input".to_string(),
+        ]))
+        .into()),
         Err(nom::Err::Incomplete(_)) => {
-            Err(ProtocolError::ConException(ConException::SyntaxError).into())
+            Err(ProtocolError::ConException(ConException::SyntaxError(vec![
+                "there was not enough data".to_string(),
+            ]))
+            .into())
         }
         Err(nom::Err::Failure(err) | nom::Err::Error(err)) => Err(err),
     }

@@ -125,7 +125,7 @@ fn server_properties(host: SocketAddr) -> classes::Table {
     }
 
     let host_str = host.ip().to_string();
-    let host_value = if host_str.len() < 256 {
+    let _host_value = if host_str.len() < 256 {
         FieldValue::ShortString(host_str)
     } else {
         FieldValue::LongString(host_str.into())

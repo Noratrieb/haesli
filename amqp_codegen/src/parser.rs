@@ -54,9 +54,10 @@ pub type IResult<'a, T> = nom::IResult<&'a [u8], T, TransError>;
                 .iter()
                 .map(method_function_name(&class_name))
                 .join(", ");
+            let class_name_raw = &class.name;
             println!(
-                "    let (input, _) = tag([{class_index}])(input)?;
-    alt(({all_methods}))(input)"
+                r#"    let (input, _) = tag({class_index}_u16.to_be_bytes())(input).map_err(err("invalid tag for class {class_name_raw}"))?;
+    alt(({all_methods}))(input).map_err(err("class {class_name_raw}")).map_err(failure)"#
             );
         });
 
@@ -90,20 +91,26 @@ fn domain_parser(domain: &Domain) {
 
 fn method_parser(amqp: &Amqp, class: &Class, method: &Method) {
     let class_name = class.name.to_snake_case();
+    let method_name_raw = &method.name;
 
     let function_name = method_function_name(&class_name)(method);
     function(&function_name, "Class", || {
         let method_index = method.index;
-        println!("    let (input, _) = tag([{method_index}])(input)?;");
+        println!(
+            r#"    let (input, _) = tag({method_index}_u16.to_be_bytes())(input).map_err(err("parsing method index"))?;"#
+        );
         let mut iter = method.fields.iter().peekable();
         while let Some(field) = iter.next() {
+            let field_name_raw = &field.name;
             let type_name = resolve_type_from_domain(amqp, field_type(field));
 
             if type_name == "bit" {
                 let fields_with_bit = subsequent_bit_fields(amqp, field, &mut iter);
 
                 let amount = fields_with_bit.len();
-                println!("    let (input, bits) = bit(input, {amount})?;");
+                println!(
+                    r#"    let (input, bits) = bit(input, {amount}).map_err(err("field {field_name_raw} in method {method_name_raw}")).map_err(failure)?;"#
+                );
 
                 for (i, field) in fields_with_bit.iter().enumerate() {
                     let field_name = snake_case(&field.name);
@@ -112,7 +119,9 @@ fn method_parser(amqp: &Amqp, class: &Class, method: &Method) {
             } else {
                 let fn_name = domain_function_name(field_type(field));
                 let field_name = snake_case(&field.name);
-                println!("    let (input, {field_name}) = {fn_name}(input)?;");
+                println!(
+                    r#"    let (input, {field_name}) = {fn_name}(input).map_err(err("field {field_name_raw} in method {method_name_raw}")).map_err(failure)?;"#
+                );
 
                 for assert in &field.asserts {
                     assert_check(assert, &type_name, &field_name);
@@ -134,9 +143,13 @@ fn assert_check(assert: &Assert, type_name: &str, var_name: &str) {
     match &*assert.check {
         "notnull" => match type_name {
             "shortstr" | "longstr" => {
-                println!("    if {var_name}.is_empty() {{ fail!() }}")
+                let cause = "string was null";
+                println!(r#"    if {var_name}.is_empty() {{ fail!("{cause}") }}"#);
             }
-            "short" => println!("    if {var_name} == 0 {{ fail!() }}"),
+            "short" => {
+                let cause = "number was 0";
+                println!(r#"    if {var_name} == 0 {{ fail!("{cause}") }}"#);
+            }
             _ => unimplemented!(),
         },
         "regexp" => {
@@ -144,12 +157,14 @@ fn assert_check(assert: &Assert, type_name: &str, var_name: &str) {
             println!(
                 r#"    static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"{value}").unwrap());"#
             );
-            println!("    if !REGEX.is_match(&{var_name}) {{ fail!() }}");
+            let cause = format!("regex `{value}` did not match value");
+            println!(r#"    if !REGEX.is_match(&{var_name}) {{ fail!(r"{cause}") }}"#);
         }
         "le" => {} // can't validate this here
         "length" => {
             let length = assert.value.as_ref().unwrap();
-            println!("    if {var_name}.len() > {length} {{ fail!() }}");
+            let cause = format!("value is shorter than {length}");
+            println!(r#"    if {var_name}.len() > {length} {{ fail!("{cause}") }}"#);
         }
         _ => unimplemented!(),
     }
