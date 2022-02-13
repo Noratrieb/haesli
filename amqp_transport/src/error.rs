@@ -38,6 +38,8 @@ pub enum ConException {
     SyntaxError,
     #[error("504 Channel error")]
     ChannelError,
+    #[error("xxx Not decided yet")]
+    Todo,
 }
 
 #[derive(Debug, thiserror::Error)]

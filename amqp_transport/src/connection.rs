@@ -1,5 +1,5 @@
 use crate::classes::FieldValue;
-use crate::error::{ProtocolError, Result};
+use crate::error::{ConException, ProtocolError, Result};
 use crate::frame::{Frame, FrameType};
 use crate::{classes, frame};
 use anyhow::Context;
@@ -54,7 +54,7 @@ impl Connection {
                     .local_addr()
                     .context("failed to get local_addr")?,
             ),
-            mechanisms: "none".to_string().into(),
+            mechanisms: "PLAIN".to_string().into(),
             locales: "en_US".to_string().into(),
         });
 
@@ -71,6 +71,17 @@ impl Connection {
             },
         )
         .await?;
+
+        let start_ok_frame = frame::read_frame(&mut self.stream, self.max_frame_size).await?;
+        debug!(?start_ok_frame, "Received Start-Ok frame");
+
+        if start_ok_frame.kind != FrameType::Method {
+            return Err(ProtocolError::ConException(ConException::Todo).into());
+        }
+
+        let class = classes::parse_method(&start_ok_frame.payload)?;
+
+        debug!(?class, "extracted method");
 
         Ok(())
     }
@@ -119,6 +130,8 @@ fn server_properties(host: SocketAddr) -> classes::Table {
     } else {
         FieldValue::LongString(host_str.into())
     };
+
+    // todo: fix
 
     //HashMap::from([
     //    ("host".to_string(), host_value),

@@ -46,3 +46,31 @@ pub fn parse_method(payload: &[u8]) -> Result<generated::Class, TransError> {
         Err(nom::Err::Failure(err) | nom::Err::Error(err)) => Err(err),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn pack_few_bits() {
+        let bits = [true, false, true];
+
+        let mut buffer = [0u8; 2];
+        super::write_helper::bit(&bits, &mut buffer.as_mut_slice()).unwrap();
+
+        let (_, parsed_bits) = super::parse_helper::bit(&buffer, 3).unwrap();
+        assert_eq!(bits.as_slice(), parsed_bits.as_slice());
+    }
+
+    #[test]
+    fn pack_many_bits() {
+        let bits = [
+            /* first 8 */
+            true, true, true, true, false, false, false, false, /* second 4 */
+            true, false, true, true,
+        ];
+        let mut buffer = [0u8; 2];
+        super::write_helper::bit(&bits, &mut buffer.as_mut_slice()).unwrap();
+
+        let (_, parsed_bits) = super::parse_helper::bit(&buffer, 12).unwrap();
+        assert_eq!(bits.as_slice(), parsed_bits.as_slice());
+    }
+}
