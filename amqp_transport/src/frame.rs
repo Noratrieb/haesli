@@ -1,6 +1,7 @@
 use crate::error::{ConException, ProtocolError, Result, TransError};
 use anyhow::Context;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tracing::debug;
 
 const REQUIRED_FRAME_END: u8 = 0xCE;
 
@@ -33,6 +34,8 @@ pub async fn write_frame<W>(mut w: W, frame: &Frame) -> Result<()>
 where
     W: AsyncWriteExt + Unpin,
 {
+    debug!(?frame, "sending frame");
+
     w.write_u8(frame.kind as u8).await?;
     w.write_u16(frame.channel).await?;
     w.write_u32(u32::try_from(frame.payload.len()).context("frame size too big")?)

@@ -1,10 +1,13 @@
+use crate::classes::FieldValue;
 use crate::error::{ProtocolError, Result};
 use crate::frame::{Frame, FrameType};
 use crate::{classes, frame};
 use anyhow::Context;
+use std::collections::HashMap;
+use std::net::SocketAddr;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use tracing::{debug, error, warn};
+use tracing::{debug, error};
 
 const MIN_MAX_FRAME_SIZE: usize = 4096;
 
@@ -46,10 +49,16 @@ impl Connection {
         let start_method = classes::Class::Connection(classes::Connection::Start {
             version_major: 0,
             version_minor: 9,
-            server_properties: Default::default(),
-            mechanisms: vec![],
-            locales: vec![],
+            server_properties: server_properties(
+                self.stream
+                    .local_addr()
+                    .context("failed to get local_addr")?,
+            ),
+            mechanisms: "none".to_string().into(),
+            locales: "en_US".to_string().into(),
         });
+
+        debug!(?start_method, "Sending start method");
 
         let mut payload = Vec::with_capacity(64);
         classes::write::write_method(start_method, &mut payload)?;
@@ -97,4 +106,28 @@ impl Connection {
             Err(ProtocolError::OtherCloseConnection.into())
         }
     }
+}
+
+fn server_properties(host: SocketAddr) -> classes::Table {
+    fn ss(str: &str) -> FieldValue {
+        FieldValue::ShortString(str.to_string())
+    }
+
+    let host_str = host.ip().to_string();
+    let host_value = if host_str.len() < 256 {
+        FieldValue::ShortString(host_str)
+    } else {
+        FieldValue::LongString(host_str.into())
+    };
+
+    //HashMap::from([
+    //    ("host".to_string(), host_value),
+    //    ("product".to_string(), ss("no name yet")),
+    //    ("version".to_string(), ss("0.1.0")),
+    //    ("platform".to_string(), ss("microsoft linux")),
+    //    ("copyright".to_string(), ss("MIT")),
+    //    ("information".to_string(), ss("hello reader")),
+    //    ("uwu".to_string(), ss("owo")),
+    //])
+    HashMap::new()
 }

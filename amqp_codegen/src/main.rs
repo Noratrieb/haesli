@@ -79,7 +79,7 @@ struct Field {
 }
 
 fn main() {
-    let content = fs::read_to_string("./amqp-0-9-1.xml").unwrap();
+    let content = fs::read_to_string("./amqp-0-9-1-bsd.xml").unwrap();
 
     let amqp = Amqp::from_str(&content).unwrap();
     codegen(&amqp);

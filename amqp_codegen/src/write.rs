@@ -25,7 +25,9 @@ pub fn write_method<W: Write>(class: Class, mut writer: W) -> Result<(), TransEr
                 println!("            {field_name},");
             }
             println!("        }}) => {{");
-            println!("            writer.write_all(&[{class_index}, {method_index}])?;");
+            let [ci0, ci1] = class_index.to_be_bytes();
+            let [mi0, mi1] = method_index.to_be_bytes();
+            println!("            writer.write_all(&[{ci0}, {ci1}, {mi0}, {mi1}])?;");
             let mut iter = method.fields.iter().peekable();
 
             while let Some(field) = iter.next() {
