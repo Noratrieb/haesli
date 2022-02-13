@@ -2,10 +2,10 @@ mod parser;
 mod write;
 
 use crate::parser::codegen_parser;
+use crate::write::codegen_write;
 use heck::ToUpperCamelCase;
 use std::fs;
 use strong_xml::XmlRead;
-use crate::write::codegen_write;
 
 #[derive(Debug, XmlRead)]
 #[xml(tag = "amqp")]
@@ -151,8 +151,9 @@ fn amqp_type_to_rust_type(amqp_type: &str) -> &'static str {
         "short" => "u16",
         "long" => "u32",
         "longlong" => "u64",
-        "bit" => "u8",
-        "shortstr" | "longstr" => "String",
+        "bit" => "bool",
+        "shortstr" => "String",
+        "longstr" => "Vec<u8>",
         "timestamp" => "u64",
         "table" => "super::Table",
         _ => unreachable!("invalid type {}", amqp_type),

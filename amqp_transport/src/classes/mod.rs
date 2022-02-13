@@ -6,7 +6,9 @@ mod generated;
 mod parse_helper;
 mod write_helper;
 
-pub type Table = HashMap<String, FieldValue>;
+pub type TableFieldName = String;
+
+pub type Table = HashMap<TableFieldName, FieldValue>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FieldValue {
@@ -22,8 +24,8 @@ pub enum FieldValue {
     Float(f32),
     Double(f64),
     DecimalValue(u8, u32),
-    ShortString(String),
-    LongString(String),
+    ShortString(Shortstr),
+    LongString(Longstr),
     FieldArray(Vec<FieldValue>),
     Timestamp(u64),
     FieldTable(Table),
