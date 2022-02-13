@@ -87,9 +87,7 @@ pub enum Connection {
         locale: Shortstr,
     },
     /// Index 20
-    Secure {
-        challenge: Longstr,
-    },
+    Secure { challenge: Longstr },
     /// Index 21
     SecureOk {
         /// must not be null
@@ -115,9 +113,7 @@ pub enum Connection {
         reserved_2: Bit,
     },
     /// Index 41
-    OpenOk {
-        reserved_1: Shortstr,
-    },
+    OpenOk { reserved_1: Shortstr },
     /// Index 50
     Close {
         reply_code: ReplyCode,
@@ -128,9 +124,7 @@ pub enum Connection {
     /// Index 51
     CloseOk,
     /// Index 60
-    Blocked {
-        reason: Shortstr,
-    },
+    Blocked { reason: Shortstr },
     /// Index 61
     Unblocked,
 }
@@ -138,21 +132,13 @@ pub enum Connection {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Channel {
     /// Index 10
-    Open {
-        reserved_1: Shortstr,
-    },
+    Open { reserved_1: Shortstr },
     /// Index 11
-    OpenOk {
-        reserved_1: Longstr,
-    },
+    OpenOk { reserved_1: Longstr },
     /// Index 20
-    Flow {
-        active: Bit,
-    },
+    Flow { active: Bit },
     /// Index 21
-    FlowOk {
-        active: Bit,
-    },
+    FlowOk { active: Bit },
     /// Index 40
     Close {
         reply_code: ReplyCode,
@@ -241,9 +227,7 @@ pub enum Queue {
         no_wait: NoWait,
     },
     /// Index 31
-    PurgeOk {
-        message_count: MessageCount,
-    },
+    PurgeOk { message_count: MessageCount },
     /// Index 40
     Delete {
         reserved_1: Short,
@@ -253,9 +237,7 @@ pub enum Queue {
         no_wait: NoWait,
     },
     /// Index 41
-    DeleteOk {
-        message_count: MessageCount,
-    },
+    DeleteOk { message_count: MessageCount },
 }
 /// Index 60, handler = channel
 #[derive(Debug, Clone, PartialEq)]
@@ -280,18 +262,14 @@ pub enum Basic {
         arguments: Table,
     },
     /// Index 21
-    ConsumeOk {
-        consumer_tag: ConsumerTag,
-    },
+    ConsumeOk { consumer_tag: ConsumerTag },
     /// Index 30
     Cancel {
         consumer_tag: ConsumerTag,
         no_wait: NoWait,
     },
     /// Index 31
-    CancelOk {
-        consumer_tag: ConsumerTag,
-    },
+    CancelOk { consumer_tag: ConsumerTag },
     /// Index 40
     Publish {
         reserved_1: Short,
@@ -330,9 +308,7 @@ pub enum Basic {
         message_count: MessageCount,
     },
     /// Index 72
-    GetEmpty {
-        reserved_1: Shortstr,
-    },
+    GetEmpty { reserved_1: Shortstr },
     /// Index 80
     Ack {
         delivery_tag: DeliveryTag,
@@ -344,13 +320,9 @@ pub enum Basic {
         requeue: Bit,
     },
     /// Index 100
-    RecoverAsync {
-        requeue: Bit,
-    },
+    RecoverAsync { requeue: Bit },
     /// Index 110
-    Recover {
-        requeue: Bit,
-    },
+    Recover { requeue: Bit },
     /// Index 111
     RecoverOk,
 }
@@ -371,1422 +343,1494 @@ pub enum Tx {
     RollbackOk,
 }
 pub mod parse {
-use super::*;
-use crate::classes::parse_helper::*;
-use crate::error::TransError;
-use nom::{branch::alt, bytes::complete::tag};
-use regex::Regex;
-use once_cell::sync::Lazy;
+    use super::*;
+    use crate::classes::parse_helper::*;
+    use crate::error::TransError;
+    use nom::{branch::alt, bytes::complete::tag};
+    use once_cell::sync::Lazy;
+    use regex::Regex;
 
-pub type IResult<'a, T> = nom::IResult<&'a [u8], T, TransError>;
+    pub type IResult<'a, T> = nom::IResult<&'a [u8], T, TransError>;
 
-pub fn parse_method(input: &[u8]) -> Result<(&[u8], Class), nom::Err<TransError>> {
-    alt((connection, channel, exchange, queue, basic, tx))(input)
-}
-fn domain_class_id(input: &[u8]) -> IResult<ClassId> {
-    short(input)
-}
-fn domain_consumer_tag(input: &[u8]) -> IResult<ConsumerTag> {
-    shortstr(input)
-}
-fn domain_delivery_tag(input: &[u8]) -> IResult<DeliveryTag> {
-    longlong(input)
-}
-fn domain_exchange_name(input: &[u8]) -> IResult<ExchangeName> {
-    let (input, result) = shortstr(input)?;
-    if result.len() > 127 { fail!() }
-    static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[a-zA-Z0-9-_.:]*$").unwrap());
-    if !REGEX.is_match(&result) { fail!() }
-    Ok((input, result))
-}
-fn domain_method_id(input: &[u8]) -> IResult<MethodId> {
-    short(input)
-}
-fn domain_path(input: &[u8]) -> IResult<Path> {
-    let (input, result) = shortstr(input)?;
-    if result.is_empty() { fail!() }
-    if result.len() > 127 { fail!() }
-    Ok((input, result))
-}
-fn domain_peer_properties(input: &[u8]) -> IResult<PeerProperties> {
-    table(input)
-}
-fn domain_queue_name(input: &[u8]) -> IResult<QueueName> {
-    let (input, result) = shortstr(input)?;
-    if result.len() > 127 { fail!() }
-    static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[a-zA-Z0-9-_.:]*$").unwrap());
-    if !REGEX.is_match(&result) { fail!() }
-    Ok((input, result))
-}
-fn domain_message_count(input: &[u8]) -> IResult<MessageCount> {
-    long(input)
-}
-fn domain_reply_code(input: &[u8]) -> IResult<ReplyCode> {
-    let (input, result) = short(input)?;
-    if result == 0 { fail!() }
-    Ok((input, result))
-}
-fn domain_reply_text(input: &[u8]) -> IResult<ReplyText> {
-    let (input, result) = shortstr(input)?;
-    if result.is_empty() { fail!() }
-    Ok((input, result))
-}
-fn domain_octet(input: &[u8]) -> IResult<Octet> {
-    octet(input)
-}
-fn domain_short(input: &[u8]) -> IResult<Short> {
-    short(input)
-}
-fn domain_long(input: &[u8]) -> IResult<Long> {
-    long(input)
-}
-fn domain_longlong(input: &[u8]) -> IResult<Longlong> {
-    longlong(input)
-}
-fn domain_shortstr(input: &[u8]) -> IResult<Shortstr> {
-    shortstr(input)
-}
-fn domain_longstr(input: &[u8]) -> IResult<Longstr> {
-    longstr(input)
-}
-fn domain_timestamp(input: &[u8]) -> IResult<Timestamp> {
-    timestamp(input)
-}
-fn domain_table(input: &[u8]) -> IResult<Table> {
-    table(input)
-}
-fn connection(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([10])(input)?;
-    alt((connection_start, connection_start_ok, connection_secure, connection_secure_ok, connection_tune, connection_tune_ok, connection_open, connection_open_ok, connection_close, connection_close_ok, connection_blocked, connection_unblocked))(input)
-}
-fn connection_start(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([10])(input)?;
-    let (input, version_major) = domain_octet(input)?;
-    let (input, version_minor) = domain_octet(input)?;
-    let (input, server_properties) = domain_peer_properties(input)?;
-    let (input, mechanisms) = domain_longstr(input)?;
-    if mechanisms.is_empty() { fail!() }
-    let (input, locales) = domain_longstr(input)?;
-    if locales.is_empty() { fail!() }
-    Ok((input, Class::Connection(Connection::Start {
-        version_major,
-        version_minor,
-        server_properties,
-        mechanisms,
-        locales,
-    })))
-}
-fn connection_start_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([11])(input)?;
-    let (input, client_properties) = domain_peer_properties(input)?;
-    let (input, mechanism) = domain_shortstr(input)?;
-    if mechanism.is_empty() { fail!() }
-    let (input, response) = domain_longstr(input)?;
-    if response.is_empty() { fail!() }
-    let (input, locale) = domain_shortstr(input)?;
-    if locale.is_empty() { fail!() }
-    Ok((input, Class::Connection(Connection::StartOk {
-        client_properties,
-        mechanism,
-        response,
-        locale,
-    })))
-}
-fn connection_secure(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([20])(input)?;
-    let (input, challenge) = domain_longstr(input)?;
-    Ok((input, Class::Connection(Connection::Secure {
-        challenge,
-    })))
-}
-fn connection_secure_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([21])(input)?;
-    let (input, response) = domain_longstr(input)?;
-    if response.is_empty() { fail!() }
-    Ok((input, Class::Connection(Connection::SecureOk {
-        response,
-    })))
-}
-fn connection_tune(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([30])(input)?;
-    let (input, channel_max) = domain_short(input)?;
-    let (input, frame_max) = domain_long(input)?;
-    let (input, heartbeat) = domain_short(input)?;
-    Ok((input, Class::Connection(Connection::Tune {
-        channel_max,
-        frame_max,
-        heartbeat,
-    })))
-}
-fn connection_tune_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([31])(input)?;
-    let (input, channel_max) = domain_short(input)?;
-    if channel_max == 0 { fail!() }
-    let (input, frame_max) = domain_long(input)?;
-    let (input, heartbeat) = domain_short(input)?;
-    Ok((input, Class::Connection(Connection::TuneOk {
-        channel_max,
-        frame_max,
-        heartbeat,
-    })))
-}
-fn connection_open(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([40])(input)?;
-    let (input, virtual_host) = domain_path(input)?;
-    let (input, reserved_1) = domain_shortstr(input)?;
-    let (input, bits) = bit(input, 1)?;
-    let reserved_2 = bits[0];
-    Ok((input, Class::Connection(Connection::Open {
-        virtual_host,
-        reserved_1,
-        reserved_2,
-    })))
-}
-fn connection_open_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([41])(input)?;
-    let (input, reserved_1) = domain_shortstr(input)?;
-    Ok((input, Class::Connection(Connection::OpenOk {
-        reserved_1,
-    })))
-}
-fn connection_close(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([50])(input)?;
-    let (input, reply_code) = domain_reply_code(input)?;
-    let (input, reply_text) = domain_reply_text(input)?;
-    let (input, class_id) = domain_class_id(input)?;
-    let (input, method_id) = domain_method_id(input)?;
-    Ok((input, Class::Connection(Connection::Close {
-        reply_code,
-        reply_text,
-        class_id,
-        method_id,
-    })))
-}
-fn connection_close_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([51])(input)?;
-    Ok((input, Class::Connection(Connection::CloseOk {
-    })))
-}
-fn connection_blocked(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([60])(input)?;
-    let (input, reason) = domain_shortstr(input)?;
-    Ok((input, Class::Connection(Connection::Blocked {
-        reason,
-    })))
-}
-fn connection_unblocked(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([61])(input)?;
-    Ok((input, Class::Connection(Connection::Unblocked {
-    })))
-}
-fn channel(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([20])(input)?;
-    alt((channel_open, channel_open_ok, channel_flow, channel_flow_ok, channel_close, channel_close_ok))(input)
-}
-fn channel_open(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([10])(input)?;
-    let (input, reserved_1) = domain_shortstr(input)?;
-    Ok((input, Class::Channel(Channel::Open {
-        reserved_1,
-    })))
-}
-fn channel_open_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([11])(input)?;
-    let (input, reserved_1) = domain_longstr(input)?;
-    Ok((input, Class::Channel(Channel::OpenOk {
-        reserved_1,
-    })))
-}
-fn channel_flow(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([20])(input)?;
-    let (input, bits) = bit(input, 1)?;
-    let active = bits[0];
-    Ok((input, Class::Channel(Channel::Flow {
-        active,
-    })))
-}
-fn channel_flow_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([21])(input)?;
-    let (input, bits) = bit(input, 1)?;
-    let active = bits[0];
-    Ok((input, Class::Channel(Channel::FlowOk {
-        active,
-    })))
-}
-fn channel_close(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([40])(input)?;
-    let (input, reply_code) = domain_reply_code(input)?;
-    let (input, reply_text) = domain_reply_text(input)?;
-    let (input, class_id) = domain_class_id(input)?;
-    let (input, method_id) = domain_method_id(input)?;
-    Ok((input, Class::Channel(Channel::Close {
-        reply_code,
-        reply_text,
-        class_id,
-        method_id,
-    })))
-}
-fn channel_close_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([41])(input)?;
-    Ok((input, Class::Channel(Channel::CloseOk {
-    })))
-}
-fn exchange(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([40])(input)?;
-    alt((exchange_declare, exchange_declare_ok, exchange_delete, exchange_delete_ok))(input)
-}
-fn exchange_declare(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([10])(input)?;
-    let (input, reserved_1) = domain_short(input)?;
-    let (input, exchange) = domain_exchange_name(input)?;
-    if exchange.is_empty() { fail!() }
-    let (input, r#type) = domain_shortstr(input)?;
-    let (input, bits) = bit(input, 5)?;
-    let passive = bits[0];
-    let durable = bits[1];
-    let reserved_2 = bits[2];
-    let reserved_3 = bits[3];
-    let no_wait = bits[4];
-    let (input, arguments) = domain_table(input)?;
-    Ok((input, Class::Exchange(Exchange::Declare {
-        reserved_1,
-        exchange,
-        r#type,
-        passive,
-        durable,
-        reserved_2,
-        reserved_3,
-        no_wait,
-        arguments,
-    })))
-}
-fn exchange_declare_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([11])(input)?;
-    Ok((input, Class::Exchange(Exchange::DeclareOk {
-    })))
-}
-fn exchange_delete(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([20])(input)?;
-    let (input, reserved_1) = domain_short(input)?;
-    let (input, exchange) = domain_exchange_name(input)?;
-    if exchange.is_empty() { fail!() }
-    let (input, bits) = bit(input, 2)?;
-    let if_unused = bits[0];
-    let no_wait = bits[1];
-    Ok((input, Class::Exchange(Exchange::Delete {
-        reserved_1,
-        exchange,
-        if_unused,
-        no_wait,
-    })))
-}
-fn exchange_delete_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([21])(input)?;
-    Ok((input, Class::Exchange(Exchange::DeleteOk {
-    })))
-}
-fn queue(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([50])(input)?;
-    alt((queue_declare, queue_declare_ok, queue_bind, queue_bind_ok, queue_unbind, queue_unbind_ok, queue_purge, queue_purge_ok, queue_delete, queue_delete_ok))(input)
-}
-fn queue_declare(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([10])(input)?;
-    let (input, reserved_1) = domain_short(input)?;
-    let (input, queue) = domain_queue_name(input)?;
-    let (input, bits) = bit(input, 5)?;
-    let passive = bits[0];
-    let durable = bits[1];
-    let exclusive = bits[2];
-    let auto_delete = bits[3];
-    let no_wait = bits[4];
-    let (input, arguments) = domain_table(input)?;
-    Ok((input, Class::Queue(Queue::Declare {
-        reserved_1,
-        queue,
-        passive,
-        durable,
-        exclusive,
-        auto_delete,
-        no_wait,
-        arguments,
-    })))
-}
-fn queue_declare_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([11])(input)?;
-    let (input, queue) = domain_queue_name(input)?;
-    if queue.is_empty() { fail!() }
-    let (input, message_count) = domain_message_count(input)?;
-    let (input, consumer_count) = domain_long(input)?;
-    Ok((input, Class::Queue(Queue::DeclareOk {
-        queue,
-        message_count,
-        consumer_count,
-    })))
-}
-fn queue_bind(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([20])(input)?;
-    let (input, reserved_1) = domain_short(input)?;
-    let (input, queue) = domain_queue_name(input)?;
-    let (input, exchange) = domain_exchange_name(input)?;
-    let (input, routing_key) = domain_shortstr(input)?;
-    let (input, bits) = bit(input, 1)?;
-    let no_wait = bits[0];
-    let (input, arguments) = domain_table(input)?;
-    Ok((input, Class::Queue(Queue::Bind {
-        reserved_1,
-        queue,
-        exchange,
-        routing_key,
-        no_wait,
-        arguments,
-    })))
-}
-fn queue_bind_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([21])(input)?;
-    Ok((input, Class::Queue(Queue::BindOk {
-    })))
-}
-fn queue_unbind(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([50])(input)?;
-    let (input, reserved_1) = domain_short(input)?;
-    let (input, queue) = domain_queue_name(input)?;
-    let (input, exchange) = domain_exchange_name(input)?;
-    let (input, routing_key) = domain_shortstr(input)?;
-    let (input, arguments) = domain_table(input)?;
-    Ok((input, Class::Queue(Queue::Unbind {
-        reserved_1,
-        queue,
-        exchange,
-        routing_key,
-        arguments,
-    })))
-}
-fn queue_unbind_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([51])(input)?;
-    Ok((input, Class::Queue(Queue::UnbindOk {
-    })))
-}
-fn queue_purge(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([30])(input)?;
-    let (input, reserved_1) = domain_short(input)?;
-    let (input, queue) = domain_queue_name(input)?;
-    let (input, bits) = bit(input, 1)?;
-    let no_wait = bits[0];
-    Ok((input, Class::Queue(Queue::Purge {
-        reserved_1,
-        queue,
-        no_wait,
-    })))
-}
-fn queue_purge_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([31])(input)?;
-    let (input, message_count) = domain_message_count(input)?;
-    Ok((input, Class::Queue(Queue::PurgeOk {
-        message_count,
-    })))
-}
-fn queue_delete(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([40])(input)?;
-    let (input, reserved_1) = domain_short(input)?;
-    let (input, queue) = domain_queue_name(input)?;
-    let (input, bits) = bit(input, 3)?;
-    let if_unused = bits[0];
-    let if_empty = bits[1];
-    let no_wait = bits[2];
-    Ok((input, Class::Queue(Queue::Delete {
-        reserved_1,
-        queue,
-        if_unused,
-        if_empty,
-        no_wait,
-    })))
-}
-fn queue_delete_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([41])(input)?;
-    let (input, message_count) = domain_message_count(input)?;
-    Ok((input, Class::Queue(Queue::DeleteOk {
-        message_count,
-    })))
-}
-fn basic(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([60])(input)?;
-    alt((basic_qos, basic_qos_ok, basic_consume, basic_consume_ok, basic_cancel, basic_cancel_ok, basic_publish, basic_return, basic_deliver, basic_get, basic_get_ok, basic_get_empty, basic_ack, basic_reject, basic_recover_async, basic_recover, basic_recover_ok))(input)
-}
-fn basic_qos(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([10])(input)?;
-    let (input, prefetch_size) = domain_long(input)?;
-    let (input, prefetch_count) = domain_short(input)?;
-    let (input, bits) = bit(input, 1)?;
-    let global = bits[0];
-    Ok((input, Class::Basic(Basic::Qos {
-        prefetch_size,
-        prefetch_count,
-        global,
-    })))
-}
-fn basic_qos_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([11])(input)?;
-    Ok((input, Class::Basic(Basic::QosOk {
-    })))
-}
-fn basic_consume(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([20])(input)?;
-    let (input, reserved_1) = domain_short(input)?;
-    let (input, queue) = domain_queue_name(input)?;
-    let (input, consumer_tag) = domain_consumer_tag(input)?;
-    let (input, bits) = bit(input, 4)?;
-    let no_local = bits[0];
-    let no_ack = bits[1];
-    let exclusive = bits[2];
-    let no_wait = bits[3];
-    let (input, arguments) = domain_table(input)?;
-    Ok((input, Class::Basic(Basic::Consume {
-        reserved_1,
-        queue,
-        consumer_tag,
-        no_local,
-        no_ack,
-        exclusive,
-        no_wait,
-        arguments,
-    })))
-}
-fn basic_consume_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([21])(input)?;
-    let (input, consumer_tag) = domain_consumer_tag(input)?;
-    Ok((input, Class::Basic(Basic::ConsumeOk {
-        consumer_tag,
-    })))
-}
-fn basic_cancel(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([30])(input)?;
-    let (input, consumer_tag) = domain_consumer_tag(input)?;
-    let (input, bits) = bit(input, 1)?;
-    let no_wait = bits[0];
-    Ok((input, Class::Basic(Basic::Cancel {
-        consumer_tag,
-        no_wait,
-    })))
-}
-fn basic_cancel_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([31])(input)?;
-    let (input, consumer_tag) = domain_consumer_tag(input)?;
-    Ok((input, Class::Basic(Basic::CancelOk {
-        consumer_tag,
-    })))
-}
-fn basic_publish(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([40])(input)?;
-    let (input, reserved_1) = domain_short(input)?;
-    let (input, exchange) = domain_exchange_name(input)?;
-    let (input, routing_key) = domain_shortstr(input)?;
-    let (input, bits) = bit(input, 2)?;
-    let mandatory = bits[0];
-    let immediate = bits[1];
-    Ok((input, Class::Basic(Basic::Publish {
-        reserved_1,
-        exchange,
-        routing_key,
-        mandatory,
-        immediate,
-    })))
-}
-fn basic_return(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([50])(input)?;
-    let (input, reply_code) = domain_reply_code(input)?;
-    let (input, reply_text) = domain_reply_text(input)?;
-    let (input, exchange) = domain_exchange_name(input)?;
-    let (input, routing_key) = domain_shortstr(input)?;
-    Ok((input, Class::Basic(Basic::Return {
-        reply_code,
-        reply_text,
-        exchange,
-        routing_key,
-    })))
-}
-fn basic_deliver(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([60])(input)?;
-    let (input, consumer_tag) = domain_consumer_tag(input)?;
-    let (input, delivery_tag) = domain_delivery_tag(input)?;
-    let (input, bits) = bit(input, 1)?;
-    let redelivered = bits[0];
-    let (input, exchange) = domain_exchange_name(input)?;
-    let (input, routing_key) = domain_shortstr(input)?;
-    Ok((input, Class::Basic(Basic::Deliver {
-        consumer_tag,
-        delivery_tag,
-        redelivered,
-        exchange,
-        routing_key,
-    })))
-}
-fn basic_get(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([70])(input)?;
-    let (input, reserved_1) = domain_short(input)?;
-    let (input, queue) = domain_queue_name(input)?;
-    let (input, bits) = bit(input, 1)?;
-    let no_ack = bits[0];
-    Ok((input, Class::Basic(Basic::Get {
-        reserved_1,
-        queue,
-        no_ack,
-    })))
-}
-fn basic_get_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([71])(input)?;
-    let (input, delivery_tag) = domain_delivery_tag(input)?;
-    let (input, bits) = bit(input, 1)?;
-    let redelivered = bits[0];
-    let (input, exchange) = domain_exchange_name(input)?;
-    let (input, routing_key) = domain_shortstr(input)?;
-    let (input, message_count) = domain_message_count(input)?;
-    Ok((input, Class::Basic(Basic::GetOk {
-        delivery_tag,
-        redelivered,
-        exchange,
-        routing_key,
-        message_count,
-    })))
-}
-fn basic_get_empty(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([72])(input)?;
-    let (input, reserved_1) = domain_shortstr(input)?;
-    Ok((input, Class::Basic(Basic::GetEmpty {
-        reserved_1,
-    })))
-}
-fn basic_ack(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([80])(input)?;
-    let (input, delivery_tag) = domain_delivery_tag(input)?;
-    let (input, bits) = bit(input, 1)?;
-    let multiple = bits[0];
-    Ok((input, Class::Basic(Basic::Ack {
-        delivery_tag,
-        multiple,
-    })))
-}
-fn basic_reject(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([90])(input)?;
-    let (input, delivery_tag) = domain_delivery_tag(input)?;
-    let (input, bits) = bit(input, 1)?;
-    let requeue = bits[0];
-    Ok((input, Class::Basic(Basic::Reject {
-        delivery_tag,
-        requeue,
-    })))
-}
-fn basic_recover_async(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([100])(input)?;
-    let (input, bits) = bit(input, 1)?;
-    let requeue = bits[0];
-    Ok((input, Class::Basic(Basic::RecoverAsync {
-        requeue,
-    })))
-}
-fn basic_recover(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([110])(input)?;
-    let (input, bits) = bit(input, 1)?;
-    let requeue = bits[0];
-    Ok((input, Class::Basic(Basic::Recover {
-        requeue,
-    })))
-}
-fn basic_recover_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([111])(input)?;
-    Ok((input, Class::Basic(Basic::RecoverOk {
-    })))
-}
-fn tx(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([90])(input)?;
-    alt((tx_select, tx_select_ok, tx_commit, tx_commit_ok, tx_rollback, tx_rollback_ok))(input)
-}
-fn tx_select(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([10])(input)?;
-    Ok((input, Class::Tx(Tx::Select {
-    })))
-}
-fn tx_select_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([11])(input)?;
-    Ok((input, Class::Tx(Tx::SelectOk {
-    })))
-}
-fn tx_commit(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([20])(input)?;
-    Ok((input, Class::Tx(Tx::Commit {
-    })))
-}
-fn tx_commit_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([21])(input)?;
-    Ok((input, Class::Tx(Tx::CommitOk {
-    })))
-}
-fn tx_rollback(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([30])(input)?;
-    Ok((input, Class::Tx(Tx::Rollback {
-    })))
-}
-fn tx_rollback_ok(input: &[u8]) -> IResult<Class> {
-    let (input, _) = tag([31])(input)?;
-    Ok((input, Class::Tx(Tx::RollbackOk {
-    })))
-}
-
+    pub fn parse_method(input: &[u8]) -> Result<(&[u8], Class), nom::Err<TransError>> {
+        alt((connection, channel, exchange, queue, basic, tx))(input)
+    }
+    fn domain_class_id(input: &[u8]) -> IResult<ClassId> {
+        short(input)
+    }
+    fn domain_consumer_tag(input: &[u8]) -> IResult<ConsumerTag> {
+        shortstr(input)
+    }
+    fn domain_delivery_tag(input: &[u8]) -> IResult<DeliveryTag> {
+        longlong(input)
+    }
+    fn domain_exchange_name(input: &[u8]) -> IResult<ExchangeName> {
+        let (input, result) = shortstr(input)?;
+        if result.len() > 127 {
+            fail!()
+        }
+        static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[a-zA-Z0-9-_.:]*$").unwrap());
+        if !REGEX.is_match(&result) {
+            fail!()
+        }
+        Ok((input, result))
+    }
+    fn domain_method_id(input: &[u8]) -> IResult<MethodId> {
+        short(input)
+    }
+    fn domain_path(input: &[u8]) -> IResult<Path> {
+        let (input, result) = shortstr(input)?;
+        if result.is_empty() {
+            fail!()
+        }
+        if result.len() > 127 {
+            fail!()
+        }
+        Ok((input, result))
+    }
+    fn domain_peer_properties(input: &[u8]) -> IResult<PeerProperties> {
+        table(input)
+    }
+    fn domain_queue_name(input: &[u8]) -> IResult<QueueName> {
+        let (input, result) = shortstr(input)?;
+        if result.len() > 127 {
+            fail!()
+        }
+        static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[a-zA-Z0-9-_.:]*$").unwrap());
+        if !REGEX.is_match(&result) {
+            fail!()
+        }
+        Ok((input, result))
+    }
+    fn domain_message_count(input: &[u8]) -> IResult<MessageCount> {
+        long(input)
+    }
+    fn domain_reply_code(input: &[u8]) -> IResult<ReplyCode> {
+        let (input, result) = short(input)?;
+        if result == 0 {
+            fail!()
+        }
+        Ok((input, result))
+    }
+    fn domain_reply_text(input: &[u8]) -> IResult<ReplyText> {
+        let (input, result) = shortstr(input)?;
+        if result.is_empty() {
+            fail!()
+        }
+        Ok((input, result))
+    }
+    fn domain_octet(input: &[u8]) -> IResult<Octet> {
+        octet(input)
+    }
+    fn domain_short(input: &[u8]) -> IResult<Short> {
+        short(input)
+    }
+    fn domain_long(input: &[u8]) -> IResult<Long> {
+        long(input)
+    }
+    fn domain_longlong(input: &[u8]) -> IResult<Longlong> {
+        longlong(input)
+    }
+    fn domain_shortstr(input: &[u8]) -> IResult<Shortstr> {
+        shortstr(input)
+    }
+    fn domain_longstr(input: &[u8]) -> IResult<Longstr> {
+        longstr(input)
+    }
+    fn domain_timestamp(input: &[u8]) -> IResult<Timestamp> {
+        timestamp(input)
+    }
+    fn domain_table(input: &[u8]) -> IResult<Table> {
+        table(input)
+    }
+    fn connection(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([10])(input)?;
+        alt((
+            connection_start,
+            connection_start_ok,
+            connection_secure,
+            connection_secure_ok,
+            connection_tune,
+            connection_tune_ok,
+            connection_open,
+            connection_open_ok,
+            connection_close,
+            connection_close_ok,
+            connection_blocked,
+            connection_unblocked,
+        ))(input)
+    }
+    fn connection_start(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([10])(input)?;
+        let (input, version_major) = domain_octet(input)?;
+        let (input, version_minor) = domain_octet(input)?;
+        let (input, server_properties) = domain_peer_properties(input)?;
+        let (input, mechanisms) = domain_longstr(input)?;
+        if mechanisms.is_empty() {
+            fail!()
+        }
+        let (input, locales) = domain_longstr(input)?;
+        if locales.is_empty() {
+            fail!()
+        }
+        Ok((
+            input,
+            Class::Connection(Connection::Start {
+                version_major,
+                version_minor,
+                server_properties,
+                mechanisms,
+                locales,
+            }),
+        ))
+    }
+    fn connection_start_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([11])(input)?;
+        let (input, client_properties) = domain_peer_properties(input)?;
+        let (input, mechanism) = domain_shortstr(input)?;
+        if mechanism.is_empty() {
+            fail!()
+        }
+        let (input, response) = domain_longstr(input)?;
+        if response.is_empty() {
+            fail!()
+        }
+        let (input, locale) = domain_shortstr(input)?;
+        if locale.is_empty() {
+            fail!()
+        }
+        Ok((
+            input,
+            Class::Connection(Connection::StartOk {
+                client_properties,
+                mechanism,
+                response,
+                locale,
+            }),
+        ))
+    }
+    fn connection_secure(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([20])(input)?;
+        let (input, challenge) = domain_longstr(input)?;
+        Ok((input, Class::Connection(Connection::Secure { challenge })))
+    }
+    fn connection_secure_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([21])(input)?;
+        let (input, response) = domain_longstr(input)?;
+        if response.is_empty() {
+            fail!()
+        }
+        Ok((input, Class::Connection(Connection::SecureOk { response })))
+    }
+    fn connection_tune(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([30])(input)?;
+        let (input, channel_max) = domain_short(input)?;
+        let (input, frame_max) = domain_long(input)?;
+        let (input, heartbeat) = domain_short(input)?;
+        Ok((
+            input,
+            Class::Connection(Connection::Tune {
+                channel_max,
+                frame_max,
+                heartbeat,
+            }),
+        ))
+    }
+    fn connection_tune_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([31])(input)?;
+        let (input, channel_max) = domain_short(input)?;
+        if channel_max == 0 {
+            fail!()
+        }
+        let (input, frame_max) = domain_long(input)?;
+        let (input, heartbeat) = domain_short(input)?;
+        Ok((
+            input,
+            Class::Connection(Connection::TuneOk {
+                channel_max,
+                frame_max,
+                heartbeat,
+            }),
+        ))
+    }
+    fn connection_open(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([40])(input)?;
+        let (input, virtual_host) = domain_path(input)?;
+        let (input, reserved_1) = domain_shortstr(input)?;
+        let (input, bits) = bit(input, 1)?;
+        let reserved_2 = bits[0];
+        Ok((
+            input,
+            Class::Connection(Connection::Open {
+                virtual_host,
+                reserved_1,
+                reserved_2,
+            }),
+        ))
+    }
+    fn connection_open_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([41])(input)?;
+        let (input, reserved_1) = domain_shortstr(input)?;
+        Ok((input, Class::Connection(Connection::OpenOk { reserved_1 })))
+    }
+    fn connection_close(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([50])(input)?;
+        let (input, reply_code) = domain_reply_code(input)?;
+        let (input, reply_text) = domain_reply_text(input)?;
+        let (input, class_id) = domain_class_id(input)?;
+        let (input, method_id) = domain_method_id(input)?;
+        Ok((
+            input,
+            Class::Connection(Connection::Close {
+                reply_code,
+                reply_text,
+                class_id,
+                method_id,
+            }),
+        ))
+    }
+    fn connection_close_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([51])(input)?;
+        Ok((input, Class::Connection(Connection::CloseOk {})))
+    }
+    fn connection_blocked(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([60])(input)?;
+        let (input, reason) = domain_shortstr(input)?;
+        Ok((input, Class::Connection(Connection::Blocked { reason })))
+    }
+    fn connection_unblocked(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([61])(input)?;
+        Ok((input, Class::Connection(Connection::Unblocked {})))
+    }
+    fn channel(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([20])(input)?;
+        alt((
+            channel_open,
+            channel_open_ok,
+            channel_flow,
+            channel_flow_ok,
+            channel_close,
+            channel_close_ok,
+        ))(input)
+    }
+    fn channel_open(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([10])(input)?;
+        let (input, reserved_1) = domain_shortstr(input)?;
+        Ok((input, Class::Channel(Channel::Open { reserved_1 })))
+    }
+    fn channel_open_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([11])(input)?;
+        let (input, reserved_1) = domain_longstr(input)?;
+        Ok((input, Class::Channel(Channel::OpenOk { reserved_1 })))
+    }
+    fn channel_flow(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([20])(input)?;
+        let (input, bits) = bit(input, 1)?;
+        let active = bits[0];
+        Ok((input, Class::Channel(Channel::Flow { active })))
+    }
+    fn channel_flow_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([21])(input)?;
+        let (input, bits) = bit(input, 1)?;
+        let active = bits[0];
+        Ok((input, Class::Channel(Channel::FlowOk { active })))
+    }
+    fn channel_close(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([40])(input)?;
+        let (input, reply_code) = domain_reply_code(input)?;
+        let (input, reply_text) = domain_reply_text(input)?;
+        let (input, class_id) = domain_class_id(input)?;
+        let (input, method_id) = domain_method_id(input)?;
+        Ok((
+            input,
+            Class::Channel(Channel::Close {
+                reply_code,
+                reply_text,
+                class_id,
+                method_id,
+            }),
+        ))
+    }
+    fn channel_close_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([41])(input)?;
+        Ok((input, Class::Channel(Channel::CloseOk {})))
+    }
+    fn exchange(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([40])(input)?;
+        alt((
+            exchange_declare,
+            exchange_declare_ok,
+            exchange_delete,
+            exchange_delete_ok,
+        ))(input)
+    }
+    fn exchange_declare(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([10])(input)?;
+        let (input, reserved_1) = domain_short(input)?;
+        let (input, exchange) = domain_exchange_name(input)?;
+        if exchange.is_empty() {
+            fail!()
+        }
+        let (input, r#type) = domain_shortstr(input)?;
+        let (input, bits) = bit(input, 5)?;
+        let passive = bits[0];
+        let durable = bits[1];
+        let reserved_2 = bits[2];
+        let reserved_3 = bits[3];
+        let no_wait = bits[4];
+        let (input, arguments) = domain_table(input)?;
+        Ok((
+            input,
+            Class::Exchange(Exchange::Declare {
+                reserved_1,
+                exchange,
+                r#type,
+                passive,
+                durable,
+                reserved_2,
+                reserved_3,
+                no_wait,
+                arguments,
+            }),
+        ))
+    }
+    fn exchange_declare_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([11])(input)?;
+        Ok((input, Class::Exchange(Exchange::DeclareOk {})))
+    }
+    fn exchange_delete(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([20])(input)?;
+        let (input, reserved_1) = domain_short(input)?;
+        let (input, exchange) = domain_exchange_name(input)?;
+        if exchange.is_empty() {
+            fail!()
+        }
+        let (input, bits) = bit(input, 2)?;
+        let if_unused = bits[0];
+        let no_wait = bits[1];
+        Ok((
+            input,
+            Class::Exchange(Exchange::Delete {
+                reserved_1,
+                exchange,
+                if_unused,
+                no_wait,
+            }),
+        ))
+    }
+    fn exchange_delete_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([21])(input)?;
+        Ok((input, Class::Exchange(Exchange::DeleteOk {})))
+    }
+    fn queue(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([50])(input)?;
+        alt((
+            queue_declare,
+            queue_declare_ok,
+            queue_bind,
+            queue_bind_ok,
+            queue_unbind,
+            queue_unbind_ok,
+            queue_purge,
+            queue_purge_ok,
+            queue_delete,
+            queue_delete_ok,
+        ))(input)
+    }
+    fn queue_declare(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([10])(input)?;
+        let (input, reserved_1) = domain_short(input)?;
+        let (input, queue) = domain_queue_name(input)?;
+        let (input, bits) = bit(input, 5)?;
+        let passive = bits[0];
+        let durable = bits[1];
+        let exclusive = bits[2];
+        let auto_delete = bits[3];
+        let no_wait = bits[4];
+        let (input, arguments) = domain_table(input)?;
+        Ok((
+            input,
+            Class::Queue(Queue::Declare {
+                reserved_1,
+                queue,
+                passive,
+                durable,
+                exclusive,
+                auto_delete,
+                no_wait,
+                arguments,
+            }),
+        ))
+    }
+    fn queue_declare_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([11])(input)?;
+        let (input, queue) = domain_queue_name(input)?;
+        if queue.is_empty() {
+            fail!()
+        }
+        let (input, message_count) = domain_message_count(input)?;
+        let (input, consumer_count) = domain_long(input)?;
+        Ok((
+            input,
+            Class::Queue(Queue::DeclareOk {
+                queue,
+                message_count,
+                consumer_count,
+            }),
+        ))
+    }
+    fn queue_bind(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([20])(input)?;
+        let (input, reserved_1) = domain_short(input)?;
+        let (input, queue) = domain_queue_name(input)?;
+        let (input, exchange) = domain_exchange_name(input)?;
+        let (input, routing_key) = domain_shortstr(input)?;
+        let (input, bits) = bit(input, 1)?;
+        let no_wait = bits[0];
+        let (input, arguments) = domain_table(input)?;
+        Ok((
+            input,
+            Class::Queue(Queue::Bind {
+                reserved_1,
+                queue,
+                exchange,
+                routing_key,
+                no_wait,
+                arguments,
+            }),
+        ))
+    }
+    fn queue_bind_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([21])(input)?;
+        Ok((input, Class::Queue(Queue::BindOk {})))
+    }
+    fn queue_unbind(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([50])(input)?;
+        let (input, reserved_1) = domain_short(input)?;
+        let (input, queue) = domain_queue_name(input)?;
+        let (input, exchange) = domain_exchange_name(input)?;
+        let (input, routing_key) = domain_shortstr(input)?;
+        let (input, arguments) = domain_table(input)?;
+        Ok((
+            input,
+            Class::Queue(Queue::Unbind {
+                reserved_1,
+                queue,
+                exchange,
+                routing_key,
+                arguments,
+            }),
+        ))
+    }
+    fn queue_unbind_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([51])(input)?;
+        Ok((input, Class::Queue(Queue::UnbindOk {})))
+    }
+    fn queue_purge(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([30])(input)?;
+        let (input, reserved_1) = domain_short(input)?;
+        let (input, queue) = domain_queue_name(input)?;
+        let (input, bits) = bit(input, 1)?;
+        let no_wait = bits[0];
+        Ok((
+            input,
+            Class::Queue(Queue::Purge {
+                reserved_1,
+                queue,
+                no_wait,
+            }),
+        ))
+    }
+    fn queue_purge_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([31])(input)?;
+        let (input, message_count) = domain_message_count(input)?;
+        Ok((input, Class::Queue(Queue::PurgeOk { message_count })))
+    }
+    fn queue_delete(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([40])(input)?;
+        let (input, reserved_1) = domain_short(input)?;
+        let (input, queue) = domain_queue_name(input)?;
+        let (input, bits) = bit(input, 3)?;
+        let if_unused = bits[0];
+        let if_empty = bits[1];
+        let no_wait = bits[2];
+        Ok((
+            input,
+            Class::Queue(Queue::Delete {
+                reserved_1,
+                queue,
+                if_unused,
+                if_empty,
+                no_wait,
+            }),
+        ))
+    }
+    fn queue_delete_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([41])(input)?;
+        let (input, message_count) = domain_message_count(input)?;
+        Ok((input, Class::Queue(Queue::DeleteOk { message_count })))
+    }
+    fn basic(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([60])(input)?;
+        alt((
+            basic_qos,
+            basic_qos_ok,
+            basic_consume,
+            basic_consume_ok,
+            basic_cancel,
+            basic_cancel_ok,
+            basic_publish,
+            basic_return,
+            basic_deliver,
+            basic_get,
+            basic_get_ok,
+            basic_get_empty,
+            basic_ack,
+            basic_reject,
+            basic_recover_async,
+            basic_recover,
+            basic_recover_ok,
+        ))(input)
+    }
+    fn basic_qos(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([10])(input)?;
+        let (input, prefetch_size) = domain_long(input)?;
+        let (input, prefetch_count) = domain_short(input)?;
+        let (input, bits) = bit(input, 1)?;
+        let global = bits[0];
+        Ok((
+            input,
+            Class::Basic(Basic::Qos {
+                prefetch_size,
+                prefetch_count,
+                global,
+            }),
+        ))
+    }
+    fn basic_qos_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([11])(input)?;
+        Ok((input, Class::Basic(Basic::QosOk {})))
+    }
+    fn basic_consume(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([20])(input)?;
+        let (input, reserved_1) = domain_short(input)?;
+        let (input, queue) = domain_queue_name(input)?;
+        let (input, consumer_tag) = domain_consumer_tag(input)?;
+        let (input, bits) = bit(input, 4)?;
+        let no_local = bits[0];
+        let no_ack = bits[1];
+        let exclusive = bits[2];
+        let no_wait = bits[3];
+        let (input, arguments) = domain_table(input)?;
+        Ok((
+            input,
+            Class::Basic(Basic::Consume {
+                reserved_1,
+                queue,
+                consumer_tag,
+                no_local,
+                no_ack,
+                exclusive,
+                no_wait,
+                arguments,
+            }),
+        ))
+    }
+    fn basic_consume_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([21])(input)?;
+        let (input, consumer_tag) = domain_consumer_tag(input)?;
+        Ok((input, Class::Basic(Basic::ConsumeOk { consumer_tag })))
+    }
+    fn basic_cancel(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([30])(input)?;
+        let (input, consumer_tag) = domain_consumer_tag(input)?;
+        let (input, bits) = bit(input, 1)?;
+        let no_wait = bits[0];
+        Ok((
+            input,
+            Class::Basic(Basic::Cancel {
+                consumer_tag,
+                no_wait,
+            }),
+        ))
+    }
+    fn basic_cancel_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([31])(input)?;
+        let (input, consumer_tag) = domain_consumer_tag(input)?;
+        Ok((input, Class::Basic(Basic::CancelOk { consumer_tag })))
+    }
+    fn basic_publish(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([40])(input)?;
+        let (input, reserved_1) = domain_short(input)?;
+        let (input, exchange) = domain_exchange_name(input)?;
+        let (input, routing_key) = domain_shortstr(input)?;
+        let (input, bits) = bit(input, 2)?;
+        let mandatory = bits[0];
+        let immediate = bits[1];
+        Ok((
+            input,
+            Class::Basic(Basic::Publish {
+                reserved_1,
+                exchange,
+                routing_key,
+                mandatory,
+                immediate,
+            }),
+        ))
+    }
+    fn basic_return(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([50])(input)?;
+        let (input, reply_code) = domain_reply_code(input)?;
+        let (input, reply_text) = domain_reply_text(input)?;
+        let (input, exchange) = domain_exchange_name(input)?;
+        let (input, routing_key) = domain_shortstr(input)?;
+        Ok((
+            input,
+            Class::Basic(Basic::Return {
+                reply_code,
+                reply_text,
+                exchange,
+                routing_key,
+            }),
+        ))
+    }
+    fn basic_deliver(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([60])(input)?;
+        let (input, consumer_tag) = domain_consumer_tag(input)?;
+        let (input, delivery_tag) = domain_delivery_tag(input)?;
+        let (input, bits) = bit(input, 1)?;
+        let redelivered = bits[0];
+        let (input, exchange) = domain_exchange_name(input)?;
+        let (input, routing_key) = domain_shortstr(input)?;
+        Ok((
+            input,
+            Class::Basic(Basic::Deliver {
+                consumer_tag,
+                delivery_tag,
+                redelivered,
+                exchange,
+                routing_key,
+            }),
+        ))
+    }
+    fn basic_get(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([70])(input)?;
+        let (input, reserved_1) = domain_short(input)?;
+        let (input, queue) = domain_queue_name(input)?;
+        let (input, bits) = bit(input, 1)?;
+        let no_ack = bits[0];
+        Ok((
+            input,
+            Class::Basic(Basic::Get {
+                reserved_1,
+                queue,
+                no_ack,
+            }),
+        ))
+    }
+    fn basic_get_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([71])(input)?;
+        let (input, delivery_tag) = domain_delivery_tag(input)?;
+        let (input, bits) = bit(input, 1)?;
+        let redelivered = bits[0];
+        let (input, exchange) = domain_exchange_name(input)?;
+        let (input, routing_key) = domain_shortstr(input)?;
+        let (input, message_count) = domain_message_count(input)?;
+        Ok((
+            input,
+            Class::Basic(Basic::GetOk {
+                delivery_tag,
+                redelivered,
+                exchange,
+                routing_key,
+                message_count,
+            }),
+        ))
+    }
+    fn basic_get_empty(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([72])(input)?;
+        let (input, reserved_1) = domain_shortstr(input)?;
+        Ok((input, Class::Basic(Basic::GetEmpty { reserved_1 })))
+    }
+    fn basic_ack(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([80])(input)?;
+        let (input, delivery_tag) = domain_delivery_tag(input)?;
+        let (input, bits) = bit(input, 1)?;
+        let multiple = bits[0];
+        Ok((
+            input,
+            Class::Basic(Basic::Ack {
+                delivery_tag,
+                multiple,
+            }),
+        ))
+    }
+    fn basic_reject(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([90])(input)?;
+        let (input, delivery_tag) = domain_delivery_tag(input)?;
+        let (input, bits) = bit(input, 1)?;
+        let requeue = bits[0];
+        Ok((
+            input,
+            Class::Basic(Basic::Reject {
+                delivery_tag,
+                requeue,
+            }),
+        ))
+    }
+    fn basic_recover_async(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([100])(input)?;
+        let (input, bits) = bit(input, 1)?;
+        let requeue = bits[0];
+        Ok((input, Class::Basic(Basic::RecoverAsync { requeue })))
+    }
+    fn basic_recover(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([110])(input)?;
+        let (input, bits) = bit(input, 1)?;
+        let requeue = bits[0];
+        Ok((input, Class::Basic(Basic::Recover { requeue })))
+    }
+    fn basic_recover_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([111])(input)?;
+        Ok((input, Class::Basic(Basic::RecoverOk {})))
+    }
+    fn tx(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([90])(input)?;
+        alt((
+            tx_select,
+            tx_select_ok,
+            tx_commit,
+            tx_commit_ok,
+            tx_rollback,
+            tx_rollback_ok,
+        ))(input)
+    }
+    fn tx_select(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([10])(input)?;
+        Ok((input, Class::Tx(Tx::Select {})))
+    }
+    fn tx_select_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([11])(input)?;
+        Ok((input, Class::Tx(Tx::SelectOk {})))
+    }
+    fn tx_commit(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([20])(input)?;
+        Ok((input, Class::Tx(Tx::Commit {})))
+    }
+    fn tx_commit_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([21])(input)?;
+        Ok((input, Class::Tx(Tx::CommitOk {})))
+    }
+    fn tx_rollback(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([30])(input)?;
+        Ok((input, Class::Tx(Tx::Rollback {})))
+    }
+    fn tx_rollback_ok(input: &[u8]) -> IResult<Class> {
+        let (input, _) = tag([31])(input)?;
+        Ok((input, Class::Tx(Tx::RollbackOk {})))
+    }
 }
 pub mod write {
-use super::*;
-use crate::classes::write_helper::*;
-use crate::error::TransError;
-use std::io::Write;
+    use super::*;
+    use crate::classes::write_helper::*;
+    use crate::error::TransError;
+    use std::io::Write;
 
-pub fn write_method<W: Write>(class: Class, mut writer: W) -> Result<(), TransError> {
-    match class {
-        Class::Connection(Connection::Start {
-            version_major,
-            version_minor,
-            server_properties,
-            mechanisms,
-            locales,
-        }) => {
-            writer.write_all(&[0, 10, 0, 10])?;
-            octet(version_major, &mut writer)?;
-            octet(version_minor, &mut writer)?;
-            table(server_properties, &mut writer)?;
-            longstr(mechanisms, &mut writer)?;
-            longstr(locales, &mut writer)?;
+    pub fn write_method<W: Write>(class: Class, mut writer: W) -> Result<(), TransError> {
+        match class {
+            Class::Connection(Connection::Start {
+                version_major,
+                version_minor,
+                server_properties,
+                mechanisms,
+                locales,
+            }) => {
+                writer.write_all(&[0, 10, 0, 10])?;
+                octet(version_major, &mut writer)?;
+                octet(version_minor, &mut writer)?;
+                table(server_properties, &mut writer)?;
+                longstr(mechanisms, &mut writer)?;
+                longstr(locales, &mut writer)?;
+            }
+            Class::Connection(Connection::StartOk {
+                client_properties,
+                mechanism,
+                response,
+                locale,
+            }) => {
+                writer.write_all(&[0, 10, 0, 11])?;
+                table(client_properties, &mut writer)?;
+                shortstr(mechanism, &mut writer)?;
+                longstr(response, &mut writer)?;
+                shortstr(locale, &mut writer)?;
+            }
+            Class::Connection(Connection::Secure { challenge }) => {
+                writer.write_all(&[0, 10, 0, 20])?;
+                longstr(challenge, &mut writer)?;
+            }
+            Class::Connection(Connection::SecureOk { response }) => {
+                writer.write_all(&[0, 10, 0, 21])?;
+                longstr(response, &mut writer)?;
+            }
+            Class::Connection(Connection::Tune {
+                channel_max,
+                frame_max,
+                heartbeat,
+            }) => {
+                writer.write_all(&[0, 10, 0, 30])?;
+                short(channel_max, &mut writer)?;
+                long(frame_max, &mut writer)?;
+                short(heartbeat, &mut writer)?;
+            }
+            Class::Connection(Connection::TuneOk {
+                channel_max,
+                frame_max,
+                heartbeat,
+            }) => {
+                writer.write_all(&[0, 10, 0, 31])?;
+                short(channel_max, &mut writer)?;
+                long(frame_max, &mut writer)?;
+                short(heartbeat, &mut writer)?;
+            }
+            Class::Connection(Connection::Open {
+                virtual_host,
+                reserved_1,
+                reserved_2,
+            }) => {
+                writer.write_all(&[0, 10, 0, 40])?;
+                shortstr(virtual_host, &mut writer)?;
+                shortstr(reserved_1, &mut writer)?;
+                bit(&[reserved_2], &mut writer)?;
+            }
+            Class::Connection(Connection::OpenOk { reserved_1 }) => {
+                writer.write_all(&[0, 10, 0, 41])?;
+                shortstr(reserved_1, &mut writer)?;
+            }
+            Class::Connection(Connection::Close {
+                reply_code,
+                reply_text,
+                class_id,
+                method_id,
+            }) => {
+                writer.write_all(&[0, 10, 0, 50])?;
+                short(reply_code, &mut writer)?;
+                shortstr(reply_text, &mut writer)?;
+                short(class_id, &mut writer)?;
+                short(method_id, &mut writer)?;
+            }
+            Class::Connection(Connection::CloseOk {}) => {
+                writer.write_all(&[0, 10, 0, 51])?;
+            }
+            Class::Connection(Connection::Blocked { reason }) => {
+                writer.write_all(&[0, 10, 0, 60])?;
+                shortstr(reason, &mut writer)?;
+            }
+            Class::Connection(Connection::Unblocked {}) => {
+                writer.write_all(&[0, 10, 0, 61])?;
+            }
+            Class::Channel(Channel::Open { reserved_1 }) => {
+                writer.write_all(&[0, 20, 0, 10])?;
+                shortstr(reserved_1, &mut writer)?;
+            }
+            Class::Channel(Channel::OpenOk { reserved_1 }) => {
+                writer.write_all(&[0, 20, 0, 11])?;
+                longstr(reserved_1, &mut writer)?;
+            }
+            Class::Channel(Channel::Flow { active }) => {
+                writer.write_all(&[0, 20, 0, 20])?;
+                bit(&[active], &mut writer)?;
+            }
+            Class::Channel(Channel::FlowOk { active }) => {
+                writer.write_all(&[0, 20, 0, 21])?;
+                bit(&[active], &mut writer)?;
+            }
+            Class::Channel(Channel::Close {
+                reply_code,
+                reply_text,
+                class_id,
+                method_id,
+            }) => {
+                writer.write_all(&[0, 20, 0, 40])?;
+                short(reply_code, &mut writer)?;
+                shortstr(reply_text, &mut writer)?;
+                short(class_id, &mut writer)?;
+                short(method_id, &mut writer)?;
+            }
+            Class::Channel(Channel::CloseOk {}) => {
+                writer.write_all(&[0, 20, 0, 41])?;
+            }
+            Class::Exchange(Exchange::Declare {
+                reserved_1,
+                exchange,
+                r#type,
+                passive,
+                durable,
+                reserved_2,
+                reserved_3,
+                no_wait,
+                arguments,
+            }) => {
+                writer.write_all(&[0, 40, 0, 10])?;
+                short(reserved_1, &mut writer)?;
+                shortstr(exchange, &mut writer)?;
+                shortstr(r#type, &mut writer)?;
+                bit(
+                    &[passive, durable, reserved_2, reserved_3, no_wait],
+                    &mut writer,
+                )?;
+                table(arguments, &mut writer)?;
+            }
+            Class::Exchange(Exchange::DeclareOk {}) => {
+                writer.write_all(&[0, 40, 0, 11])?;
+            }
+            Class::Exchange(Exchange::Delete {
+                reserved_1,
+                exchange,
+                if_unused,
+                no_wait,
+            }) => {
+                writer.write_all(&[0, 40, 0, 20])?;
+                short(reserved_1, &mut writer)?;
+                shortstr(exchange, &mut writer)?;
+                bit(&[if_unused, no_wait], &mut writer)?;
+            }
+            Class::Exchange(Exchange::DeleteOk {}) => {
+                writer.write_all(&[0, 40, 0, 21])?;
+            }
+            Class::Queue(Queue::Declare {
+                reserved_1,
+                queue,
+                passive,
+                durable,
+                exclusive,
+                auto_delete,
+                no_wait,
+                arguments,
+            }) => {
+                writer.write_all(&[0, 50, 0, 10])?;
+                short(reserved_1, &mut writer)?;
+                shortstr(queue, &mut writer)?;
+                bit(
+                    &[passive, durable, exclusive, auto_delete, no_wait],
+                    &mut writer,
+                )?;
+                table(arguments, &mut writer)?;
+            }
+            Class::Queue(Queue::DeclareOk {
+                queue,
+                message_count,
+                consumer_count,
+            }) => {
+                writer.write_all(&[0, 50, 0, 11])?;
+                shortstr(queue, &mut writer)?;
+                long(message_count, &mut writer)?;
+                long(consumer_count, &mut writer)?;
+            }
+            Class::Queue(Queue::Bind {
+                reserved_1,
+                queue,
+                exchange,
+                routing_key,
+                no_wait,
+                arguments,
+            }) => {
+                writer.write_all(&[0, 50, 0, 20])?;
+                short(reserved_1, &mut writer)?;
+                shortstr(queue, &mut writer)?;
+                shortstr(exchange, &mut writer)?;
+                shortstr(routing_key, &mut writer)?;
+                bit(&[no_wait], &mut writer)?;
+                table(arguments, &mut writer)?;
+            }
+            Class::Queue(Queue::BindOk {}) => {
+                writer.write_all(&[0, 50, 0, 21])?;
+            }
+            Class::Queue(Queue::Unbind {
+                reserved_1,
+                queue,
+                exchange,
+                routing_key,
+                arguments,
+            }) => {
+                writer.write_all(&[0, 50, 0, 50])?;
+                short(reserved_1, &mut writer)?;
+                shortstr(queue, &mut writer)?;
+                shortstr(exchange, &mut writer)?;
+                shortstr(routing_key, &mut writer)?;
+                table(arguments, &mut writer)?;
+            }
+            Class::Queue(Queue::UnbindOk {}) => {
+                writer.write_all(&[0, 50, 0, 51])?;
+            }
+            Class::Queue(Queue::Purge {
+                reserved_1,
+                queue,
+                no_wait,
+            }) => {
+                writer.write_all(&[0, 50, 0, 30])?;
+                short(reserved_1, &mut writer)?;
+                shortstr(queue, &mut writer)?;
+                bit(&[no_wait], &mut writer)?;
+            }
+            Class::Queue(Queue::PurgeOk { message_count }) => {
+                writer.write_all(&[0, 50, 0, 31])?;
+                long(message_count, &mut writer)?;
+            }
+            Class::Queue(Queue::Delete {
+                reserved_1,
+                queue,
+                if_unused,
+                if_empty,
+                no_wait,
+            }) => {
+                writer.write_all(&[0, 50, 0, 40])?;
+                short(reserved_1, &mut writer)?;
+                shortstr(queue, &mut writer)?;
+                bit(&[if_unused, if_empty, no_wait], &mut writer)?;
+            }
+            Class::Queue(Queue::DeleteOk { message_count }) => {
+                writer.write_all(&[0, 50, 0, 41])?;
+                long(message_count, &mut writer)?;
+            }
+            Class::Basic(Basic::Qos {
+                prefetch_size,
+                prefetch_count,
+                global,
+            }) => {
+                writer.write_all(&[0, 60, 0, 10])?;
+                long(prefetch_size, &mut writer)?;
+                short(prefetch_count, &mut writer)?;
+                bit(&[global], &mut writer)?;
+            }
+            Class::Basic(Basic::QosOk {}) => {
+                writer.write_all(&[0, 60, 0, 11])?;
+            }
+            Class::Basic(Basic::Consume {
+                reserved_1,
+                queue,
+                consumer_tag,
+                no_local,
+                no_ack,
+                exclusive,
+                no_wait,
+                arguments,
+            }) => {
+                writer.write_all(&[0, 60, 0, 20])?;
+                short(reserved_1, &mut writer)?;
+                shortstr(queue, &mut writer)?;
+                shortstr(consumer_tag, &mut writer)?;
+                bit(&[no_local, no_ack, exclusive, no_wait], &mut writer)?;
+                table(arguments, &mut writer)?;
+            }
+            Class::Basic(Basic::ConsumeOk { consumer_tag }) => {
+                writer.write_all(&[0, 60, 0, 21])?;
+                shortstr(consumer_tag, &mut writer)?;
+            }
+            Class::Basic(Basic::Cancel {
+                consumer_tag,
+                no_wait,
+            }) => {
+                writer.write_all(&[0, 60, 0, 30])?;
+                shortstr(consumer_tag, &mut writer)?;
+                bit(&[no_wait], &mut writer)?;
+            }
+            Class::Basic(Basic::CancelOk { consumer_tag }) => {
+                writer.write_all(&[0, 60, 0, 31])?;
+                shortstr(consumer_tag, &mut writer)?;
+            }
+            Class::Basic(Basic::Publish {
+                reserved_1,
+                exchange,
+                routing_key,
+                mandatory,
+                immediate,
+            }) => {
+                writer.write_all(&[0, 60, 0, 40])?;
+                short(reserved_1, &mut writer)?;
+                shortstr(exchange, &mut writer)?;
+                shortstr(routing_key, &mut writer)?;
+                bit(&[mandatory, immediate], &mut writer)?;
+            }
+            Class::Basic(Basic::Return {
+                reply_code,
+                reply_text,
+                exchange,
+                routing_key,
+            }) => {
+                writer.write_all(&[0, 60, 0, 50])?;
+                short(reply_code, &mut writer)?;
+                shortstr(reply_text, &mut writer)?;
+                shortstr(exchange, &mut writer)?;
+                shortstr(routing_key, &mut writer)?;
+            }
+            Class::Basic(Basic::Deliver {
+                consumer_tag,
+                delivery_tag,
+                redelivered,
+                exchange,
+                routing_key,
+            }) => {
+                writer.write_all(&[0, 60, 0, 60])?;
+                shortstr(consumer_tag, &mut writer)?;
+                longlong(delivery_tag, &mut writer)?;
+                bit(&[redelivered], &mut writer)?;
+                shortstr(exchange, &mut writer)?;
+                shortstr(routing_key, &mut writer)?;
+            }
+            Class::Basic(Basic::Get {
+                reserved_1,
+                queue,
+                no_ack,
+            }) => {
+                writer.write_all(&[0, 60, 0, 70])?;
+                short(reserved_1, &mut writer)?;
+                shortstr(queue, &mut writer)?;
+                bit(&[no_ack], &mut writer)?;
+            }
+            Class::Basic(Basic::GetOk {
+                delivery_tag,
+                redelivered,
+                exchange,
+                routing_key,
+                message_count,
+            }) => {
+                writer.write_all(&[0, 60, 0, 71])?;
+                longlong(delivery_tag, &mut writer)?;
+                bit(&[redelivered], &mut writer)?;
+                shortstr(exchange, &mut writer)?;
+                shortstr(routing_key, &mut writer)?;
+                long(message_count, &mut writer)?;
+            }
+            Class::Basic(Basic::GetEmpty { reserved_1 }) => {
+                writer.write_all(&[0, 60, 0, 72])?;
+                shortstr(reserved_1, &mut writer)?;
+            }
+            Class::Basic(Basic::Ack {
+                delivery_tag,
+                multiple,
+            }) => {
+                writer.write_all(&[0, 60, 0, 80])?;
+                longlong(delivery_tag, &mut writer)?;
+                bit(&[multiple], &mut writer)?;
+            }
+            Class::Basic(Basic::Reject {
+                delivery_tag,
+                requeue,
+            }) => {
+                writer.write_all(&[0, 60, 0, 90])?;
+                longlong(delivery_tag, &mut writer)?;
+                bit(&[requeue], &mut writer)?;
+            }
+            Class::Basic(Basic::RecoverAsync { requeue }) => {
+                writer.write_all(&[0, 60, 0, 100])?;
+                bit(&[requeue], &mut writer)?;
+            }
+            Class::Basic(Basic::Recover { requeue }) => {
+                writer.write_all(&[0, 60, 0, 110])?;
+                bit(&[requeue], &mut writer)?;
+            }
+            Class::Basic(Basic::RecoverOk {}) => {
+                writer.write_all(&[0, 60, 0, 111])?;
+            }
+            Class::Tx(Tx::Select {}) => {
+                writer.write_all(&[0, 90, 0, 10])?;
+            }
+            Class::Tx(Tx::SelectOk {}) => {
+                writer.write_all(&[0, 90, 0, 11])?;
+            }
+            Class::Tx(Tx::Commit {}) => {
+                writer.write_all(&[0, 90, 0, 20])?;
+            }
+            Class::Tx(Tx::CommitOk {}) => {
+                writer.write_all(&[0, 90, 0, 21])?;
+            }
+            Class::Tx(Tx::Rollback {}) => {
+                writer.write_all(&[0, 90, 0, 30])?;
+            }
+            Class::Tx(Tx::RollbackOk {}) => {
+                writer.write_all(&[0, 90, 0, 31])?;
+            }
         }
-        Class::Connection(Connection::StartOk {
-            client_properties,
-            mechanism,
-            response,
-            locale,
-        }) => {
-            writer.write_all(&[0, 10, 0, 11])?;
-            table(client_properties, &mut writer)?;
-            shortstr(mechanism, &mut writer)?;
-            longstr(response, &mut writer)?;
-            shortstr(locale, &mut writer)?;
-        }
-        Class::Connection(Connection::Secure {
-            challenge,
-        }) => {
-            writer.write_all(&[0, 10, 0, 20])?;
-            longstr(challenge, &mut writer)?;
-        }
-        Class::Connection(Connection::SecureOk {
-            response,
-        }) => {
-            writer.write_all(&[0, 10, 0, 21])?;
-            longstr(response, &mut writer)?;
-        }
-        Class::Connection(Connection::Tune {
-            channel_max,
-            frame_max,
-            heartbeat,
-        }) => {
-            writer.write_all(&[0, 10, 0, 30])?;
-            short(channel_max, &mut writer)?;
-            long(frame_max, &mut writer)?;
-            short(heartbeat, &mut writer)?;
-        }
-        Class::Connection(Connection::TuneOk {
-            channel_max,
-            frame_max,
-            heartbeat,
-        }) => {
-            writer.write_all(&[0, 10, 0, 31])?;
-            short(channel_max, &mut writer)?;
-            long(frame_max, &mut writer)?;
-            short(heartbeat, &mut writer)?;
-        }
-        Class::Connection(Connection::Open {
-            virtual_host,
-            reserved_1,
-            reserved_2,
-        }) => {
-            writer.write_all(&[0, 10, 0, 40])?;
-            shortstr(virtual_host, &mut writer)?;
-            shortstr(reserved_1, &mut writer)?;
-            bit(&[reserved_2, ], &mut writer)?;
-        }
-        Class::Connection(Connection::OpenOk {
-            reserved_1,
-        }) => {
-            writer.write_all(&[0, 10, 0, 41])?;
-            shortstr(reserved_1, &mut writer)?;
-        }
-        Class::Connection(Connection::Close {
-            reply_code,
-            reply_text,
-            class_id,
-            method_id,
-        }) => {
-            writer.write_all(&[0, 10, 0, 50])?;
-            short(reply_code, &mut writer)?;
-            shortstr(reply_text, &mut writer)?;
-            short(class_id, &mut writer)?;
-            short(method_id, &mut writer)?;
-        }
-        Class::Connection(Connection::CloseOk {
-        }) => {
-            writer.write_all(&[0, 10, 0, 51])?;
-        }
-        Class::Connection(Connection::Blocked {
-            reason,
-        }) => {
-            writer.write_all(&[0, 10, 0, 60])?;
-            shortstr(reason, &mut writer)?;
-        }
-        Class::Connection(Connection::Unblocked {
-        }) => {
-            writer.write_all(&[0, 10, 0, 61])?;
-        }
-        Class::Channel(Channel::Open {
-            reserved_1,
-        }) => {
-            writer.write_all(&[0, 20, 0, 10])?;
-            shortstr(reserved_1, &mut writer)?;
-        }
-        Class::Channel(Channel::OpenOk {
-            reserved_1,
-        }) => {
-            writer.write_all(&[0, 20, 0, 11])?;
-            longstr(reserved_1, &mut writer)?;
-        }
-        Class::Channel(Channel::Flow {
-            active,
-        }) => {
-            writer.write_all(&[0, 20, 0, 20])?;
-            bit(&[active, ], &mut writer)?;
-        }
-        Class::Channel(Channel::FlowOk {
-            active,
-        }) => {
-            writer.write_all(&[0, 20, 0, 21])?;
-            bit(&[active, ], &mut writer)?;
-        }
-        Class::Channel(Channel::Close {
-            reply_code,
-            reply_text,
-            class_id,
-            method_id,
-        }) => {
-            writer.write_all(&[0, 20, 0, 40])?;
-            short(reply_code, &mut writer)?;
-            shortstr(reply_text, &mut writer)?;
-            short(class_id, &mut writer)?;
-            short(method_id, &mut writer)?;
-        }
-        Class::Channel(Channel::CloseOk {
-        }) => {
-            writer.write_all(&[0, 20, 0, 41])?;
-        }
-        Class::Exchange(Exchange::Declare {
-            reserved_1,
-            exchange,
-            r#type,
-            passive,
-            durable,
-            reserved_2,
-            reserved_3,
-            no_wait,
-            arguments,
-        }) => {
-            writer.write_all(&[0, 40, 0, 10])?;
-            short(reserved_1, &mut writer)?;
-            shortstr(exchange, &mut writer)?;
-            shortstr(r#type, &mut writer)?;
-            bit(&[passive, durable, reserved_2, reserved_3, no_wait, ], &mut writer)?;
-            table(arguments, &mut writer)?;
-        }
-        Class::Exchange(Exchange::DeclareOk {
-        }) => {
-            writer.write_all(&[0, 40, 0, 11])?;
-        }
-        Class::Exchange(Exchange::Delete {
-            reserved_1,
-            exchange,
-            if_unused,
-            no_wait,
-        }) => {
-            writer.write_all(&[0, 40, 0, 20])?;
-            short(reserved_1, &mut writer)?;
-            shortstr(exchange, &mut writer)?;
-            bit(&[if_unused, no_wait, ], &mut writer)?;
-        }
-        Class::Exchange(Exchange::DeleteOk {
-        }) => {
-            writer.write_all(&[0, 40, 0, 21])?;
-        }
-        Class::Queue(Queue::Declare {
-            reserved_1,
-            queue,
-            passive,
-            durable,
-            exclusive,
-            auto_delete,
-            no_wait,
-            arguments,
-        }) => {
-            writer.write_all(&[0, 50, 0, 10])?;
-            short(reserved_1, &mut writer)?;
-            shortstr(queue, &mut writer)?;
-            bit(&[passive, durable, exclusive, auto_delete, no_wait, ], &mut writer)?;
-            table(arguments, &mut writer)?;
-        }
-        Class::Queue(Queue::DeclareOk {
-            queue,
-            message_count,
-            consumer_count,
-        }) => {
-            writer.write_all(&[0, 50, 0, 11])?;
-            shortstr(queue, &mut writer)?;
-            long(message_count, &mut writer)?;
-            long(consumer_count, &mut writer)?;
-        }
-        Class::Queue(Queue::Bind {
-            reserved_1,
-            queue,
-            exchange,
-            routing_key,
-            no_wait,
-            arguments,
-        }) => {
-            writer.write_all(&[0, 50, 0, 20])?;
-            short(reserved_1, &mut writer)?;
-            shortstr(queue, &mut writer)?;
-            shortstr(exchange, &mut writer)?;
-            shortstr(routing_key, &mut writer)?;
-            bit(&[no_wait, ], &mut writer)?;
-            table(arguments, &mut writer)?;
-        }
-        Class::Queue(Queue::BindOk {
-        }) => {
-            writer.write_all(&[0, 50, 0, 21])?;
-        }
-        Class::Queue(Queue::Unbind {
-            reserved_1,
-            queue,
-            exchange,
-            routing_key,
-            arguments,
-        }) => {
-            writer.write_all(&[0, 50, 0, 50])?;
-            short(reserved_1, &mut writer)?;
-            shortstr(queue, &mut writer)?;
-            shortstr(exchange, &mut writer)?;
-            shortstr(routing_key, &mut writer)?;
-            table(arguments, &mut writer)?;
-        }
-        Class::Queue(Queue::UnbindOk {
-        }) => {
-            writer.write_all(&[0, 50, 0, 51])?;
-        }
-        Class::Queue(Queue::Purge {
-            reserved_1,
-            queue,
-            no_wait,
-        }) => {
-            writer.write_all(&[0, 50, 0, 30])?;
-            short(reserved_1, &mut writer)?;
-            shortstr(queue, &mut writer)?;
-            bit(&[no_wait, ], &mut writer)?;
-        }
-        Class::Queue(Queue::PurgeOk {
-            message_count,
-        }) => {
-            writer.write_all(&[0, 50, 0, 31])?;
-            long(message_count, &mut writer)?;
-        }
-        Class::Queue(Queue::Delete {
-            reserved_1,
-            queue,
-            if_unused,
-            if_empty,
-            no_wait,
-        }) => {
-            writer.write_all(&[0, 50, 0, 40])?;
-            short(reserved_1, &mut writer)?;
-            shortstr(queue, &mut writer)?;
-            bit(&[if_unused, if_empty, no_wait, ], &mut writer)?;
-        }
-        Class::Queue(Queue::DeleteOk {
-            message_count,
-        }) => {
-            writer.write_all(&[0, 50, 0, 41])?;
-            long(message_count, &mut writer)?;
-        }
-        Class::Basic(Basic::Qos {
-            prefetch_size,
-            prefetch_count,
-            global,
-        }) => {
-            writer.write_all(&[0, 60, 0, 10])?;
-            long(prefetch_size, &mut writer)?;
-            short(prefetch_count, &mut writer)?;
-            bit(&[global, ], &mut writer)?;
-        }
-        Class::Basic(Basic::QosOk {
-        }) => {
-            writer.write_all(&[0, 60, 0, 11])?;
-        }
-        Class::Basic(Basic::Consume {
-            reserved_1,
-            queue,
-            consumer_tag,
-            no_local,
-            no_ack,
-            exclusive,
-            no_wait,
-            arguments,
-        }) => {
-            writer.write_all(&[0, 60, 0, 20])?;
-            short(reserved_1, &mut writer)?;
-            shortstr(queue, &mut writer)?;
-            shortstr(consumer_tag, &mut writer)?;
-            bit(&[no_local, no_ack, exclusive, no_wait, ], &mut writer)?;
-            table(arguments, &mut writer)?;
-        }
-        Class::Basic(Basic::ConsumeOk {
-            consumer_tag,
-        }) => {
-            writer.write_all(&[0, 60, 0, 21])?;
-            shortstr(consumer_tag, &mut writer)?;
-        }
-        Class::Basic(Basic::Cancel {
-            consumer_tag,
-            no_wait,
-        }) => {
-            writer.write_all(&[0, 60, 0, 30])?;
-            shortstr(consumer_tag, &mut writer)?;
-            bit(&[no_wait, ], &mut writer)?;
-        }
-        Class::Basic(Basic::CancelOk {
-            consumer_tag,
-        }) => {
-            writer.write_all(&[0, 60, 0, 31])?;
-            shortstr(consumer_tag, &mut writer)?;
-        }
-        Class::Basic(Basic::Publish {
-            reserved_1,
-            exchange,
-            routing_key,
-            mandatory,
-            immediate,
-        }) => {
-            writer.write_all(&[0, 60, 0, 40])?;
-            short(reserved_1, &mut writer)?;
-            shortstr(exchange, &mut writer)?;
-            shortstr(routing_key, &mut writer)?;
-            bit(&[mandatory, immediate, ], &mut writer)?;
-        }
-        Class::Basic(Basic::Return {
-            reply_code,
-            reply_text,
-            exchange,
-            routing_key,
-        }) => {
-            writer.write_all(&[0, 60, 0, 50])?;
-            short(reply_code, &mut writer)?;
-            shortstr(reply_text, &mut writer)?;
-            shortstr(exchange, &mut writer)?;
-            shortstr(routing_key, &mut writer)?;
-        }
-        Class::Basic(Basic::Deliver {
-            consumer_tag,
-            delivery_tag,
-            redelivered,
-            exchange,
-            routing_key,
-        }) => {
-            writer.write_all(&[0, 60, 0, 60])?;
-            shortstr(consumer_tag, &mut writer)?;
-            longlong(delivery_tag, &mut writer)?;
-            bit(&[redelivered, ], &mut writer)?;
-            shortstr(exchange, &mut writer)?;
-            shortstr(routing_key, &mut writer)?;
-        }
-        Class::Basic(Basic::Get {
-            reserved_1,
-            queue,
-            no_ack,
-        }) => {
-            writer.write_all(&[0, 60, 0, 70])?;
-            short(reserved_1, &mut writer)?;
-            shortstr(queue, &mut writer)?;
-            bit(&[no_ack, ], &mut writer)?;
-        }
-        Class::Basic(Basic::GetOk {
-            delivery_tag,
-            redelivered,
-            exchange,
-            routing_key,
-            message_count,
-        }) => {
-            writer.write_all(&[0, 60, 0, 71])?;
-            longlong(delivery_tag, &mut writer)?;
-            bit(&[redelivered, ], &mut writer)?;
-            shortstr(exchange, &mut writer)?;
-            shortstr(routing_key, &mut writer)?;
-            long(message_count, &mut writer)?;
-        }
-        Class::Basic(Basic::GetEmpty {
-            reserved_1,
-        }) => {
-            writer.write_all(&[0, 60, 0, 72])?;
-            shortstr(reserved_1, &mut writer)?;
-        }
-        Class::Basic(Basic::Ack {
-            delivery_tag,
-            multiple,
-        }) => {
-            writer.write_all(&[0, 60, 0, 80])?;
-            longlong(delivery_tag, &mut writer)?;
-            bit(&[multiple, ], &mut writer)?;
-        }
-        Class::Basic(Basic::Reject {
-            delivery_tag,
-            requeue,
-        }) => {
-            writer.write_all(&[0, 60, 0, 90])?;
-            longlong(delivery_tag, &mut writer)?;
-            bit(&[requeue, ], &mut writer)?;
-        }
-        Class::Basic(Basic::RecoverAsync {
-            requeue,
-        }) => {
-            writer.write_all(&[0, 60, 0, 100])?;
-            bit(&[requeue, ], &mut writer)?;
-        }
-        Class::Basic(Basic::Recover {
-            requeue,
-        }) => {
-            writer.write_all(&[0, 60, 0, 110])?;
-            bit(&[requeue, ], &mut writer)?;
-        }
-        Class::Basic(Basic::RecoverOk {
-        }) => {
-            writer.write_all(&[0, 60, 0, 111])?;
-        }
-        Class::Tx(Tx::Select {
-        }) => {
-            writer.write_all(&[0, 90, 0, 10])?;
-        }
-        Class::Tx(Tx::SelectOk {
-        }) => {
-            writer.write_all(&[0, 90, 0, 11])?;
-        }
-        Class::Tx(Tx::Commit {
-        }) => {
-            writer.write_all(&[0, 90, 0, 20])?;
-        }
-        Class::Tx(Tx::CommitOk {
-        }) => {
-            writer.write_all(&[0, 90, 0, 21])?;
-        }
-        Class::Tx(Tx::Rollback {
-        }) => {
-            writer.write_all(&[0, 90, 0, 30])?;
-        }
-        Class::Tx(Tx::RollbackOk {
-        }) => {
-            writer.write_all(&[0, 90, 0, 31])?;
-        }
+        Ok(())
     }
-    Ok(())
-}
 }
 #[cfg(test)]
 mod random {
-use rand::Rng;
-use crate::classes::tests::RandomMethod;
-use super::*;
+    use super::*;
+    use crate::classes::tests::RandomMethod;
+    use rand::Rng;
 
-impl<R: Rng> RandomMethod<R> for Class {
-    fn random(rng: &mut R) -> Self {
-        match rand::thread_rng().gen_range(0u32..6) {
-            0 => Class::Connection(Connection::random(rng)),
-            1 => Class::Channel(Channel::random(rng)),
-            2 => Class::Exchange(Exchange::random(rng)),
-            3 => Class::Queue(Queue::random(rng)),
-            4 => Class::Basic(Basic::random(rng)),
-            5 => Class::Tx(Tx::random(rng)),
-            _ => unreachable!(),
+    impl<R: Rng> RandomMethod<R> for Class {
+        fn random(rng: &mut R) -> Self {
+            match rand::thread_rng().gen_range(0u32..6) {
+                0 => Class::Connection(Connection::random(rng)),
+                1 => Class::Channel(Channel::random(rng)),
+                2 => Class::Exchange(Exchange::random(rng)),
+                3 => Class::Queue(Queue::random(rng)),
+                4 => Class::Basic(Basic::random(rng)),
+                5 => Class::Tx(Tx::random(rng)),
+                _ => unreachable!(),
             }
+        }
     }
-}
-impl<R: Rng> RandomMethod<R> for Connection {
-    fn random(rng: &mut R) -> Self {
-        match rand::thread_rng().gen_range(0u32..12) {
-            0 => Connection::Start {
-                version_major: RandomMethod::random(rng),
-                version_minor: RandomMethod::random(rng),
-                server_properties: RandomMethod::random(rng),
-                mechanisms: RandomMethod::random(rng),
-                locales: RandomMethod::random(rng),
-            },
-            1 => Connection::StartOk {
-                client_properties: RandomMethod::random(rng),
-                mechanism: RandomMethod::random(rng),
-                response: RandomMethod::random(rng),
-                locale: RandomMethod::random(rng),
-            },
-            2 => Connection::Secure {
-                challenge: RandomMethod::random(rng),
-            },
-            3 => Connection::SecureOk {
-                response: RandomMethod::random(rng),
-            },
-            4 => Connection::Tune {
-                channel_max: RandomMethod::random(rng),
-                frame_max: RandomMethod::random(rng),
-                heartbeat: RandomMethod::random(rng),
-            },
-            5 => Connection::TuneOk {
-                channel_max: RandomMethod::random(rng),
-                frame_max: RandomMethod::random(rng),
-                heartbeat: RandomMethod::random(rng),
-            },
-            6 => Connection::Open {
-                virtual_host: RandomMethod::random(rng),
-                reserved_1: RandomMethod::random(rng),
-                reserved_2: RandomMethod::random(rng),
-            },
-            7 => Connection::OpenOk {
-                reserved_1: RandomMethod::random(rng),
-            },
-            8 => Connection::Close {
-                reply_code: RandomMethod::random(rng),
-                reply_text: RandomMethod::random(rng),
-                class_id: RandomMethod::random(rng),
-                method_id: RandomMethod::random(rng),
-            },
-            9 => Connection::CloseOk {
-            },
-            10 => Connection::Blocked {
-                reason: RandomMethod::random(rng),
-            },
-            11 => Connection::Unblocked {
-            },
-            _ => unreachable!(),
+    impl<R: Rng> RandomMethod<R> for Connection {
+        fn random(rng: &mut R) -> Self {
+            match rand::thread_rng().gen_range(0u32..12) {
+                0 => Connection::Start {
+                    version_major: RandomMethod::random(rng),
+                    version_minor: RandomMethod::random(rng),
+                    server_properties: RandomMethod::random(rng),
+                    mechanisms: RandomMethod::random(rng),
+                    locales: RandomMethod::random(rng),
+                },
+                1 => Connection::StartOk {
+                    client_properties: RandomMethod::random(rng),
+                    mechanism: RandomMethod::random(rng),
+                    response: RandomMethod::random(rng),
+                    locale: RandomMethod::random(rng),
+                },
+                2 => Connection::Secure {
+                    challenge: RandomMethod::random(rng),
+                },
+                3 => Connection::SecureOk {
+                    response: RandomMethod::random(rng),
+                },
+                4 => Connection::Tune {
+                    channel_max: RandomMethod::random(rng),
+                    frame_max: RandomMethod::random(rng),
+                    heartbeat: RandomMethod::random(rng),
+                },
+                5 => Connection::TuneOk {
+                    channel_max: RandomMethod::random(rng),
+                    frame_max: RandomMethod::random(rng),
+                    heartbeat: RandomMethod::random(rng),
+                },
+                6 => Connection::Open {
+                    virtual_host: RandomMethod::random(rng),
+                    reserved_1: RandomMethod::random(rng),
+                    reserved_2: RandomMethod::random(rng),
+                },
+                7 => Connection::OpenOk {
+                    reserved_1: RandomMethod::random(rng),
+                },
+                8 => Connection::Close {
+                    reply_code: RandomMethod::random(rng),
+                    reply_text: RandomMethod::random(rng),
+                    class_id: RandomMethod::random(rng),
+                    method_id: RandomMethod::random(rng),
+                },
+                9 => Connection::CloseOk {},
+                10 => Connection::Blocked {
+                    reason: RandomMethod::random(rng),
+                },
+                11 => Connection::Unblocked {},
+                _ => unreachable!(),
             }
+        }
     }
-}
-impl<R: Rng> RandomMethod<R> for Channel {
-    fn random(rng: &mut R) -> Self {
-        match rand::thread_rng().gen_range(0u32..6) {
-            0 => Channel::Open {
-                reserved_1: RandomMethod::random(rng),
-            },
-            1 => Channel::OpenOk {
-                reserved_1: RandomMethod::random(rng),
-            },
-            2 => Channel::Flow {
-                active: RandomMethod::random(rng),
-            },
-            3 => Channel::FlowOk {
-                active: RandomMethod::random(rng),
-            },
-            4 => Channel::Close {
-                reply_code: RandomMethod::random(rng),
-                reply_text: RandomMethod::random(rng),
-                class_id: RandomMethod::random(rng),
-                method_id: RandomMethod::random(rng),
-            },
-            5 => Channel::CloseOk {
-            },
-            _ => unreachable!(),
+    impl<R: Rng> RandomMethod<R> for Channel {
+        fn random(rng: &mut R) -> Self {
+            match rand::thread_rng().gen_range(0u32..6) {
+                0 => Channel::Open {
+                    reserved_1: RandomMethod::random(rng),
+                },
+                1 => Channel::OpenOk {
+                    reserved_1: RandomMethod::random(rng),
+                },
+                2 => Channel::Flow {
+                    active: RandomMethod::random(rng),
+                },
+                3 => Channel::FlowOk {
+                    active: RandomMethod::random(rng),
+                },
+                4 => Channel::Close {
+                    reply_code: RandomMethod::random(rng),
+                    reply_text: RandomMethod::random(rng),
+                    class_id: RandomMethod::random(rng),
+                    method_id: RandomMethod::random(rng),
+                },
+                5 => Channel::CloseOk {},
+                _ => unreachable!(),
             }
+        }
     }
-}
-impl<R: Rng> RandomMethod<R> for Exchange {
-    fn random(rng: &mut R) -> Self {
-        match rand::thread_rng().gen_range(0u32..4) {
-            0 => Exchange::Declare {
-                reserved_1: RandomMethod::random(rng),
-                exchange: RandomMethod::random(rng),
-                r#type: RandomMethod::random(rng),
-                passive: RandomMethod::random(rng),
-                durable: RandomMethod::random(rng),
-                reserved_2: RandomMethod::random(rng),
-                reserved_3: RandomMethod::random(rng),
-                no_wait: RandomMethod::random(rng),
-                arguments: RandomMethod::random(rng),
-            },
-            1 => Exchange::DeclareOk {
-            },
-            2 => Exchange::Delete {
-                reserved_1: RandomMethod::random(rng),
-                exchange: RandomMethod::random(rng),
-                if_unused: RandomMethod::random(rng),
-                no_wait: RandomMethod::random(rng),
-            },
-            3 => Exchange::DeleteOk {
-            },
-            _ => unreachable!(),
+    impl<R: Rng> RandomMethod<R> for Exchange {
+        fn random(rng: &mut R) -> Self {
+            match rand::thread_rng().gen_range(0u32..4) {
+                0 => Exchange::Declare {
+                    reserved_1: RandomMethod::random(rng),
+                    exchange: RandomMethod::random(rng),
+                    r#type: RandomMethod::random(rng),
+                    passive: RandomMethod::random(rng),
+                    durable: RandomMethod::random(rng),
+                    reserved_2: RandomMethod::random(rng),
+                    reserved_3: RandomMethod::random(rng),
+                    no_wait: RandomMethod::random(rng),
+                    arguments: RandomMethod::random(rng),
+                },
+                1 => Exchange::DeclareOk {},
+                2 => Exchange::Delete {
+                    reserved_1: RandomMethod::random(rng),
+                    exchange: RandomMethod::random(rng),
+                    if_unused: RandomMethod::random(rng),
+                    no_wait: RandomMethod::random(rng),
+                },
+                3 => Exchange::DeleteOk {},
+                _ => unreachable!(),
             }
+        }
     }
-}
-impl<R: Rng> RandomMethod<R> for Queue {
-    fn random(rng: &mut R) -> Self {
-        match rand::thread_rng().gen_range(0u32..10) {
-            0 => Queue::Declare {
-                reserved_1: RandomMethod::random(rng),
-                queue: RandomMethod::random(rng),
-                passive: RandomMethod::random(rng),
-                durable: RandomMethod::random(rng),
-                exclusive: RandomMethod::random(rng),
-                auto_delete: RandomMethod::random(rng),
-                no_wait: RandomMethod::random(rng),
-                arguments: RandomMethod::random(rng),
-            },
-            1 => Queue::DeclareOk {
-                queue: RandomMethod::random(rng),
-                message_count: RandomMethod::random(rng),
-                consumer_count: RandomMethod::random(rng),
-            },
-            2 => Queue::Bind {
-                reserved_1: RandomMethod::random(rng),
-                queue: RandomMethod::random(rng),
-                exchange: RandomMethod::random(rng),
-                routing_key: RandomMethod::random(rng),
-                no_wait: RandomMethod::random(rng),
-                arguments: RandomMethod::random(rng),
-            },
-            3 => Queue::BindOk {
-            },
-            4 => Queue::Unbind {
-                reserved_1: RandomMethod::random(rng),
-                queue: RandomMethod::random(rng),
-                exchange: RandomMethod::random(rng),
-                routing_key: RandomMethod::random(rng),
-                arguments: RandomMethod::random(rng),
-            },
-            5 => Queue::UnbindOk {
-            },
-            6 => Queue::Purge {
-                reserved_1: RandomMethod::random(rng),
-                queue: RandomMethod::random(rng),
-                no_wait: RandomMethod::random(rng),
-            },
-            7 => Queue::PurgeOk {
-                message_count: RandomMethod::random(rng),
-            },
-            8 => Queue::Delete {
-                reserved_1: RandomMethod::random(rng),
-                queue: RandomMethod::random(rng),
-                if_unused: RandomMethod::random(rng),
-                if_empty: RandomMethod::random(rng),
-                no_wait: RandomMethod::random(rng),
-            },
-            9 => Queue::DeleteOk {
-                message_count: RandomMethod::random(rng),
-            },
-            _ => unreachable!(),
+    impl<R: Rng> RandomMethod<R> for Queue {
+        fn random(rng: &mut R) -> Self {
+            match rand::thread_rng().gen_range(0u32..10) {
+                0 => Queue::Declare {
+                    reserved_1: RandomMethod::random(rng),
+                    queue: RandomMethod::random(rng),
+                    passive: RandomMethod::random(rng),
+                    durable: RandomMethod::random(rng),
+                    exclusive: RandomMethod::random(rng),
+                    auto_delete: RandomMethod::random(rng),
+                    no_wait: RandomMethod::random(rng),
+                    arguments: RandomMethod::random(rng),
+                },
+                1 => Queue::DeclareOk {
+                    queue: RandomMethod::random(rng),
+                    message_count: RandomMethod::random(rng),
+                    consumer_count: RandomMethod::random(rng),
+                },
+                2 => Queue::Bind {
+                    reserved_1: RandomMethod::random(rng),
+                    queue: RandomMethod::random(rng),
+                    exchange: RandomMethod::random(rng),
+                    routing_key: RandomMethod::random(rng),
+                    no_wait: RandomMethod::random(rng),
+                    arguments: RandomMethod::random(rng),
+                },
+                3 => Queue::BindOk {},
+                4 => Queue::Unbind {
+                    reserved_1: RandomMethod::random(rng),
+                    queue: RandomMethod::random(rng),
+                    exchange: RandomMethod::random(rng),
+                    routing_key: RandomMethod::random(rng),
+                    arguments: RandomMethod::random(rng),
+                },
+                5 => Queue::UnbindOk {},
+                6 => Queue::Purge {
+                    reserved_1: RandomMethod::random(rng),
+                    queue: RandomMethod::random(rng),
+                    no_wait: RandomMethod::random(rng),
+                },
+                7 => Queue::PurgeOk {
+                    message_count: RandomMethod::random(rng),
+                },
+                8 => Queue::Delete {
+                    reserved_1: RandomMethod::random(rng),
+                    queue: RandomMethod::random(rng),
+                    if_unused: RandomMethod::random(rng),
+                    if_empty: RandomMethod::random(rng),
+                    no_wait: RandomMethod::random(rng),
+                },
+                9 => Queue::DeleteOk {
+                    message_count: RandomMethod::random(rng),
+                },
+                _ => unreachable!(),
             }
+        }
     }
-}
-impl<R: Rng> RandomMethod<R> for Basic {
-    fn random(rng: &mut R) -> Self {
-        match rand::thread_rng().gen_range(0u32..17) {
-            0 => Basic::Qos {
-                prefetch_size: RandomMethod::random(rng),
-                prefetch_count: RandomMethod::random(rng),
-                global: RandomMethod::random(rng),
-            },
-            1 => Basic::QosOk {
-            },
-            2 => Basic::Consume {
-                reserved_1: RandomMethod::random(rng),
-                queue: RandomMethod::random(rng),
-                consumer_tag: RandomMethod::random(rng),
-                no_local: RandomMethod::random(rng),
-                no_ack: RandomMethod::random(rng),
-                exclusive: RandomMethod::random(rng),
-                no_wait: RandomMethod::random(rng),
-                arguments: RandomMethod::random(rng),
-            },
-            3 => Basic::ConsumeOk {
-                consumer_tag: RandomMethod::random(rng),
-            },
-            4 => Basic::Cancel {
-                consumer_tag: RandomMethod::random(rng),
-                no_wait: RandomMethod::random(rng),
-            },
-            5 => Basic::CancelOk {
-                consumer_tag: RandomMethod::random(rng),
-            },
-            6 => Basic::Publish {
-                reserved_1: RandomMethod::random(rng),
-                exchange: RandomMethod::random(rng),
-                routing_key: RandomMethod::random(rng),
-                mandatory: RandomMethod::random(rng),
-                immediate: RandomMethod::random(rng),
-            },
-            7 => Basic::Return {
-                reply_code: RandomMethod::random(rng),
-                reply_text: RandomMethod::random(rng),
-                exchange: RandomMethod::random(rng),
-                routing_key: RandomMethod::random(rng),
-            },
-            8 => Basic::Deliver {
-                consumer_tag: RandomMethod::random(rng),
-                delivery_tag: RandomMethod::random(rng),
-                redelivered: RandomMethod::random(rng),
-                exchange: RandomMethod::random(rng),
-                routing_key: RandomMethod::random(rng),
-            },
-            9 => Basic::Get {
-                reserved_1: RandomMethod::random(rng),
-                queue: RandomMethod::random(rng),
-                no_ack: RandomMethod::random(rng),
-            },
-            10 => Basic::GetOk {
-                delivery_tag: RandomMethod::random(rng),
-                redelivered: RandomMethod::random(rng),
-                exchange: RandomMethod::random(rng),
-                routing_key: RandomMethod::random(rng),
-                message_count: RandomMethod::random(rng),
-            },
-            11 => Basic::GetEmpty {
-                reserved_1: RandomMethod::random(rng),
-            },
-            12 => Basic::Ack {
-                delivery_tag: RandomMethod::random(rng),
-                multiple: RandomMethod::random(rng),
-            },
-            13 => Basic::Reject {
-                delivery_tag: RandomMethod::random(rng),
-                requeue: RandomMethod::random(rng),
-            },
-            14 => Basic::RecoverAsync {
-                requeue: RandomMethod::random(rng),
-            },
-            15 => Basic::Recover {
-                requeue: RandomMethod::random(rng),
-            },
-            16 => Basic::RecoverOk {
-            },
-            _ => unreachable!(),
+    impl<R: Rng> RandomMethod<R> for Basic {
+        fn random(rng: &mut R) -> Self {
+            match rand::thread_rng().gen_range(0u32..17) {
+                0 => Basic::Qos {
+                    prefetch_size: RandomMethod::random(rng),
+                    prefetch_count: RandomMethod::random(rng),
+                    global: RandomMethod::random(rng),
+                },
+                1 => Basic::QosOk {},
+                2 => Basic::Consume {
+                    reserved_1: RandomMethod::random(rng),
+                    queue: RandomMethod::random(rng),
+                    consumer_tag: RandomMethod::random(rng),
+                    no_local: RandomMethod::random(rng),
+                    no_ack: RandomMethod::random(rng),
+                    exclusive: RandomMethod::random(rng),
+                    no_wait: RandomMethod::random(rng),
+                    arguments: RandomMethod::random(rng),
+                },
+                3 => Basic::ConsumeOk {
+                    consumer_tag: RandomMethod::random(rng),
+                },
+                4 => Basic::Cancel {
+                    consumer_tag: RandomMethod::random(rng),
+                    no_wait: RandomMethod::random(rng),
+                },
+                5 => Basic::CancelOk {
+                    consumer_tag: RandomMethod::random(rng),
+                },
+                6 => Basic::Publish {
+                    reserved_1: RandomMethod::random(rng),
+                    exchange: RandomMethod::random(rng),
+                    routing_key: RandomMethod::random(rng),
+                    mandatory: RandomMethod::random(rng),
+                    immediate: RandomMethod::random(rng),
+                },
+                7 => Basic::Return {
+                    reply_code: RandomMethod::random(rng),
+                    reply_text: RandomMethod::random(rng),
+                    exchange: RandomMethod::random(rng),
+                    routing_key: RandomMethod::random(rng),
+                },
+                8 => Basic::Deliver {
+                    consumer_tag: RandomMethod::random(rng),
+                    delivery_tag: RandomMethod::random(rng),
+                    redelivered: RandomMethod::random(rng),
+                    exchange: RandomMethod::random(rng),
+                    routing_key: RandomMethod::random(rng),
+                },
+                9 => Basic::Get {
+                    reserved_1: RandomMethod::random(rng),
+                    queue: RandomMethod::random(rng),
+                    no_ack: RandomMethod::random(rng),
+                },
+                10 => Basic::GetOk {
+                    delivery_tag: RandomMethod::random(rng),
+                    redelivered: RandomMethod::random(rng),
+                    exchange: RandomMethod::random(rng),
+                    routing_key: RandomMethod::random(rng),
+                    message_count: RandomMethod::random(rng),
+                },
+                11 => Basic::GetEmpty {
+                    reserved_1: RandomMethod::random(rng),
+                },
+                12 => Basic::Ack {
+                    delivery_tag: RandomMethod::random(rng),
+                    multiple: RandomMethod::random(rng),
+                },
+                13 => Basic::Reject {
+                    delivery_tag: RandomMethod::random(rng),
+                    requeue: RandomMethod::random(rng),
+                },
+                14 => Basic::RecoverAsync {
+                    requeue: RandomMethod::random(rng),
+                },
+                15 => Basic::Recover {
+                    requeue: RandomMethod::random(rng),
+                },
+                16 => Basic::RecoverOk {},
+                _ => unreachable!(),
             }
+        }
     }
-}
-impl<R: Rng> RandomMethod<R> for Tx {
-    fn random(rng: &mut R) -> Self {
-        match rand::thread_rng().gen_range(0u32..6) {
-            0 => Tx::Select {
-            },
-            1 => Tx::SelectOk {
-            },
-            2 => Tx::Commit {
-            },
-            3 => Tx::CommitOk {
-            },
-            4 => Tx::Rollback {
-            },
-            5 => Tx::RollbackOk {
-            },
-            _ => unreachable!(),
+    impl<R: Rng> RandomMethod<R> for Tx {
+        fn random(rng: &mut R) -> Self {
+            match rand::thread_rng().gen_range(0u32..6) {
+                0 => Tx::Select {},
+                1 => Tx::SelectOk {},
+                2 => Tx::Commit {},
+                3 => Tx::CommitOk {},
+                4 => Tx::Rollback {},
+                5 => Tx::RollbackOk {},
+                _ => unreachable!(),
             }
+        }
     }
-}
 }
