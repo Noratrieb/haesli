@@ -6,7 +6,7 @@ use crate::error::{ConException, ProtocolError, TransError};
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take};
 use nom::error::ErrorKind;
-use nom::multi::count;
+use nom::multi::{count, many0};
 use nom::number::complete::{f32, f64, i16, i32, i64, i8, u16, u32, u64, u8};
 use nom::number::Endianness::Big;
 use nom::Err;
@@ -140,10 +140,20 @@ pub fn timestamp(input: &[u8]) -> IResult<Timestamp> {
 }
 
 pub fn table(input: &[u8]) -> IResult<Table> {
-    let (input, len) = u32(Big)(input)?;
-    let (input, values) = count(table_value_pair, usize::try_from(len).unwrap())(input)?;
+    let (input, size) = u32(Big)(input)?;
+    let (table_input, rest_input) = input.split_at(size.try_into().unwrap());
+
+    let (input, values) = many0(table_value_pair)(table_input)?;
+
+    if input != &[] {
+        fail!(format!(
+            "table longer than expected, expected = {size}, remaining = {}",
+            input.len()
+        ));
+    }
+
     let table = HashMap::from_iter(values.into_iter());
-    Ok((input, table))
+    Ok((rest_input, table))
 }
 
 fn table_value_pair(input: &[u8]) -> IResult<(TableFieldName, FieldValue)> {

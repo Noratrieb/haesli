@@ -63,12 +63,12 @@ impl Connection {
         let mut payload = Vec::with_capacity(64);
         classes::write::write_method(start_method, &mut payload)?;
         frame::write_frame(
-            &mut self.stream,
             &Frame {
                 kind: FrameType::Method,
                 channel: 0,
                 payload,
             },
+            &mut self.stream,
         )
         .await?;
 
@@ -132,12 +132,12 @@ fn server_properties(host: SocketAddr) -> classes::Table {
     };
 
     HashMap::from([
-        ("host".to_string(), host_value),
-        ("product".to_string(), ss("no name yet")),
+        //("host".to_string(), host_value),
+        //("product".to_string(), ss("no name yet")),
         ("version".to_string(), ss("0.1.0")),
-        ("platform".to_string(), ss("microsoft linux")),
-        ("copyright".to_string(), ss("MIT")),
-        ("information".to_string(), ss("hello reader")),
-        ("uwu".to_string(), ss("owo")),
+        //("platform".to_string(), ss("microsoft linux")),
+        //("copyright".to_string(), ss("MIT")),
+        //("information".to_string(), ss("hello reader")),
+        //("uwu".to_string(), ss("owo")),
     ])
 }

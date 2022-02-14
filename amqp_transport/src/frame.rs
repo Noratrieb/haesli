@@ -30,7 +30,7 @@ pub enum FrameType {
     Heartbeat = 8,
 }
 
-pub async fn write_frame<W>(mut w: W, frame: &Frame) -> Result<()>
+pub async fn write_frame<W>(frame: &Frame, mut w: W, ) -> Result<()>
 where
     W: AsyncWriteExt + Unpin,
 {

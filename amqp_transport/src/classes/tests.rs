@@ -99,7 +99,7 @@ fn pack_many_bits() {
 
 #[test]
 fn random_ser_de() {
-    const ITERATIONS: usize = 100000;
+    const ITERATIONS: usize = 1000;
     let mut rng = rand::rngs::StdRng::from_seed([0; 32]);
 
     for _ in 0..ITERATIONS {

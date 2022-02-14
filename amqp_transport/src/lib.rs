@@ -6,6 +6,8 @@ mod classes;
 mod connection;
 mod error;
 mod frame;
+#[cfg(test)]
+mod tests;
 
 use crate::connection::Connection;
 use anyhow::Result;

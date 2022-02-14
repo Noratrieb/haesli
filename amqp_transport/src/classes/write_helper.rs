@@ -74,13 +74,16 @@ pub fn timestamp<W: Write>(value: Timestamp, writer: &mut W) -> Result<(), Trans
 }
 
 pub fn table<W: Write>(table: Table, writer: &mut W) -> Result<(), TransError> {
-    let len = u32::try_from(table.len()).context("table too big")?;
-    writer.write_all(&len.to_be_bytes())?;
+    let mut table_buf = Vec::new();
 
     for (field_name, value) in table {
-        shortstr(field_name, writer)?;
-        field_value(value, writer)?;
+        shortstr(field_name, &mut table_buf)?;
+        field_value(value, &mut table_buf)?;
     }
+
+    let len = u32::try_from(table_buf.len()).context("table too big")?;
+    writer.write_all(&len.to_be_bytes())?;
+    writer.write_all(&table_buf)?;
 
     Ok(())
 }
