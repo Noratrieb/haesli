@@ -2,55 +2,125 @@
 
 pub type ClassId = u16;
 
+/// consumer tag
+///
+/// Identifier for the consumer, valid within the current channel.
 pub type ConsumerTag = String;
 
+/// server-assigned delivery tag
+///
+/// The server-assigned and channel-specific delivery tag
 pub type DeliveryTag = u64;
 
+/// exchange name
+///
 /// must be shorter than 127, must match `^[a-zA-Z0-9-_.:]*$`
+///
+/// The exchange name is a client-selected string that identifies the exchange for
+/// publish methods.
 pub type ExchangeName = String;
 
 pub type MethodId = u16;
 
+/// no acknowledgement needed
+///
+/// If this field is set the server does not expect acknowledgements for
+/// messages. That is, when a message is delivered to the client the server
+/// assumes the delivery will succeed and immediately dequeues it. This
+/// functionality may increase performance but at the cost of reliability.
+/// Messages can get lost if a client dies before they are delivered to the
+/// application.
 pub type NoAck = bool;
 
+/// do not deliver own messages
+///
+/// If the no-local field is set the server will not send messages to the connection that
+/// published them.
 pub type NoLocal = bool;
 
+/// do not send reply method
+///
+/// If set, the server will not respond to the method. The client should not wait
+/// for a reply method. If the server could not complete the method it will raise a
+/// channel or connection exception.
 pub type NoWait = bool;
 
 /// must not be null, must be shorter than 127
+///
+/// Unconstrained.
 pub type Path = String;
 
+///
+/// This table provides a set of peer properties, used for identification, debugging,
+/// and general information.
 pub type PeerProperties = super::Table;
 
+/// queue name
+///
 /// must be shorter than 127, must match `^[a-zA-Z0-9-_.:]*$`
+///
+/// The queue name identifies the queue within the vhost.  In methods where the queue
+/// name may be blank, and that has no specific significance, this refers to the
+/// 'current' queue for the channel, meaning the last queue that the client declared
+/// on the channel.  If the client did not declare a queue, and the method needs a
+/// queue name, this will result in a 502 (syntax error) channel exception.
 pub type QueueName = String;
 
+/// message is being redelivered
+///
+/// This indicates that the message has been previously delivered to this or
+/// another client.
 pub type Redelivered = bool;
 
+/// number of messages in queue
+///
+/// The number of messages in the queue, which will be zero for newly-declared
+/// queues. This is the number of messages present in the queue, and committed
+/// if the channel on which they were published is transacted, that are not
+/// waiting acknowledgement.
 pub type MessageCount = u32;
 
+/// reply code from server
+///
 /// must not be null
+///
+/// The reply code. The AMQ reply codes are defined as constants at the start
+/// of this formal specification.
 pub type ReplyCode = u16;
 
+/// localised reply text
+///
 /// must not be null
+///
+/// The localised reply text. This text can be logged as an aid to resolving
+/// issues.
 pub type ReplyText = String;
 
+/// single bit
 pub type Bit = bool;
 
+/// single octet
 pub type Octet = u8;
 
+/// 16-bit integer
 pub type Short = u16;
 
+/// 32-bit integer
 pub type Long = u32;
 
+/// 64-bit integer
 pub type Longlong = u64;
 
+/// short string (max. 256 characters)
 pub type Shortstr = String;
 
+/// long string
 pub type Longstr = Vec<u8>;
 
+/// 64-bit timestamp
 pub type Timestamp = u64;
 
+/// field table
 pub type Table = super::Table;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -63,283 +133,557 @@ pub enum Class {
     Tx(Tx),
 }
 
-/// Index 10, handler = connection
+/// The connection class provides methods for a client to establish a network connection to
+/// a server, and for both peers to operate the connection thereafter.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Connection {
-    /// Index 10
+    /// This method starts the connection negotiation process by telling the client the
+    /// protocol version that the server proposes, along with a list of security mechanisms
+    /// which the client can use for authentication.
     Start {
+        /// The major version number can take any value from 0 to 99 as defined in the
+        /// AMQP specification.
         version_major: Octet,
+        /// The minor version number can take any value from 0 to 99 as defined in the
+        /// AMQP specification.
         version_minor: Octet,
         server_properties: PeerProperties,
         /// must not be null
+        ///
+        /// A list of the security mechanisms that the server supports, delimited by spaces.
         mechanisms: Longstr,
         /// must not be null
+        ///
+        /// A list of the message locales that the server supports, delimited by spaces. The
+        /// locale defines the language in which the server will send reply texts.
         locales: Longstr,
     },
-    /// Index 11
+    /// This method selects a SASL security mechanism.
     StartOk {
         client_properties: PeerProperties,
         /// must not be null
+        ///
+        /// A single security mechanisms selected by the client, which must be one of those
+        /// specified by the server.
         mechanism: Shortstr,
         /// must not be null
+        ///
+        /// A block of opaque data passed to the security mechanism. The contents of this
+        /// data are defined by the SASL security mechanism.
         response: Longstr,
         /// must not be null
+        ///
+        /// A single message locale selected by the client, which must be one of those
+        /// specified by the server.
         locale: Shortstr,
     },
-    /// Index 20
-    Secure { challenge: Longstr },
-    /// Index 21
+    /// The SASL protocol works by exchanging challenges and responses until both peers have
+    /// received sufficient information to authenticate each other. This method challenges
+    /// the client to provide more information.
+    Secure {
+        /// Challenge information, a block of opaque binary data passed to the security
+        /// mechanism.
+        challenge: Longstr,
+    },
+    /// This method attempts to authenticate, passing a block of SASL data for the security
+    /// mechanism at the server side.
     SecureOk {
         /// must not be null
+        ///
+        /// A block of opaque data passed to the security mechanism. The contents of this
+        /// data are defined by the SASL security mechanism.
         response: Longstr,
     },
-    /// Index 30
+    /// This method proposes a set of connection configuration values to the client. The
+    /// client can accept and/or adjust these.
     Tune {
+        /// Specifies highest channel number that the server permits.  Usable channel numbers
+        /// are in the range 1..channel-max.  Zero indicates no specified limit.
         channel_max: Short,
+        /// The largest frame size that the server proposes for the connection, including
+        /// frame header and end-byte.  The client can negotiate a lower value. Zero means
+        /// that the server does not impose any specific limit but may reject very large
+        /// frames if it cannot allocate resources for them.
         frame_max: Long,
+        /// The delay, in seconds, of the connection heartbeat that the server wants.
+        /// Zero means the server does not want a heartbeat.
         heartbeat: Short,
     },
-    /// Index 31
+    /// This method sends the client's connection tuning parameters to the server.
+    /// Certain fields are negotiated, others provide capability information.
     TuneOk {
         /// must not be null, must be less than the tune field of the method channel-max
+        ///
+        /// The maximum total number of channels that the client will use per connection.
         channel_max: Short,
+        /// The largest frame size that the client and server will use for the connection.
+        /// Zero means that the client does not impose any specific limit but may reject
+        /// very large frames if it cannot allocate resources for them. Note that the
+        /// frame-max limit applies principally to content frames, where large contents can
+        /// be broken into frames of arbitrary size.
         frame_max: Long,
+        /// The delay, in seconds, of the connection heartbeat that the client wants. Zero
+        /// means the client does not want a heartbeat.
         heartbeat: Short,
     },
-    /// Index 40
+    /// This method opens a connection to a virtual host, which is a collection of
+    /// resources, and acts to separate multiple application domains within a server.
+    /// The server may apply arbitrary limits per virtual host, such as the number
+    /// of each type of entity that may be used, per connection and/or in total.
     Open {
+        /// The name of the virtual host to work with.
         virtual_host: Path,
         reserved_1: Shortstr,
         reserved_2: Bit,
     },
-    /// Index 41
+    /// This method signals to the client that the connection is ready for use.
     OpenOk { reserved_1: Shortstr },
-    /// Index 50
+    /// This method indicates that the sender wants to close the connection. This may be
+    /// due to internal conditions (e.g. a forced shut-down) or due to an error handling
+    /// a specific method, i.e. an exception. When a close is due to an exception, the
+    /// sender provides the class and method id of the method which caused the exception.
     Close {
         reply_code: ReplyCode,
         reply_text: ReplyText,
+        /// When the close is provoked by a method exception, this is the class of the
+        /// method.
         class_id: ClassId,
+        /// When the close is provoked by a method exception, this is the ID of the method.
         method_id: MethodId,
     },
-    /// Index 51
+    /// This method confirms a Connection.Close method and tells the recipient that it is
+    /// safe to release resources for the connection and close the socket.
     CloseOk,
-    /// Index 60
-    Blocked { reason: Shortstr },
-    /// Index 61
-    Unblocked,
 }
-/// Index 20, handler = channel
+/// The channel class provides methods for a client to establish a channel to a
+/// server and for both peers to operate the channel thereafter.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Channel {
-    /// Index 10
+    /// This method opens a channel to the server.
     Open { reserved_1: Shortstr },
-    /// Index 11
+    /// This method signals to the client that the channel is ready for use.
     OpenOk { reserved_1: Longstr },
-    /// Index 20
-    Flow { active: Bit },
-    /// Index 21
-    FlowOk { active: Bit },
-    /// Index 40
+    /// This method asks the peer to pause or restart the flow of content data sent by
+    /// a consumer. This is a simple flow-control mechanism that a peer can use to avoid
+    /// overflowing its queues or otherwise finding itself receiving more messages than
+    /// it can process. Note that this method is not intended for window control. It does
+    /// not affect contents returned by Basic.Get-Ok methods.
+    Flow {
+        /// If 1, the peer starts sending content frames. If 0, the peer stops sending
+        /// content frames.
+        active: Bit,
+    },
+    /// Confirms to the peer that a flow command was received and processed.
+    FlowOk {
+        /// Confirms the setting of the processed flow method: 1 means the peer will start
+        /// sending or continue to send content frames; 0 means it will not.
+        active: Bit,
+    },
+    /// This method indicates that the sender wants to close the channel. This may be due to
+    /// internal conditions (e.g. a forced shut-down) or due to an error handling a specific
+    /// method, i.e. an exception. When a close is due to an exception, the sender provides
+    /// the class and method id of the method which caused the exception.
     Close {
         reply_code: ReplyCode,
         reply_text: ReplyText,
+        /// When the close is provoked by a method exception, this is the class of the
+        /// method.
         class_id: ClassId,
+        /// When the close is provoked by a method exception, this is the ID of the method.
         method_id: MethodId,
     },
-    /// Index 41
+    /// This method confirms a Channel.Close method and tells the recipient that it is safe
+    /// to release resources for the channel.
     CloseOk,
 }
-/// Index 40, handler = channel
+/// Exchanges match and distribute messages across queues. Exchanges can be configured in
+/// the server or declared at runtime.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Exchange {
-    /// Index 10
+    /// This method creates an exchange if it does not already exist, and if the exchange
+    /// exists, verifies that it is of the correct and expected class.
     Declare {
         reserved_1: Short,
         /// must not be null
         exchange: ExchangeName,
+        /// Each exchange belongs to one of a set of exchange types implemented by the
+        /// server. The exchange types define the functionality of the exchange - i.e. how
+        /// messages are routed through it. It is not valid or meaningful to attempt to
+        /// change the type of an existing exchange.
         r#type: Shortstr,
+        /// If set, the server will reply with Declare-Ok if the exchange already
+        /// exists with the same name, and raise an error if not.  The client can
+        /// use this to check whether an exchange exists without modifying the
+        /// server state. When set, all other method fields except name and no-wait
+        /// are ignored.  A declare with both passive and no-wait has no effect.
+        /// Arguments are compared for semantic equivalence.
         passive: Bit,
+        /// If set when creating a new exchange, the exchange will be marked as durable.
+        /// Durable exchanges remain active when a server restarts. Non-durable exchanges
+        /// (transient exchanges) are purged if/when a server restarts.
         durable: Bit,
         reserved_2: Bit,
         reserved_3: Bit,
         no_wait: NoWait,
+        /// A set of arguments for the declaration. The syntax and semantics of these
+        /// arguments depends on the server implementation.
         arguments: Table,
     },
-    /// Index 11
+    /// This method confirms a Declare method and confirms the name of the exchange,
+    /// essential for automatically-named exchanges.
     DeclareOk,
-    /// Index 20
+    /// This method deletes an exchange. When an exchange is deleted all queue bindings on
+    /// the exchange are cancelled.
     Delete {
         reserved_1: Short,
         /// must not be null
         exchange: ExchangeName,
+        /// If set, the server will only delete the exchange if it has no queue bindings. If
+        /// the exchange has queue bindings the server does not delete it but raises a
+        /// channel exception instead.
         if_unused: Bit,
         no_wait: NoWait,
     },
-    /// Index 21
+    /// This method confirms the deletion of an exchange.
     DeleteOk,
 }
-/// Index 50, handler = channel
+/// Queues store and forward messages. Queues can be configured in the server or created at
+/// runtime. Queues must be attached to at least one exchange in order to receive messages
+/// from publishers.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Queue {
-    /// Index 10
+    /// This method creates or checks a queue. When creating a new queue the client can
+    /// specify various properties that control the durability of the queue and its
+    /// contents, and the level of sharing for the queue.
     Declare {
         reserved_1: Short,
         queue: QueueName,
+        /// If set, the server will reply with Declare-Ok if the queue already
+        /// exists with the same name, and raise an error if not.  The client can
+        /// use this to check whether a queue exists without modifying the
+        /// server state.  When set, all other method fields except name and no-wait
+        /// are ignored.  A declare with both passive and no-wait has no effect.
+        /// Arguments are compared for semantic equivalence.
         passive: Bit,
+        /// If set when creating a new queue, the queue will be marked as durable. Durable
+        /// queues remain active when a server restarts. Non-durable queues (transient
+        /// queues) are purged if/when a server restarts. Note that durable queues do not
+        /// necessarily hold persistent messages, although it does not make sense to send
+        /// persistent messages to a transient queue.
         durable: Bit,
+        /// Exclusive queues may only be accessed by the current connection, and are
+        /// deleted when that connection closes.  Passive declaration of an exclusive
+        /// queue by other connections are not allowed.
         exclusive: Bit,
+        /// If set, the queue is deleted when all consumers have finished using it.  The last
+        /// consumer can be cancelled either explicitly or because its channel is closed. If
+        /// there was no consumer ever on the queue, it won't be deleted.  Applications can
+        /// explicitly delete auto-delete queues using the Delete method as normal.
         auto_delete: Bit,
         no_wait: NoWait,
+        /// A set of arguments for the declaration. The syntax and semantics of these
+        /// arguments depends on the server implementation.
         arguments: Table,
     },
-    /// Index 11
+    /// This method confirms a Declare method and confirms the name of the queue, essential
+    /// for automatically-named queues.
     DeclareOk {
         /// must not be null
+        ///
+        /// Reports the name of the queue. If the server generated a queue name, this field
+        /// contains that name.
         queue: QueueName,
         message_count: MessageCount,
+        /// Reports the number of active consumers for the queue. Note that consumers can
+        /// suspend activity (Channel.Flow) in which case they do not appear in this count.
         consumer_count: Long,
     },
-    /// Index 20
+    /// This method binds a queue to an exchange. Until a queue is bound it will not
+    /// receive any messages. In a classic messaging model, store-and-forward queues
+    /// are bound to a direct exchange and subscription queues are bound to a topic
+    /// exchange.
     Bind {
         reserved_1: Short,
+        /// Specifies the name of the queue to bind.
         queue: QueueName,
         exchange: ExchangeName,
+        /// Specifies the routing key for the binding. The routing key is used for routing
+        /// messages depending on the exchange configuration. Not all exchanges use a
+        /// routing key - refer to the specific exchange documentation.  If the queue name
+        /// is empty, the server uses the last queue declared on the channel.  If the
+        /// routing key is also empty, the server uses this queue name for the routing
+        /// key as well.  If the queue name is provided but the routing key is empty, the
+        /// server does the binding with that empty routing key.  The meaning of empty
+        /// routing keys depends on the exchange implementation.
         routing_key: Shortstr,
         no_wait: NoWait,
+        /// A set of arguments for the binding. The syntax and semantics of these arguments
+        /// depends on the exchange class.
         arguments: Table,
     },
-    /// Index 21
+    /// This method confirms that the bind was successful.
     BindOk,
-    /// Index 50
+    /// This method unbinds a queue from an exchange.
     Unbind {
         reserved_1: Short,
+        /// Specifies the name of the queue to unbind.
         queue: QueueName,
+        /// The name of the exchange to unbind from.
         exchange: ExchangeName,
+        /// Specifies the routing key of the binding to unbind.
         routing_key: Shortstr,
+        /// Specifies the arguments of the binding to unbind.
         arguments: Table,
     },
-    /// Index 51
+    /// This method confirms that the unbind was successful.
     UnbindOk,
-    /// Index 30
+    /// This method removes all messages from a queue which are not awaiting
+    /// acknowledgment.
     Purge {
         reserved_1: Short,
+        /// Specifies the name of the queue to purge.
         queue: QueueName,
         no_wait: NoWait,
     },
-    /// Index 31
-    PurgeOk { message_count: MessageCount },
-    /// Index 40
+    /// This method confirms the purge of a queue.
+    PurgeOk {
+        /// Reports the number of messages purged.
+        message_count: MessageCount,
+    },
+    /// This method deletes a queue. When a queue is deleted any pending messages are sent
+    /// to a dead-letter queue if this is defined in the server configuration, and all
+    /// consumers on the queue are cancelled.
     Delete {
         reserved_1: Short,
+        /// Specifies the name of the queue to delete.
         queue: QueueName,
+        /// If set, the server will only delete the queue if it has no consumers. If the
+        /// queue has consumers the server does does not delete it but raises a channel
+        /// exception instead.
         if_unused: Bit,
+        /// If set, the server will only delete the queue if it has no messages.
         if_empty: Bit,
         no_wait: NoWait,
     },
-    /// Index 41
-    DeleteOk { message_count: MessageCount },
+    /// This method confirms the deletion of a queue.
+    DeleteOk {
+        /// Reports the number of messages deleted.
+        message_count: MessageCount,
+    },
 }
-/// Index 60, handler = channel
+/// The Basic class provides methods that support an industry-standard messaging model.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Basic {
-    /// Index 10
+    /// This method requests a specific quality of service. The QoS can be specified for the
+    /// current channel or for all channels on the connection. The particular properties and
+    /// semantics of a qos method always depend on the content class semantics. Though the
+    /// qos method could in principle apply to both peers, it is currently meaningful only
+    /// for the server.
     Qos {
+        /// The client can request that messages be sent in advance so that when the client
+        /// finishes processing a message, the following message is already held locally,
+        /// rather than needing to be sent down the channel. Prefetching gives a performance
+        /// improvement. This field specifies the prefetch window size in octets. The server
+        /// will send a message in advance if it is equal to or smaller in size than the
+        /// available prefetch size (and also falls into other prefetch limits). May be set
+        /// to zero, meaning "no specific limit", although other prefetch limits may still
+        /// apply. The prefetch-size is ignored if the no-ack option is set.
         prefetch_size: Long,
+        /// Specifies a prefetch window in terms of whole messages. This field may be used
+        /// in combination with the prefetch-size field; a message will only be sent in
+        /// advance if both prefetch windows (and those at the channel and connection level)
+        /// allow it. The prefetch-count is ignored if the no-ack option is set.
         prefetch_count: Short,
+        /// By default the QoS settings apply to the current channel only. If this field is
+        /// set, they are applied to the entire connection.
         global: Bit,
     },
-    /// Index 11
+    /// This method tells the client that the requested QoS levels could be handled by the
+    /// server. The requested QoS applies to all active consumers until a new QoS is
+    /// defined.
     QosOk,
-    /// Index 20
+    /// This method asks the server to start a "consumer", which is a transient request for
+    /// messages from a specific queue. Consumers last as long as the channel they were
+    /// declared on, or until the client cancels them.
     Consume {
         reserved_1: Short,
+        /// Specifies the name of the queue to consume from.
         queue: QueueName,
+        /// Specifies the identifier for the consumer. The consumer tag is local to a
+        /// channel, so two clients can use the same consumer tags. If this field is
+        /// empty the server will generate a unique tag.
         consumer_tag: ConsumerTag,
         no_local: NoLocal,
         no_ack: NoAck,
+        /// Request exclusive consumer access, meaning only this consumer can access the
+        /// queue.
         exclusive: Bit,
         no_wait: NoWait,
+        /// A set of arguments for the consume. The syntax and semantics of these
+        /// arguments depends on the server implementation.
         arguments: Table,
     },
-    /// Index 21
-    ConsumeOk { consumer_tag: ConsumerTag },
-    /// Index 30
+    /// The server provides the client with a consumer tag, which is used by the client
+    /// for methods called on the consumer at a later stage.
+    ConsumeOk {
+        /// Holds the consumer tag specified by the client or provided by the server.
+        consumer_tag: ConsumerTag,
+    },
+    /// This method cancels a consumer. This does not affect already delivered
+    /// messages, but it does mean the server will not send any more messages for
+    /// that consumer. The client may receive an arbitrary number of messages in
+    /// between sending the cancel method and receiving the cancel-ok reply.
     Cancel {
         consumer_tag: ConsumerTag,
         no_wait: NoWait,
     },
-    /// Index 31
+    /// This method confirms that the cancellation was completed.
     CancelOk { consumer_tag: ConsumerTag },
-    /// Index 40
+    /// This method publishes a message to a specific exchange. The message will be routed
+    /// to queues as defined by the exchange configuration and distributed to any active
+    /// consumers when the transaction, if any, is committed.
     Publish {
         reserved_1: Short,
+        /// Specifies the name of the exchange to publish to. The exchange name can be
+        /// empty, meaning the default exchange. If the exchange name is specified, and that
+        /// exchange does not exist, the server will raise a channel exception.
         exchange: ExchangeName,
+        /// Specifies the routing key for the message. The routing key is used for routing
+        /// messages depending on the exchange configuration.
         routing_key: Shortstr,
+        /// This flag tells the server how to react if the message cannot be routed to a
+        /// queue. If this flag is set, the server will return an unroutable message with a
+        /// Return method. If this flag is zero, the server silently drops the message.
         mandatory: Bit,
+        /// This flag tells the server how to react if the message cannot be routed to a
+        /// queue consumer immediately. If this flag is set, the server will return an
+        /// undeliverable message with a Return method. If this flag is zero, the server
+        /// will queue the message, but with no guarantee that it will ever be consumed.
         immediate: Bit,
     },
-    /// Index 50
+    /// This method returns an undeliverable message that was published with the "immediate"
+    /// flag set, or an unroutable message published with the "mandatory" flag set. The
+    /// reply code and text provide information about the reason that the message was
+    /// undeliverable.
     Return {
         reply_code: ReplyCode,
         reply_text: ReplyText,
+        /// Specifies the name of the exchange that the message was originally published
+        /// to.  May be empty, meaning the default exchange.
         exchange: ExchangeName,
+        /// Specifies the routing key name specified when the message was published.
         routing_key: Shortstr,
     },
-    /// Index 60
+    /// This method delivers a message to the client, via a consumer. In the asynchronous
+    /// message delivery model, the client starts a consumer using the Consume method, then
+    /// the server responds with Deliver methods as and when messages arrive for that
+    /// consumer.
     Deliver {
         consumer_tag: ConsumerTag,
         delivery_tag: DeliveryTag,
         redelivered: Redelivered,
+        /// Specifies the name of the exchange that the message was originally published to.
+        /// May be empty, indicating the default exchange.
         exchange: ExchangeName,
+        /// Specifies the routing key name specified when the message was published.
         routing_key: Shortstr,
     },
-    /// Index 70
+    /// This method provides a direct access to the messages in a queue using a synchronous
+    /// dialogue that is designed for specific types of application where synchronous
+    /// functionality is more important than performance.
     Get {
         reserved_1: Short,
+        /// Specifies the name of the queue to get a message from.
         queue: QueueName,
         no_ack: NoAck,
     },
-    /// Index 71
+    /// This method delivers a message to the client following a get method. A message
+    /// delivered by 'get-ok' must be acknowledged unless the no-ack option was set in the
+    /// get method.
     GetOk {
         delivery_tag: DeliveryTag,
         redelivered: Redelivered,
+        /// Specifies the name of the exchange that the message was originally published to.
+        /// If empty, the message was published to the default exchange.
         exchange: ExchangeName,
+        /// Specifies the routing key name specified when the message was published.
         routing_key: Shortstr,
         message_count: MessageCount,
     },
-    /// Index 72
+    /// This method tells the client that the queue has no messages available for the
+    /// client.
     GetEmpty { reserved_1: Shortstr },
-    /// Index 80
+    /// This method acknowledges one or more messages delivered via the Deliver or Get-Ok
+    /// methods. The client can ask to confirm a single message or a set of messages up to
+    /// and including a specific message.
     Ack {
         delivery_tag: DeliveryTag,
+        /// If set to 1, the delivery tag is treated as "up to and including", so that the
+        /// client can acknowledge multiple messages with a single method. If set to zero,
+        /// the delivery tag refers to a single message. If the multiple field is 1, and the
+        /// delivery tag is zero, tells the server to acknowledge all outstanding messages.
         multiple: Bit,
     },
-    /// Index 90
+    /// This method allows a client to reject a message. It can be used to interrupt and
+    /// cancel large incoming messages, or return untreatable messages to their original
+    /// queue.
     Reject {
         delivery_tag: DeliveryTag,
+        /// If requeue is true, the server will attempt to requeue the message.  If requeue
+        /// is false or the requeue  attempt fails the messages are discarded or dead-lettered.
         requeue: Bit,
     },
-    /// Index 100
-    RecoverAsync { requeue: Bit },
-    /// Index 110
-    Recover { requeue: Bit },
-    /// Index 111
+    /// This method asks the server to redeliver all unacknowledged messages on a
+    /// specified channel. Zero or more messages may be redelivered.  This method
+    /// is deprecated in favour of the synchronous Recover/Recover-Ok.
+    RecoverAsync {
+        /// If this field is zero, the message will be redelivered to the original
+        /// recipient. If this bit is 1, the server will attempt to requeue the message,
+        /// potentially then delivering it to an alternative subscriber.
+        requeue: Bit,
+    },
+    /// This method asks the server to redeliver all unacknowledged messages on a
+    /// specified channel. Zero or more messages may be redelivered.  This method
+    /// replaces the asynchronous Recover.
+    Recover {
+        /// If this field is zero, the message will be redelivered to the original
+        /// recipient. If this bit is 1, the server will attempt to requeue the message,
+        /// potentially then delivering it to an alternative subscriber.
+        requeue: Bit,
+    },
+    /// This method acknowledges a Basic.Recover method.
     RecoverOk,
 }
-/// Index 90, handler = channel
+/// The Tx class allows publish and ack operations to be batched into atomic
+/// units of work.  The intention is that all publish and ack requests issued
+/// within a transaction will complete successfully or none of them will.
+/// Servers SHOULD implement atomic transactions at least where all publish
+/// or ack requests affect a single queue.  Transactions that cover multiple
+/// queues may be non-atomic, given that queues can be created and destroyed
+/// asynchronously, and such events do not form part of any transaction.
+/// Further, the behaviour of transactions with respect to the immediate and
+/// mandatory flags on Basic.Publish methods is not defined.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Tx {
-    /// Index 10
+    /// This method sets the channel to use standard transactions. The client must use this
+    /// method at least once on a channel before using the Commit or Rollback methods.
     Select,
-    /// Index 11
+    /// This method confirms to the client that the channel was successfully set to use
+    /// standard transactions.
     SelectOk,
-    /// Index 20
+    /// This method commits all message publications and acknowledgments performed in
+    /// the current transaction.  A new transaction starts immediately after a commit.
     Commit,
-    /// Index 21
+    /// This method confirms to the client that the commit succeeded. Note that if a commit
+    /// fails, the server raises a channel exception.
     CommitOk,
-    /// Index 30
+    /// This method abandons all message publications and acknowledgments performed in
+    /// the current transaction. A new transaction starts immediately after a rollback.
+    /// Note that unacked messages will not be automatically redelivered by rollback;
+    /// if that is required an explicit recover call should be issued.
     Rollback,
-    /// Index 31
+    /// This method confirms to the client that the rollback succeeded. Note that if an
+    /// rollback fails, the server raises a channel exception.
     RollbackOk,
 }
 pub mod parse {
@@ -457,8 +801,6 @@ pub mod parse {
             connection_open_ok,
             connection_close,
             connection_close_ok,
-            connection_blocked,
-            connection_unblocked,
         ))(input)
         .map_err(err("class connection"))
         .map_err(failure)
@@ -645,17 +987,6 @@ pub mod parse {
     fn connection_close_ok(input: &[u8]) -> IResult<Class> {
         let (input, _) = tag(51_u16.to_be_bytes())(input).map_err(err("parsing method index"))?;
         Ok((input, Class::Connection(Connection::CloseOk {})))
-    }
-    fn connection_blocked(input: &[u8]) -> IResult<Class> {
-        let (input, _) = tag(60_u16.to_be_bytes())(input).map_err(err("parsing method index"))?;
-        let (input, reason) = domain_shortstr(input)
-            .map_err(err("field reason in method blocked"))
-            .map_err(failure)?;
-        Ok((input, Class::Connection(Connection::Blocked { reason })))
-    }
-    fn connection_unblocked(input: &[u8]) -> IResult<Class> {
-        let (input, _) = tag(61_u16.to_be_bytes())(input).map_err(err("parsing method index"))?;
-        Ok((input, Class::Connection(Connection::Unblocked {})))
     }
     fn channel(input: &[u8]) -> IResult<Class> {
         let (input, _) =
@@ -1455,13 +1786,6 @@ pub mod write {
             Class::Connection(Connection::CloseOk {}) => {
                 writer.write_all(&[0, 10, 0, 51])?;
             }
-            Class::Connection(Connection::Blocked { reason }) => {
-                writer.write_all(&[0, 10, 0, 60])?;
-                shortstr(reason, &mut writer)?;
-            }
-            Class::Connection(Connection::Unblocked {}) => {
-                writer.write_all(&[0, 10, 0, 61])?;
-            }
             Class::Channel(Channel::Open { reserved_1 }) => {
                 writer.write_all(&[0, 20, 0, 10])?;
                 shortstr(reserved_1, &mut writer)?;
@@ -1811,7 +2135,7 @@ mod random {
     impl<R: Rng> RandomMethod<R> for Connection {
         #[allow(unused_variables)]
         fn random(rng: &mut R) -> Self {
-            match rng.gen_range(0u32..12) {
+            match rng.gen_range(0u32..10) {
                 0 => Connection::Start {
                     version_major: RandomMethod::random(rng),
                     version_minor: RandomMethod::random(rng),
@@ -1856,10 +2180,6 @@ mod random {
                     method_id: RandomMethod::random(rng),
                 },
                 9 => Connection::CloseOk {},
-                10 => Connection::Blocked {
-                    reason: RandomMethod::random(rng),
-                },
-                11 => Connection::Unblocked {},
                 _ => unreachable!(),
             }
         }

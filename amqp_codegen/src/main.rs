@@ -1,14 +1,14 @@
 mod parser;
-mod write;
 mod random;
+mod write;
 
 use crate::parser::codegen_parser;
+use crate::random::codegen_random;
 use crate::write::codegen_write;
 use heck::ToUpperCamelCase;
 use std::fs;
 use std::iter::Peekable;
 use strong_xml::XmlRead;
-use crate::random::codegen_random;
 
 #[derive(Debug, XmlRead)]
 #[xml(tag = "amqp")]
@@ -26,8 +26,13 @@ struct Domain {
     name: String,
     #[xml(attr = "type")]
     kind: String,
+    #[xml(attr = "label")]
+    label: Option<String>,
     #[xml(child = "assert")]
     asserts: Vec<Assert>,
+    #[xml(child = "doc")]
+    doc: Vec<Doc>,
+
 }
 
 #[derive(Debug, XmlRead)]
@@ -48,12 +53,12 @@ struct Assert {
 struct Class {
     #[xml(attr = "name")]
     name: String,
-    #[xml(attr = "handler")]
-    handler: String,
     #[xml(attr = "index")]
     index: u16,
     #[xml(child = "method")]
     methods: Vec<Method>,
+    #[xml(child = "doc")]
+    doc: Vec<Doc>,
 }
 
 #[derive(Debug, XmlRead)]
@@ -65,6 +70,9 @@ struct Method {
     fields: Vec<Field>,
     #[xml(attr = "index")]
     index: u16,
+    #[xml(child = "doc")]
+    doc: Vec<Doc>,
+
 }
 
 #[derive(Debug, XmlRead)]
@@ -78,12 +86,31 @@ struct Field {
     kind: Option<String>,
     #[xml(child = "assert")]
     asserts: Vec<Assert>,
+    #[xml(child = "doc")]
+    doc: Vec<Doc>,
+
 }
 
-fn main() {
-    let content = fs::read_to_string("./amqp-0-9-1-bsd.xml").unwrap();
+#[derive(Debug, XmlRead)]
+#[xml(tag = "doc")]
+struct Doc {
+    #[xml(text)]
+    text: String,
+    #[xml(attr = "type")]
+    kind: Option<String>,
+}
 
-    let amqp = Amqp::from_str(&content).unwrap();
+
+fn main() {
+    let content = fs::read_to_string("./amqp0-9-1.xml").unwrap();
+
+    let amqp = match Amqp::from_str(&content) {
+        Ok(amqp) => amqp,
+        Err(err) => {
+            eprintln!("{err}");
+            std::process::exit(1);
+        }
+    };
     codegen(&amqp);
 }
 
@@ -100,8 +127,19 @@ fn codegen_domain_defs(amqp: &Amqp) {
     for domain in &amqp.domains {
         let invariants = invariants(domain.asserts.iter());
 
+        if let Some(label) = &domain.label {
+            println!("/// {label}");
+        }
+
         if !invariants.is_empty() {
+            if domain.label.is_some() {
+                println!("///");
+            }
             println!("/// {invariants}");
+        }
+        if !domain.doc.is_empty() {
+            println!("///");
+            doc_comment(&domain.doc, 0);
         }
         println!(
             "pub type {} = {};\n",
@@ -122,12 +160,12 @@ fn codegen_class_defs(amqp: &Amqp) {
 
     for class in &amqp.classes {
         let enum_name = class.name.to_upper_camel_case();
-        println!("/// Index {}, handler = {}", class.index, class.handler);
+        doc_comment(&class.doc, 0);
         println!("#[derive(Debug, Clone, PartialEq)]");
         println!("pub enum {enum_name} {{");
         for method in &class.methods {
             let method_name = method.name.to_upper_camel_case();
-            println!("    /// Index {}", method.index);
+            doc_comment(&method.doc, 4);
             print!("    {method_name}");
             if !method.fields.is_empty() {
                 println!(" {{");
@@ -137,6 +175,12 @@ fn codegen_class_defs(amqp: &Amqp) {
                         get_invariants_with_type(field_type(field), field.asserts.as_ref());
                     if !field_docs.is_empty() {
                         println!("        /// {field_docs}");
+                        if !field.doc.is_empty() {
+                            println!("        ///");
+                            doc_comment(&field.doc, 8);
+                        }
+                    } else {
+                        doc_comment(&field.doc, 8);
                     }
                     println!("        {field_name}: {field_type},");
                 }
@@ -233,4 +277,19 @@ fn invariants<'a>(asserts: impl Iterator<Item = &'a Assert>) -> String {
         })
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+fn doc_comment(docs: &[Doc], indent: usize) {
+    for doc in docs {
+        if doc.kind == Some("grammar".to_string()) {
+            continue;
+        }
+        for line in doc.text.lines() {
+            let line = line.trim();
+            if !line.is_empty() {
+                let indent = " ".repeat(indent);
+                println!("{indent}/// {line}");
+            }
+        }
+    }
 }
