@@ -26,15 +26,17 @@ pub struct Connection {
     max_frame_size: usize,
     heartbeat_delay: u16,
     channel_max: u16,
+    connection_handle: amqp_core::ConnectionHandle,
 }
 
 impl Connection {
-    pub fn new(stream: TcpStream) -> Self {
+    pub fn new(stream: TcpStream, connection_handle: amqp_core::ConnectionHandle) -> Self {
         Self {
             stream,
             max_frame_size: FRAME_SIZE_MIN_MAX,
             heartbeat_delay: HEARTBEAT_DELAY,
             channel_max: CHANNEL_MAX,
+            connection_handle,
         }
     }
 
@@ -43,6 +45,9 @@ impl Connection {
             Ok(()) => {}
             Err(err) => error!(%err, "Error during processing of connection"),
         }
+
+        let connection_handle = self.connection_handle.lock();
+        connection_handle.close();
     }
 
     pub async fn process_connection(&mut self) -> Result<()> {
