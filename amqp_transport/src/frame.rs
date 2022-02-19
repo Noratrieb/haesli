@@ -1,7 +1,7 @@
 use crate::error::{ConException, ProtocolError, Result};
 use anyhow::Context;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tracing::debug;
+use tracing::trace;
 
 const REQUIRED_FRAME_END: u8 = 0xCE;
 
@@ -30,11 +30,11 @@ pub enum FrameType {
     Heartbeat = 8,
 }
 
-pub async fn write_frame<W>(frame: &Frame, mut w: W, ) -> Result<()>
+pub async fn write_frame<W>(frame: &Frame, mut w: W) -> Result<()>
 where
     W: AsyncWriteExt + Unpin,
 {
-    debug!(?frame, "sending frame");
+    trace!(?frame, "Sending frame");
 
     w.write_u8(frame.kind as u8).await?;
     w.write_u16(frame.channel).await?;
@@ -63,17 +63,21 @@ where
         return Err(ProtocolError::Fatal.into());
     }
 
-    if payload.len() > max_frame_size {
-        return Err(ProtocolError::ConException(ConException::FrameError).into());
+    if max_frame_size != 0 && payload.len() > max_frame_size {
+        return Err(ConException::FrameError.into_trans());
     }
 
     let kind = parse_frame_type(kind, channel)?;
 
-    Ok(Frame {
+    let frame = Frame {
         kind,
         channel,
         payload,
-    })
+    };
+
+    trace!(?frame, "Received frame");
+
+    Ok(frame)
 }
 
 fn parse_frame_type(kind: u8, channel: u16) -> Result<FrameType> {
@@ -88,7 +92,7 @@ fn parse_frame_type(kind: u8, channel: u16) -> Result<FrameType> {
                 Ok(FrameType::Heartbeat)
             }
         }
-        _ => Err(ProtocolError::ConException(ConException::FrameError).into()),
+        _ => Err(ConException::FrameError.into_trans()),
     }
 }
 

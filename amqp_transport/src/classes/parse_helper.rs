@@ -17,7 +17,7 @@ use std::collections::HashMap;
 
 impl<T> nom::error::ParseError<T> for TransError {
     fn from_error_kind(_input: T, _kind: ErrorKind) -> Self {
-        ProtocolError::ConException(ConException::SyntaxError(vec![])).into()
+        ConException::SyntaxError(vec![]).into_trans()
     }
 
     fn append(_input: T, _kind: ErrorKind, other: Self) -> Self {
@@ -47,13 +47,11 @@ pub fn err<S: Into<String>>(msg: S) -> impl FnOnce(Err<TransError>) -> Err<Trans
             },
             _ => vec![msg],
         };
-        error_level(ProtocolError::ConException(ConException::SyntaxError(stack)).into())
+        error_level(ConException::SyntaxError(stack).into_trans())
     }
 }
 pub fn err_other<E, S: Into<String>>(msg: S) -> impl FnOnce(E) -> Err<TransError> {
-    move |_| {
-        Err::Error(ProtocolError::ConException(ConException::SyntaxError(vec![msg.into()])).into())
-    }
+    move |_| Err::Error(ConException::SyntaxError(vec![msg.into()]).into_trans())
 }
 
 pub fn failure<E>(err: Err<E>) -> Err<E> {
@@ -145,7 +143,7 @@ pub fn table(input: &[u8]) -> IResult<Table> {
 
     let (input, values) = many0(table_value_pair)(table_input)?;
 
-    if input != &[] {
+    if !input.is_empty() {
         fail!(format!(
             "table longer than expected, expected = {size}, remaining = {}",
             input.len()

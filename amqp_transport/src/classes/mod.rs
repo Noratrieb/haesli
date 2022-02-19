@@ -1,4 +1,4 @@
-use crate::error::{ConException, ProtocolError, TransError};
+use crate::error::{ConException, TransError};
 use std::collections::HashMap;
 
 mod generated;
@@ -41,15 +41,17 @@ pub fn parse_method(payload: &[u8]) -> Result<generated::Class, TransError> {
 
     match nom_result {
         Ok(([], class)) => Ok(class),
-        Ok((_, _)) => Err(ProtocolError::ConException(ConException::SyntaxError(vec![
-            "could not consume all input".to_string(),
-        ]))
-        .into()),
+        Ok((_, _)) => {
+            Err(
+                ConException::SyntaxError(vec!["could not consume all input".to_string()])
+                    .into_trans(),
+            )
+        }
         Err(nom::Err::Incomplete(_)) => {
-            Err(ProtocolError::ConException(ConException::SyntaxError(vec![
-                "there was not enough data".to_string(),
-            ]))
-            .into())
+            Err(
+                ConException::SyntaxError(vec!["there was not enough data".to_string()])
+                    .into_trans(),
+            )
         }
         Err(nom::Err::Failure(err) | nom::Err::Error(err)) => Err(err),
     }

@@ -1,48 +1,88 @@
-use crate::classes::FieldValue;
 use crate::error::{ConException, ProtocolError, Result};
 use crate::frame::{Frame, FrameType};
-use crate::{classes, frame};
+use crate::{classes, frame, sasl};
 use anyhow::Context;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
+use uuid::Uuid;
 
-const MIN_MAX_FRAME_SIZE: usize = 4096;
+fn ensure_conn(condition: bool) -> Result<()> {
+    if condition {
+        Ok(())
+    } else {
+        Err(ConException::Todo.into_trans())
+    }
+}
+
+const FRAME_SIZE_MIN_MAX: usize = 4096;
+const CHANNEL_MAX: u16 = 0;
+const FRAME_SIZE_MAX: u32 = 0;
+const HEARTBEAT_DELAY: u16 = 0;
 
 pub struct Connection {
     stream: TcpStream,
     max_frame_size: usize,
+    heartbeat_delay: u16,
+    channel_max: u16,
+    id: Uuid,
 }
 
 impl Connection {
-    pub fn new(stream: TcpStream) -> Self {
+    pub fn new(stream: TcpStream, id: Uuid) -> Self {
         Self {
             stream,
-            max_frame_size: MIN_MAX_FRAME_SIZE,
+            max_frame_size: FRAME_SIZE_MIN_MAX,
+            heartbeat_delay: HEARTBEAT_DELAY,
+            channel_max: CHANNEL_MAX,
+            id,
         }
     }
 
-    pub async fn open_connection(mut self) {
-        match self.run().await {
+    pub async fn start_connection_processing(mut self) {
+        match self.process_connection().await {
             Ok(()) => {}
             Err(err) => error!(%err, "Error during processing of connection"),
         }
     }
 
-    pub async fn run(&mut self) -> Result<()> {
+    pub async fn process_connection(&mut self) -> Result<()> {
         self.negotiate_version().await?;
         self.start().await?;
+        self.tune().await?;
+        self.open().await?;
+
+        info!("Connection is ready for usage!");
 
         loop {
-            let frame = frame::read_frame(&mut self.stream, self.max_frame_size).await?;
-            debug!(?frame, "received frame");
-            if frame.kind == FrameType::Method {
-                let class = super::classes::parse_method(&frame.payload)?;
-                debug!(?class, "was method frame");
-            }
+            let method = self.recv_method().await?;
+            debug!(?method, "Received method");
         }
+    }
+
+    async fn send_method(&mut self, channel: u16, method: classes::Class) -> Result<()> {
+        let mut payload = Vec::with_capacity(64);
+        classes::write::write_method(method, &mut payload)?;
+        frame::write_frame(
+            &Frame {
+                kind: FrameType::Method,
+                channel,
+                payload,
+            },
+            &mut self.stream,
+        )
+        .await
+    }
+
+    async fn recv_method(&mut self) -> Result<classes::Class> {
+        let start_ok_frame = frame::read_frame(&mut self.stream, self.max_frame_size).await?;
+
+        ensure_conn(start_ok_frame.kind == FrameType::Method)?;
+
+        let class = classes::parse_method(&start_ok_frame.payload)?;
+        Ok(class)
     }
 
     async fn start(&mut self) -> Result<()> {
@@ -58,30 +98,72 @@ impl Connection {
             locales: "en_US".into(),
         });
 
-        debug!(?start_method, "Sending start method");
+        debug!(?start_method, "Sending Start method");
+        self.send_method(0, start_method).await?;
 
-        let mut payload = Vec::with_capacity(64);
-        classes::write::write_method(start_method, &mut payload)?;
-        frame::write_frame(
-            &Frame {
-                kind: FrameType::Method,
-                channel: 0,
-                payload,
-            },
-            &mut self.stream,
-        )
-        .await?;
+        let start_ok = self.recv_method().await?;
+        debug!(?start_ok, "Received Start-Ok");
 
-        let start_ok_frame = frame::read_frame(&mut self.stream, self.max_frame_size).await?;
-        debug!(?start_ok_frame, "Received Start-Ok frame");
-
-        if start_ok_frame.kind != FrameType::Method {
-            return Err(ProtocolError::ConException(ConException::Todo).into());
+        if let classes::Class::Connection(classes::Connection::StartOk {
+            mechanism,
+            locale,
+            response,
+            ..
+        }) = start_ok
+        {
+            ensure_conn(mechanism == "PLAIN")?;
+            ensure_conn(locale == "en_US")?;
+            let plain_user = sasl::parse_sasl_plain_response(&response)?;
+            info!(username = %plain_user.authentication_identity, "SASL Authentication successful")
+        } else {
+            return Err(ConException::Todo.into_trans());
         }
 
-        let class = classes::parse_method(&start_ok_frame.payload)?;
+        Ok(())
+    }
 
-        debug!(?class, "extracted method");
+    async fn tune(&mut self) -> Result<()> {
+        let tune_method = classes::Class::Connection(classes::Connection::Tune {
+            channel_max: CHANNEL_MAX,
+            frame_max: FRAME_SIZE_MAX,
+            heartbeat: HEARTBEAT_DELAY,
+        });
+
+        debug!("Sending Tune method");
+        self.send_method(0, tune_method).await?;
+
+        let tune_ok = self.recv_method().await?;
+        debug!(?tune_ok, "Received Tune-Ok method");
+
+        if let classes::Class::Connection(classes::Connection::TuneOk {
+            channel_max,
+            frame_max,
+            heartbeat,
+        }) = tune_ok
+        {
+            self.channel_max = channel_max;
+            self.max_frame_size = usize::try_from(frame_max).unwrap();
+            self.heartbeat_delay = heartbeat;
+        }
+
+        Ok(())
+    }
+
+    async fn open(&mut self) -> Result<()> {
+        let open = self.recv_method().await?;
+        debug!(?open, "Received Open method");
+
+        if let classes::Class::Connection(classes::Connection::Open { virtual_host, .. }) = open {
+            ensure_conn(virtual_host == "/")?;
+        }
+
+        self.send_method(
+            0,
+            classes::Class::Connection(classes::Connection::OpenOk {
+                reserved_1: "".to_string(),
+            }),
+        )
+        .await?;
 
         Ok(())
     }
@@ -120,21 +202,18 @@ impl Connection {
 }
 
 fn server_properties(host: SocketAddr) -> classes::Table {
-    fn ss(str: &str) -> FieldValue {
-        FieldValue::LongString(str.into())
+    fn ls(str: &str) -> classes::FieldValue {
+        classes::FieldValue::LongString(str.into())
     }
 
     let host_str = host.ip().to_string();
     HashMap::from([
-        ("host".to_string(), ss(&host_str)),
-        (
-            "product".to_string(),
-            ss("no name yet"),
-        ),
-        ("version".to_string(), ss("0.1.0")),
-        ("platform".to_string(), ss("microsoft linux")),
-        ("copyright".to_string(), ss("MIT")),
-        ("information".to_string(), ss("hello reader")),
-        ("uwu".to_string(), ss("owo")),
+        ("host".to_string(), ls(&host_str)),
+        ("product".to_string(), ls("no name yet")),
+        ("version".to_string(), ls("0.1.0")),
+        ("platform".to_string(), ls("microsoft linux")),
+        ("copyright".to_string(), ls("MIT")),
+        ("information".to_string(), ls("hello reader")),
+        ("uwu".to_string(), ls("owo")),
     ])
 }

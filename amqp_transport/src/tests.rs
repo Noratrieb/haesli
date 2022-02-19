@@ -29,8 +29,6 @@ async fn write_start_ok_frame() {
 
     frame::write_frame(&frame, &mut output).await.unwrap();
 
-    
-
     #[rustfmt::skip]
     let expected = [
         /* type, octet, method */
@@ -76,8 +74,6 @@ async fn write_start_ok_frame() {
 
 #[test]
 fn read_start_ok_payload() {
-    
-    
     #[rustfmt::skip]
     let raw_data = [
         /* Connection.Start-Ok */

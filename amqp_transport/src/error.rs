@@ -1,6 +1,8 @@
 use std::io::Error;
 
-pub type Result<T> = std::result::Result<T, TransError>;
+pub type StdResult<T, E> = std::result::Result<T, E>;
+
+pub type Result<T> = StdResult<T, TransError>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum TransError {
@@ -34,13 +36,19 @@ pub enum ConException {
     FrameError,
     #[error("503 Command invalid")]
     CommandInvalid,
-    #[error("503 Syntax error")]
+    #[error("503 Syntax error | {0:?}")]
     /// A method was received but there was a syntax error. The string stores where it occured.
     SyntaxError(Vec<String>),
     #[error("504 Channel error")]
     ChannelError,
     #[error("xxx Not decided yet")]
     Todo,
+}
+
+impl ConException {
+    pub fn into_trans(self) -> TransError {
+        TransError::Invalid(ProtocolError::ConException(self))
+    }
 }
 
 #[derive(Debug, thiserror::Error)]

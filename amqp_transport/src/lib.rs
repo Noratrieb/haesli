@@ -6,13 +6,15 @@ mod classes;
 mod connection;
 mod error;
 mod frame;
+mod sasl;
 #[cfg(test)]
 mod tests;
 
 use crate::connection::Connection;
 use anyhow::Result;
 use tokio::net;
-use tracing::info;
+use tracing::{info, info_span, Instrument};
+use uuid::Uuid;
 
 pub async fn do_thing_i_guess() -> Result<()> {
     info!("Binding TCP listener...");
@@ -22,10 +24,13 @@ pub async fn do_thing_i_guess() -> Result<()> {
     loop {
         let (stream, _) = listener.accept().await?;
 
-        info!(local_addr = ?stream.local_addr(), "Accepted new connection");
+        let id = Uuid::from_bytes(rand::random());
 
-        let connection = Connection::new(stream);
+        info!(local_addr = ?stream.local_addr(), %id, "Accepted new connection");
+        let span = info_span!("client-connection", %id);
 
-        tokio::spawn(connection.open_connection());
+        let connection = Connection::new(stream, id);
+
+        tokio::spawn(connection.start_connection_processing().instrument(span));
     }
 }
