@@ -55,6 +55,13 @@ struct Data {
 struct Connection {
     id: String,
     peer_addr: String,
+    channels: Vec<Channel>,
+}
+
+#[derive(Serialize)]
+struct Channel {
+    id: String,
+    number: u16,
 }
 
 async fn get_data(global_data: GlobalData) -> impl IntoResponse {
@@ -68,6 +75,17 @@ async fn get_data(global_data: GlobalData) -> impl IntoResponse {
             Connection {
                 id: conn.id.to_string(),
                 peer_addr: conn.peer_addr.to_string(),
+                channels: conn
+                    .channels
+                    .values()
+                    .map(|chan| {
+                        let chan = chan.lock();
+                        Channel {
+                            id: chan.id.to_string(),
+                            number: chan.num,
+                        }
+                    })
+                    .collect(),
             }
         })
         .collect();

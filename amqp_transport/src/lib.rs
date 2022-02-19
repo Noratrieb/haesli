@@ -31,12 +31,12 @@ pub async fn do_thing_i_guess(global_data: GlobalData) -> Result<()> {
         let connection_handle =
             amqp_core::Connection::new_handle(id, peer_addr, global_data.clone());
 
-        let mut global_data = global_data.lock();
-        global_data
+        let mut global_data_guard = global_data.lock();
+        global_data_guard
             .connections
             .insert(id, connection_handle.clone());
 
-        let connection = Connection::new(stream, connection_handle);
+        let connection = Connection::new(id, stream, connection_handle, global_data.clone());
 
         tokio::spawn(connection.start_connection_processing().instrument(span));
     }
