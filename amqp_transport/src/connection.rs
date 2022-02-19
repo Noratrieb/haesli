@@ -54,8 +54,8 @@ impl Connection {
                     .local_addr()
                     .context("failed to get local_addr")?,
             ),
-            mechanisms: "PLAIN".to_string().into(),
-            locales: "en_US".to_string().into(),
+            mechanisms: "PLAIN".into(),
+            locales: "en_US".into(),
         });
 
         debug!(?start_method, "Sending start method");
@@ -121,23 +121,20 @@ impl Connection {
 
 fn server_properties(host: SocketAddr) -> classes::Table {
     fn ss(str: &str) -> FieldValue {
-        FieldValue::ShortString(str.to_string())
+        FieldValue::LongString(str.into())
     }
 
     let host_str = host.ip().to_string();
-    let host_value = if host_str.len() < 256 {
-        FieldValue::ShortString(host_str)
-    } else {
-        FieldValue::LongString(host_str.into())
-    };
-
     HashMap::from([
-        //("host".to_string(), host_value),
-        //("product".to_string(), ss("no name yet")),
+        ("host".to_string(), ss(&host_str)),
+        (
+            "product".to_string(),
+            ss("no name yet"),
+        ),
         ("version".to_string(), ss("0.1.0")),
-        //("platform".to_string(), ss("microsoft linux")),
-        //("copyright".to_string(), ss("MIT")),
-        //("information".to_string(), ss("hello reader")),
-        //("uwu".to_string(), ss("owo")),
+        ("platform".to_string(), ss("microsoft linux")),
+        ("copyright".to_string(), ss("MIT")),
+        ("information".to_string(), ss("hello reader")),
+        ("uwu".to_string(), ss("owo")),
     ])
 }

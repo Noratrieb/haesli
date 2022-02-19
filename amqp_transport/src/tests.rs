@@ -1,20 +1,20 @@
-use crate::classes::FieldValue;
+use crate::classes::{Class, Connection, FieldValue};
 use crate::frame::FrameType;
 use crate::{classes, frame};
 use std::collections::HashMap;
 
 #[tokio::test]
-async fn write_start_frame() {
+async fn write_start_ok_frame() {
     let mut payload = Vec::new();
     let method = classes::Class::Connection(classes::Connection::Start {
         version_major: 0,
         version_minor: 9,
         server_properties: HashMap::from([(
-            "version".to_string(),
-            FieldValue::ShortString("0.1.0".to_string()),
+            "product".to_string(),
+            FieldValue::LongString("no name yet".into()),
         )]),
-        mechanisms: vec![],
-        locales: vec![],
+        mechanisms: "PLAIN".into(),
+        locales: "en_US".into(),
     });
 
     classes::write::write_method(method, &mut payload).unwrap();
@@ -29,42 +29,44 @@ async fn write_start_frame() {
 
     frame::write_frame(&frame, &mut output).await.unwrap();
 
+    
+
     #[rustfmt::skip]
     let expected = [
-        /* type, octet */
-        1u8, // = method
+        /* type, octet, method */
+        1u8,
         /* channel, short */
         0, 0,
         /* size, long */
         /* count all the bytes in the payload, 33 here */
-        0, 0, 0, 33,
+        0, 0, 0, 52,
         /* payload */
-
-        /* class-id, short */
-        0, 10, // connection
-        /* method-id, short */
-        0, 10, // start
+        /* class-id, short, connection */
+        0, 10,
+        /* method-id, short, start */
+        0, 10,
         /* version-major, octet */
         0,
         /* version-minor, octet */
         9,
         /* server-properties, table */
           /* table-size, long (actual byte size) */
-          0, 0, 0, 15,
+          0, 0, 0, 24,
           /* table-items */
-          /* name ("version"), shortstr */
+          /* name ("product"), shortstr */
           /* len (7) ; bytes */
-          7, b'v', b'e', b'r', b's', b'i', b'o', b'n',
-          /* value, a shortstr ("0.1.0") here */
-             /* tag (s) ; len (5) ; data */
-             b's', 5, b'0', b'.', b'1', b'.', b'0',
+          7, b'p', b'r', b'o', b'd', b'u', b'c', b't',
+          /* value, a shortstr ("no name yet") here */
+             /* tag (s) ; len (11) ; data */
+             b'S', 0, 0, 0, 11, b'n', b'o', b' ', b'n', b'a', b'm', b'e', b' ', b'y', b'e', b't',
         /* mechanisms, longstr */
-        /* str-len, long ; data (none here) */
-        0, 0, 0, 0,  
+        /* str-len, long ; len 5 ; data ("PLAIN") */
+        0, 0, 0, 5,
+        b'P', b'L', b'A', b'I', b'N',
         /* locales, longstr */
-        /* str-len, long ; data (none here) */
-        0, 0, 0, 0,
-
+        /* str-len, long ; len 5 ; data ("en_US") */
+        0, 0, 0, 5,
+        b'e', b'n', b'_', b'U', b'S',
         /* frame-end */
         0xCE,
     ];
@@ -72,10 +74,10 @@ async fn write_start_frame() {
     assert_eq!(expected.as_slice(), output.as_slice());
 }
 
-#[tokio::test]
-async fn read_start_ok_payload() {
-    // comes from a python pika amqp client - can assumed to be valid
-    // annotated manually
+#[test]
+fn read_start_ok_payload() {
+    
+    
     #[rustfmt::skip]
     let raw_data = [
         /* Connection.Start-Ok */
@@ -88,8 +90,7 @@ async fn read_start_ok_payload() {
           /* value is of type 83 ("S"), long-string */
           /* has length 26 "Pika Python Client Library" */
           83, 0, 0, 0, 26,
-          80, 105, 107, 97, 32, 80, 121, 116, 104, 111, 110, 32, 67, 108, 105, 101, 110, 116, 32, 76, 105, 98,
-          114, 97, 114, 121,
+          80, 105, 107, 97, 32, 80, 121, 116, 104, 111, 110, 32, 67, 108, 105, 101, 110, 116, 32, 76, 105, 98, 114, 97, 114, 121,
           /* second key of len 8, "platform" */
           8, 112, 108, 97, 116, 102, 111, 114, 109,
           /* value is of type 83("S"), long-string */
@@ -120,21 +121,67 @@ async fn read_start_ok_payload() {
             18, 112, 117, 98, 108, 105, 115, 104, 101, 114, 95, 99, 111, 110, 102, 105, 114, 109, 115,
             /* value of type 116, "t", boolean, true */
             116, 1,
-          /* unsure after this */
           /* sixth key has length 11 "information" */
           11, 105, 110, 102, 111, 114, 109, 97, 116, 105, 111, 110,
-          /* value of type 83, "S" long-str ; len 24 */
+          /* value of type 83, "S" long-str ; len 24 ; data "See http://pika.rtfd.org" */
           83, 0, 0, 0, 24,
-/* it gets very very confusing and possibly wrong on my side here */
-          /* data "See http://pika.rtf\n\x00.or" */
-          83, 101, 101, 32, 104, 116, 116, 112, 58, 47, 47, 112, 105, 107, 97, 46, 114, 116, 102, 10, 0, 46, 111, 114, 103, 7, 118, 101, 114, 115, 105, 111, 110, 83, 0, 0, 0, 5, 49, 46, 49, 46,
-
-        /* table should only end here */
-
-        48, 5, 80, 76, 65, 73, 78, 0, 0, 0, 7, 0, 97, 100, 109, 105, 110, 0,
+          83, 101, 101, 32, 104, 116, 116, 112, 58, 47, 47, 112, 105, 107, 97, 46, 114, 116, 102, 100, 46, 111, 114, 103,
+          /* seventh key has length 7, "version" */
+          7, 118, 101, 114, 115, 105, 111, 110,
+          /* value of type 83, "S" long-str ; length 5 ; "1.1.0" */
+          83, 0, 0, 0, 5,
+          49, 46, 49, 46, 48,
+        /* client-properties table ends here */
+        /* field mechanism, length 5, "PLAIN" */
+        5, 80, 76, 65, 73, 78,
+        /* field response, longstr, length 7, "\x00admin\x00" */
+        0, 0, 0, 7, 0, 97, 100, 109, 105, 110, 0,
         /* locale, shortstr, len 5 "en_US" */
         5, 101, 110, 95, 85, 83,
     ];
 
-    classes::parse_method(&raw_data).unwrap();
+    let method = classes::parse_method(&raw_data).unwrap();
+
+    assert_eq!(
+        method,
+        Class::Connection(Connection::StartOk {
+            client_properties: HashMap::from([
+                (
+                    "product".to_string(),
+                    FieldValue::LongString("Pika Python Client Library".into())
+                ),
+                (
+                    "platform".to_string(),
+                    FieldValue::LongString("Python 3.8.10".into())
+                ),
+                (
+                    "capabilities".to_string(),
+                    FieldValue::FieldTable(HashMap::from([
+                        (
+                            "authentication_failure_close".to_string(),
+                            FieldValue::Boolean(true)
+                        ),
+                        ("basic.nack".to_string(), FieldValue::Boolean(true)),
+                        ("connection.blocked".to_string(), FieldValue::Boolean(true)),
+                        (
+                            "consumer_cancel_notify".to_string(),
+                            FieldValue::Boolean(true)
+                        ),
+                        ("publisher_confirms".to_string(), FieldValue::Boolean(true)),
+                    ]))
+                ),
+                (
+                    "information".to_string(),
+                    FieldValue::LongString("See http://pika.rtfd.org".into())
+                ),
+                (
+                    "version".to_string(),
+                    FieldValue::LongString("1.1.0".into())
+                )
+            ]),
+            mechanism: "PLAIN".to_string(),
+            response: "\x00admin\x00".into(),
+            locale: "en_US".to_string()
+        })
+    );
 }
