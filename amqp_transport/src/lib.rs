@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 extern crate core;
 
 mod classes;
@@ -29,7 +27,7 @@ pub async fn do_thing_i_guess() -> Result<()> {
         info!(local_addr = ?stream.local_addr(), %id, "Accepted new connection");
         let span = info_span!("client-connection", %id);
 
-        let connection = Connection::new(stream, id);
+        let connection = Connection::new(stream);
 
         tokio::spawn(connection.start_connection_processing().instrument(span));
     }

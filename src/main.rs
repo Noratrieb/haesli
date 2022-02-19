@@ -9,6 +9,7 @@ async fn main() -> Result<()> {
     for arg in env::args().skip(1) {
         match arg.as_str() {
             "--trace" => level = Level::TRACE,
+            "ignore-this-clippy" => eprintln!("yes please"),
             _ => {}
         }
     }

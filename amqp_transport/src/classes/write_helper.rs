@@ -68,6 +68,8 @@ pub fn longstr<W: Write>(value: Longstr, writer: &mut W) -> Result<(), TransErro
     Ok(())
 }
 
+// this appears to be unused right now, but it could be used in `Basic` things?
+#[allow(dead_code)]
 pub fn timestamp<W: Write>(value: Timestamp, writer: &mut W) -> Result<(), TransError> {
     writer.write_all(&value.to_be_bytes())?;
     Ok(())

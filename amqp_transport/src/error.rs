@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::io::Error;
 
 pub type StdResult<T, E> = std::result::Result<T, E>;
@@ -26,8 +28,10 @@ pub enum ProtocolError {
     ConException(#[from] ConException),
     #[error("{0}")]
     ChannelException(#[from] ChannelException),
-    #[error("closing connection")]
-    OtherCloseConnection,
+    #[error("Connection must be closed")]
+    CloseNow,
+    #[error("Graceful connection closing requested")]
+    GracefulClose,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -37,7 +41,7 @@ pub enum ConException {
     #[error("503 Command invalid")]
     CommandInvalid,
     #[error("503 Syntax error | {0:?}")]
-    /// A method was received but there was a syntax error. The string stores where it occured.
+    /// A method was received but there was a syntax error. The string stores where it occurred.
     SyntaxError(Vec<String>),
     #[error("504 Channel error")]
     ChannelError,

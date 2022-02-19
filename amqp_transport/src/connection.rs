@@ -7,7 +7,6 @@ use std::net::SocketAddr;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tracing::{debug, error, info};
-use uuid::Uuid;
 
 fn ensure_conn(condition: bool) -> Result<()> {
     if condition {
@@ -27,17 +26,15 @@ pub struct Connection {
     max_frame_size: usize,
     heartbeat_delay: u16,
     channel_max: u16,
-    id: Uuid,
 }
 
 impl Connection {
-    pub fn new(stream: TcpStream, id: Uuid) -> Self {
+    pub fn new(stream: TcpStream) -> Self {
         Self {
             stream,
             max_frame_size: FRAME_SIZE_MIN_MAX,
             heartbeat_delay: HEARTBEAT_DELAY,
             channel_max: CHANNEL_MAX,
-            id,
         }
     }
 
@@ -196,7 +193,7 @@ impl Connection {
             Ok(())
         } else {
             debug!(?version, expected_version = ?SUPPORTED_PROTOCOL_VERSION, "Version negotiation failed, unsupported version");
-            Err(ProtocolError::OtherCloseConnection.into())
+            Err(ProtocolError::CloseNow.into())
         }
     }
 }
