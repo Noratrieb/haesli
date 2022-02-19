@@ -1,7 +1,7 @@
-use crate::{field_type, resolve_type_from_domain, snake_case, subsequent_bit_fields, Amqp};
+use super::{field_type, resolve_type_from_domain, snake_case, subsequent_bit_fields, Amqp};
 use heck::ToUpperCamelCase;
 
-pub(crate) fn codegen_write(amqp: &Amqp) {
+pub(super) fn codegen_write(amqp: &Amqp) {
     println!(
         "pub mod write {{
 use super::*;

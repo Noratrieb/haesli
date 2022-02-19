@@ -1,7 +1,7 @@
-use crate::{snake_case, Amqp};
+use super::{snake_case, Amqp};
 use heck::ToUpperCamelCase;
 
-pub(crate) fn codegen_random(amqp: &Amqp) {
+pub(super) fn codegen_random(amqp: &Amqp) {
     println!(
         "#[cfg(test)]
 mod random {{

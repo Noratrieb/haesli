@@ -1,4 +1,4 @@
-use crate::{
+use super::{
     field_type, resolve_type_from_domain, snake_case, subsequent_bit_fields, Amqp, Assert, Class,
     Domain, Method,
 };
@@ -17,7 +17,7 @@ fn domain_function_name(domain_name: &str) -> String {
     format!("domain_{domain_name}")
 }
 
-pub(crate) fn codegen_parser(amqp: &Amqp) {
+pub(super) fn codegen_parser(amqp: &Amqp) {
     println!(
         "pub mod parse {{
 use super::*;

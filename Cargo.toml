@@ -1,5 +1,5 @@
 [workspace]
-members = ["./amqp_transport", "./amqp_codegen"]
+members = [".", "./amqp_transport", "xtask"]
 
 [package]
 name = "amqp"

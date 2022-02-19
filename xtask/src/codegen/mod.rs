@@ -2,13 +2,15 @@ mod parser;
 mod random;
 mod write;
 
-use crate::parser::codegen_parser;
-use crate::random::codegen_random;
-use crate::write::codegen_write;
 use heck::ToUpperCamelCase;
+use parser::codegen_parser;
+use random::codegen_random;
 use std::fs;
 use std::iter::Peekable;
+use std::path::PathBuf;
+use std::str::FromStr;
 use strong_xml::XmlRead;
+use write::codegen_write;
 
 #[derive(Debug, XmlRead)]
 #[xml(tag = "amqp")]
@@ -97,8 +99,15 @@ struct Doc {
     kind: Option<String>,
 }
 
-fn main() {
-    let content = fs::read_to_string("./amqp0-9-1.xml").unwrap();
+pub fn main() {
+    let this_file = PathBuf::from_str(file!()).unwrap();
+    let expected_location = this_file
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("amqp0-9-1.xml");
+    let content = fs::read_to_string(expected_location).unwrap();
 
     let amqp = match Amqp::from_str(&content) {
         Ok(amqp) => amqp,
