@@ -5,12 +5,12 @@ pub(super) fn codegen_write(amqp: &Amqp) {
     println!(
         "pub mod write {{
 use super::*;
-use crate::classes::write_helper::*;
+use crate::methods::write_helper::*;
 use crate::error::TransError;
 use std::io::Write;
 
-pub fn write_method<W: Write>(class: Method, mut writer: W) -> Result<(), TransError> {{
-    match class {{"
+pub fn write_method<W: Write>(method: Method, mut writer: W) -> Result<(), TransError> {{
+    match method {{"
     );
 
     for class in &amqp.classes {

@@ -21,7 +21,7 @@ pub(super) fn codegen_parser(amqp: &Amqp) {
     println!(
         "pub mod parse {{
 use super::*;
-use crate::classes::parse_helper::*;
+use crate::methods::parse_helper::*;
 use crate::error::TransError;
 use nom::{{branch::alt, bytes::complete::tag}};
 use regex::Regex;
@@ -108,9 +108,8 @@ fn method_parser(amqp: &Amqp, class: &Class, method: &Method) {
                 let fields_with_bit = subsequent_bit_fields(amqp, field, &mut iter);
 
                 let amount = fields_with_bit.len();
-                // todo: remove those map_err(failure)
                 println!(
-                    r#"    let (input, bits) = bit(input, {amount}).map_err(fail_err("field {field_name_raw} in method {method_name_raw}")).map_err(failure)?;"#
+                    r#"    let (input, bits) = bit(input, {amount}).map_err(fail_err("field {field_name_raw} in method {method_name_raw}"))?;"#
                 );
 
                 for (i, field) in fields_with_bit.iter().enumerate() {
@@ -121,7 +120,7 @@ fn method_parser(amqp: &Amqp, class: &Class, method: &Method) {
                 let fn_name = domain_function_name(field_type(field));
                 let field_name = snake_case(&field.name);
                 println!(
-                    r#"    let (input, {field_name}) = {fn_name}(input).map_err(fail_err("field {field_name_raw} in method {method_name_raw}")).map_err(failure)?;"#
+                    r#"    let (input, {field_name}) = {fn_name}(input).map_err(fail_err("field {field_name_raw} in method {method_name_raw}"))?;"#
                 );
 
                 for assert in &field.asserts {

@@ -103,21 +103,26 @@ fn random_ser_de() {
     let mut rng = rand::rngs::StdRng::from_seed([0; 32]);
 
     for _ in 0..ITERATIONS {
-        let class = Method::random(&mut rng);
+        let method = Method::random(&mut rng);
         let mut bytes = Vec::new();
 
-        if let Err(err) = super::write::write_method(class.clone(), &mut bytes) {
-            eprintln!("{class:#?}");
+        if let Err(err) = super::write::write_method(method.clone(), &mut bytes) {
+            eprintln!("{method:#?}");
             eprintln!("{err:?}");
             panic!("Failed to serialize");
         }
 
         match super::parse_method(&bytes) {
             Ok(parsed) => {
-                assert_eq!(class, parsed);
+                if method != parsed {
+                    eprintln!("{method:#?}");
+                    eprintln!("{bytes:?}");
+                    eprintln!("{parsed:?}");
+                    panic!("Not equal!");
+                }
             }
             Err(err) => {
-                eprintln!("{class:#?}");
+                eprintln!("{method:#?}");
                 eprintln!("{bytes:?}");
                 eprintln!("{err:?}");
                 panic!("Failed to deserialize");

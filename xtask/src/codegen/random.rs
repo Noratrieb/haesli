@@ -6,7 +6,7 @@ pub(super) fn codegen_random(amqp: &Amqp) {
         "#[cfg(test)]
 mod random {{
 use rand::Rng;
-use crate::classes::tests::RandomMethod;
+use crate::methods::tests::RandomMethod;
 use super::*;
 "
     );

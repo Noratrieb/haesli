@@ -16,7 +16,7 @@ fn main() {
 fn help() {
     println!(
         "Available tasks:
-generate - Generate amqp method code in `amqp_transport/src/classes/generated.rs.
+generate - Generate amqp method code in `amqp_transport/src/methods/generated.rs.
            Dumps code to stdout and should be redirected manually."
     );
 }

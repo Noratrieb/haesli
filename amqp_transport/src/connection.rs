@@ -107,8 +107,8 @@ impl Connection {
 
         ensure_conn(start_ok_frame.kind == FrameType::Method)?;
 
-        let class = methods::parse_method(&start_ok_frame.payload)?;
-        Ok(class)
+        let method = methods::parse_method(&start_ok_frame.payload)?;
+        Ok(method)
     }
 
     async fn start(&mut self) -> Result<()> {

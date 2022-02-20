@@ -35,12 +35,12 @@ pub enum FieldValue {
 
 pub use generated::*;
 
-/// Parses the payload of a method frame into the class/method
+/// Parses the payload of a method frame into the method
 pub fn parse_method(payload: &[u8]) -> Result<generated::Method, TransError> {
     let nom_result = generated::parse::parse_method(payload);
 
     match nom_result {
-        Ok(([], class)) => Ok(class),
+        Ok(([], method)) => Ok(method),
         Ok((_, _)) => {
             Err(
                 ConException::SyntaxError(vec!["could not consume all input".to_string()])

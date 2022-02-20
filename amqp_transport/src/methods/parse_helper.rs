@@ -53,14 +53,6 @@ pub fn err_other<E, S: Into<String>>(msg: S) -> impl FnOnce(E) -> Err<TransError
     move |_| Err::Error(ConException::SyntaxError(vec![msg.into()]).into_trans())
 }
 
-pub fn failure<E>(err: Err<E>) -> Err<E> {
-    match err {
-        Err::Incomplete(needed) => Err::Incomplete(needed),
-        Err::Error(e) => Err::Failure(e),
-        Err::Failure(e) => Err::Failure(e),
-    }
-}
-
 #[macro_export]
 macro_rules! fail {
     ($cause:expr) => {

@@ -906,24 +906,19 @@ pub mod parse {
     fn connection_start(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(10_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, version_major) = domain_octet(input)
-            .map_err(fail_err("field version-major in method start"))
-            .map_err(failure)?;
-        let (input, version_minor) = domain_octet(input)
-            .map_err(fail_err("field version-minor in method start"))
-            .map_err(failure)?;
+        let (input, version_major) =
+            domain_octet(input).map_err(fail_err("field version-major in method start"))?;
+        let (input, version_minor) =
+            domain_octet(input).map_err(fail_err("field version-minor in method start"))?;
         let (input, server_properties) = domain_peer_properties(input)
-            .map_err(fail_err("field server-properties in method start"))
-            .map_err(failure)?;
-        let (input, mechanisms) = domain_longstr(input)
-            .map_err(fail_err("field mechanisms in method start"))
-            .map_err(failure)?;
+            .map_err(fail_err("field server-properties in method start"))?;
+        let (input, mechanisms) =
+            domain_longstr(input).map_err(fail_err("field mechanisms in method start"))?;
         if mechanisms.is_empty() {
             fail!("string was null for field mechanisms")
         }
-        let (input, locales) = domain_longstr(input)
-            .map_err(fail_err("field locales in method start"))
-            .map_err(failure)?;
+        let (input, locales) =
+            domain_longstr(input).map_err(fail_err("field locales in method start"))?;
         if locales.is_empty() {
             fail!("string was null for field locales")
         }
@@ -942,23 +937,19 @@ pub mod parse {
         let (input, _) =
             tag(11_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
         let (input, client_properties) = domain_peer_properties(input)
-            .map_err(fail_err("field client-properties in method start-ok"))
-            .map_err(failure)?;
-        let (input, mechanism) = domain_shortstr(input)
-            .map_err(fail_err("field mechanism in method start-ok"))
-            .map_err(failure)?;
+            .map_err(fail_err("field client-properties in method start-ok"))?;
+        let (input, mechanism) =
+            domain_shortstr(input).map_err(fail_err("field mechanism in method start-ok"))?;
         if mechanism.is_empty() {
             fail!("string was null for field mechanism")
         }
-        let (input, response) = domain_longstr(input)
-            .map_err(fail_err("field response in method start-ok"))
-            .map_err(failure)?;
+        let (input, response) =
+            domain_longstr(input).map_err(fail_err("field response in method start-ok"))?;
         if response.is_empty() {
             fail!("string was null for field response")
         }
-        let (input, locale) = domain_shortstr(input)
-            .map_err(fail_err("field locale in method start-ok"))
-            .map_err(failure)?;
+        let (input, locale) =
+            domain_shortstr(input).map_err(fail_err("field locale in method start-ok"))?;
         if locale.is_empty() {
             fail!("string was null for field locale")
         }
@@ -975,17 +966,15 @@ pub mod parse {
     fn connection_secure(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(20_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, challenge) = domain_longstr(input)
-            .map_err(fail_err("field challenge in method secure"))
-            .map_err(failure)?;
+        let (input, challenge) =
+            domain_longstr(input).map_err(fail_err("field challenge in method secure"))?;
         Ok((input, Method::ConnectionSecure { challenge }))
     }
     fn connection_secure_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(21_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, response) = domain_longstr(input)
-            .map_err(fail_err("field response in method secure-ok"))
-            .map_err(failure)?;
+        let (input, response) =
+            domain_longstr(input).map_err(fail_err("field response in method secure-ok"))?;
         if response.is_empty() {
             fail!("string was null for field response")
         }
@@ -994,15 +983,12 @@ pub mod parse {
     fn connection_tune(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(30_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, channel_max) = domain_short(input)
-            .map_err(fail_err("field channel-max in method tune"))
-            .map_err(failure)?;
-        let (input, frame_max) = domain_long(input)
-            .map_err(fail_err("field frame-max in method tune"))
-            .map_err(failure)?;
-        let (input, heartbeat) = domain_short(input)
-            .map_err(fail_err("field heartbeat in method tune"))
-            .map_err(failure)?;
+        let (input, channel_max) =
+            domain_short(input).map_err(fail_err("field channel-max in method tune"))?;
+        let (input, frame_max) =
+            domain_long(input).map_err(fail_err("field frame-max in method tune"))?;
+        let (input, heartbeat) =
+            domain_short(input).map_err(fail_err("field heartbeat in method tune"))?;
         Ok((
             input,
             Method::ConnectionTune {
@@ -1015,18 +1001,15 @@ pub mod parse {
     fn connection_tune_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(31_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, channel_max) = domain_short(input)
-            .map_err(fail_err("field channel-max in method tune-ok"))
-            .map_err(failure)?;
+        let (input, channel_max) =
+            domain_short(input).map_err(fail_err("field channel-max in method tune-ok"))?;
         if channel_max == 0 {
             fail!("number was 0 for field channel_max")
         }
-        let (input, frame_max) = domain_long(input)
-            .map_err(fail_err("field frame-max in method tune-ok"))
-            .map_err(failure)?;
-        let (input, heartbeat) = domain_short(input)
-            .map_err(fail_err("field heartbeat in method tune-ok"))
-            .map_err(failure)?;
+        let (input, frame_max) =
+            domain_long(input).map_err(fail_err("field frame-max in method tune-ok"))?;
+        let (input, heartbeat) =
+            domain_short(input).map_err(fail_err("field heartbeat in method tune-ok"))?;
         Ok((
             input,
             Method::ConnectionTuneOk {
@@ -1039,15 +1022,11 @@ pub mod parse {
     fn connection_open(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(40_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, virtual_host) = domain_path(input)
-            .map_err(fail_err("field virtual-host in method open"))
-            .map_err(failure)?;
-        let (input, reserved_1) = domain_shortstr(input)
-            .map_err(fail_err("field reserved-1 in method open"))
-            .map_err(failure)?;
-        let (input, bits) = bit(input, 1)
-            .map_err(fail_err("field reserved-2 in method open"))
-            .map_err(failure)?;
+        let (input, virtual_host) =
+            domain_path(input).map_err(fail_err("field virtual-host in method open"))?;
+        let (input, reserved_1) =
+            domain_shortstr(input).map_err(fail_err("field reserved-1 in method open"))?;
+        let (input, bits) = bit(input, 1).map_err(fail_err("field reserved-2 in method open"))?;
         let reserved_2 = bits[0];
         Ok((
             input,
@@ -1061,26 +1040,21 @@ pub mod parse {
     fn connection_open_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(41_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reserved_1) = domain_shortstr(input)
-            .map_err(fail_err("field reserved-1 in method open-ok"))
-            .map_err(failure)?;
+        let (input, reserved_1) =
+            domain_shortstr(input).map_err(fail_err("field reserved-1 in method open-ok"))?;
         Ok((input, Method::ConnectionOpenOk { reserved_1 }))
     }
     fn connection_close(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(50_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reply_code) = domain_reply_code(input)
-            .map_err(fail_err("field reply-code in method close"))
-            .map_err(failure)?;
-        let (input, reply_text) = domain_reply_text(input)
-            .map_err(fail_err("field reply-text in method close"))
-            .map_err(failure)?;
-        let (input, class_id) = domain_class_id(input)
-            .map_err(fail_err("field class-id in method close"))
-            .map_err(failure)?;
-        let (input, method_id) = domain_method_id(input)
-            .map_err(fail_err("field method-id in method close"))
-            .map_err(failure)?;
+        let (input, reply_code) =
+            domain_reply_code(input).map_err(fail_err("field reply-code in method close"))?;
+        let (input, reply_text) =
+            domain_reply_text(input).map_err(fail_err("field reply-text in method close"))?;
+        let (input, class_id) =
+            domain_class_id(input).map_err(fail_err("field class-id in method close"))?;
+        let (input, method_id) =
+            domain_method_id(input).map_err(fail_err("field method-id in method close"))?;
         Ok((
             input,
             Method::ConnectionClose {
@@ -1112,52 +1086,42 @@ pub mod parse {
     fn channel_open(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(10_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reserved_1) = domain_shortstr(input)
-            .map_err(fail_err("field reserved-1 in method open"))
-            .map_err(failure)?;
+        let (input, reserved_1) =
+            domain_shortstr(input).map_err(fail_err("field reserved-1 in method open"))?;
         Ok((input, Method::ChannelOpen { reserved_1 }))
     }
     fn channel_open_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(11_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reserved_1) = domain_longstr(input)
-            .map_err(fail_err("field reserved-1 in method open-ok"))
-            .map_err(failure)?;
+        let (input, reserved_1) =
+            domain_longstr(input).map_err(fail_err("field reserved-1 in method open-ok"))?;
         Ok((input, Method::ChannelOpenOk { reserved_1 }))
     }
     fn channel_flow(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(20_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, bits) = bit(input, 1)
-            .map_err(fail_err("field active in method flow"))
-            .map_err(failure)?;
+        let (input, bits) = bit(input, 1).map_err(fail_err("field active in method flow"))?;
         let active = bits[0];
         Ok((input, Method::ChannelFlow { active }))
     }
     fn channel_flow_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(21_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, bits) = bit(input, 1)
-            .map_err(fail_err("field active in method flow-ok"))
-            .map_err(failure)?;
+        let (input, bits) = bit(input, 1).map_err(fail_err("field active in method flow-ok"))?;
         let active = bits[0];
         Ok((input, Method::ChannelFlowOk { active }))
     }
     fn channel_close(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(40_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reply_code) = domain_reply_code(input)
-            .map_err(fail_err("field reply-code in method close"))
-            .map_err(failure)?;
-        let (input, reply_text) = domain_reply_text(input)
-            .map_err(fail_err("field reply-text in method close"))
-            .map_err(failure)?;
-        let (input, class_id) = domain_class_id(input)
-            .map_err(fail_err("field class-id in method close"))
-            .map_err(failure)?;
-        let (input, method_id) = domain_method_id(input)
-            .map_err(fail_err("field method-id in method close"))
-            .map_err(failure)?;
+        let (input, reply_code) =
+            domain_reply_code(input).map_err(fail_err("field reply-code in method close"))?;
+        let (input, reply_text) =
+            domain_reply_text(input).map_err(fail_err("field reply-text in method close"))?;
+        let (input, class_id) =
+            domain_class_id(input).map_err(fail_err("field class-id in method close"))?;
+        let (input, method_id) =
+            domain_method_id(input).map_err(fail_err("field method-id in method close"))?;
         Ok((
             input,
             Method::ChannelClose {
@@ -1187,29 +1151,23 @@ pub mod parse {
     fn exchange_declare(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(10_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reserved_1) = domain_short(input)
-            .map_err(fail_err("field reserved-1 in method declare"))
-            .map_err(failure)?;
-        let (input, exchange) = domain_exchange_name(input)
-            .map_err(fail_err("field exchange in method declare"))
-            .map_err(failure)?;
+        let (input, reserved_1) =
+            domain_short(input).map_err(fail_err("field reserved-1 in method declare"))?;
+        let (input, exchange) =
+            domain_exchange_name(input).map_err(fail_err("field exchange in method declare"))?;
         if exchange.is_empty() {
             fail!("string was null for field exchange")
         }
-        let (input, r#type) = domain_shortstr(input)
-            .map_err(fail_err("field type in method declare"))
-            .map_err(failure)?;
-        let (input, bits) = bit(input, 5)
-            .map_err(fail_err("field passive in method declare"))
-            .map_err(failure)?;
+        let (input, r#type) =
+            domain_shortstr(input).map_err(fail_err("field type in method declare"))?;
+        let (input, bits) = bit(input, 5).map_err(fail_err("field passive in method declare"))?;
         let passive = bits[0];
         let durable = bits[1];
         let reserved_2 = bits[2];
         let reserved_3 = bits[3];
         let no_wait = bits[4];
-        let (input, arguments) = domain_table(input)
-            .map_err(fail_err("field arguments in method declare"))
-            .map_err(failure)?;
+        let (input, arguments) =
+            domain_table(input).map_err(fail_err("field arguments in method declare"))?;
         Ok((
             input,
             Method::ExchangeDeclare {
@@ -1233,18 +1191,14 @@ pub mod parse {
     fn exchange_delete(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(20_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reserved_1) = domain_short(input)
-            .map_err(fail_err("field reserved-1 in method delete"))
-            .map_err(failure)?;
-        let (input, exchange) = domain_exchange_name(input)
-            .map_err(fail_err("field exchange in method delete"))
-            .map_err(failure)?;
+        let (input, reserved_1) =
+            domain_short(input).map_err(fail_err("field reserved-1 in method delete"))?;
+        let (input, exchange) =
+            domain_exchange_name(input).map_err(fail_err("field exchange in method delete"))?;
         if exchange.is_empty() {
             fail!("string was null for field exchange")
         }
-        let (input, bits) = bit(input, 2)
-            .map_err(fail_err("field if-unused in method delete"))
-            .map_err(failure)?;
+        let (input, bits) = bit(input, 2).map_err(fail_err("field if-unused in method delete"))?;
         let if_unused = bits[0];
         let no_wait = bits[1];
         Ok((
@@ -1282,23 +1236,18 @@ pub mod parse {
     fn queue_declare(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(10_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reserved_1) = domain_short(input)
-            .map_err(fail_err("field reserved-1 in method declare"))
-            .map_err(failure)?;
-        let (input, queue) = domain_queue_name(input)
-            .map_err(fail_err("field queue in method declare"))
-            .map_err(failure)?;
-        let (input, bits) = bit(input, 5)
-            .map_err(fail_err("field passive in method declare"))
-            .map_err(failure)?;
+        let (input, reserved_1) =
+            domain_short(input).map_err(fail_err("field reserved-1 in method declare"))?;
+        let (input, queue) =
+            domain_queue_name(input).map_err(fail_err("field queue in method declare"))?;
+        let (input, bits) = bit(input, 5).map_err(fail_err("field passive in method declare"))?;
         let passive = bits[0];
         let durable = bits[1];
         let exclusive = bits[2];
         let auto_delete = bits[3];
         let no_wait = bits[4];
-        let (input, arguments) = domain_table(input)
-            .map_err(fail_err("field arguments in method declare"))
-            .map_err(failure)?;
+        let (input, arguments) =
+            domain_table(input).map_err(fail_err("field arguments in method declare"))?;
         Ok((
             input,
             Method::QueueDeclare {
@@ -1316,18 +1265,15 @@ pub mod parse {
     fn queue_declare_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(11_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, queue) = domain_queue_name(input)
-            .map_err(fail_err("field queue in method declare-ok"))
-            .map_err(failure)?;
+        let (input, queue) =
+            domain_queue_name(input).map_err(fail_err("field queue in method declare-ok"))?;
         if queue.is_empty() {
             fail!("string was null for field queue")
         }
         let (input, message_count) = domain_message_count(input)
-            .map_err(fail_err("field message-count in method declare-ok"))
-            .map_err(failure)?;
-        let (input, consumer_count) = domain_long(input)
-            .map_err(fail_err("field consumer-count in method declare-ok"))
-            .map_err(failure)?;
+            .map_err(fail_err("field message-count in method declare-ok"))?;
+        let (input, consumer_count) =
+            domain_long(input).map_err(fail_err("field consumer-count in method declare-ok"))?;
         Ok((
             input,
             Method::QueueDeclareOk {
@@ -1340,25 +1286,18 @@ pub mod parse {
     fn queue_bind(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(20_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reserved_1) = domain_short(input)
-            .map_err(fail_err("field reserved-1 in method bind"))
-            .map_err(failure)?;
-        let (input, queue) = domain_queue_name(input)
-            .map_err(fail_err("field queue in method bind"))
-            .map_err(failure)?;
-        let (input, exchange) = domain_exchange_name(input)
-            .map_err(fail_err("field exchange in method bind"))
-            .map_err(failure)?;
-        let (input, routing_key) = domain_shortstr(input)
-            .map_err(fail_err("field routing-key in method bind"))
-            .map_err(failure)?;
-        let (input, bits) = bit(input, 1)
-            .map_err(fail_err("field no-wait in method bind"))
-            .map_err(failure)?;
+        let (input, reserved_1) =
+            domain_short(input).map_err(fail_err("field reserved-1 in method bind"))?;
+        let (input, queue) =
+            domain_queue_name(input).map_err(fail_err("field queue in method bind"))?;
+        let (input, exchange) =
+            domain_exchange_name(input).map_err(fail_err("field exchange in method bind"))?;
+        let (input, routing_key) =
+            domain_shortstr(input).map_err(fail_err("field routing-key in method bind"))?;
+        let (input, bits) = bit(input, 1).map_err(fail_err("field no-wait in method bind"))?;
         let no_wait = bits[0];
-        let (input, arguments) = domain_table(input)
-            .map_err(fail_err("field arguments in method bind"))
-            .map_err(failure)?;
+        let (input, arguments) =
+            domain_table(input).map_err(fail_err("field arguments in method bind"))?;
         Ok((
             input,
             Method::QueueBind {
@@ -1379,21 +1318,16 @@ pub mod parse {
     fn queue_unbind(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(50_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reserved_1) = domain_short(input)
-            .map_err(fail_err("field reserved-1 in method unbind"))
-            .map_err(failure)?;
-        let (input, queue) = domain_queue_name(input)
-            .map_err(fail_err("field queue in method unbind"))
-            .map_err(failure)?;
-        let (input, exchange) = domain_exchange_name(input)
-            .map_err(fail_err("field exchange in method unbind"))
-            .map_err(failure)?;
-        let (input, routing_key) = domain_shortstr(input)
-            .map_err(fail_err("field routing-key in method unbind"))
-            .map_err(failure)?;
-        let (input, arguments) = domain_table(input)
-            .map_err(fail_err("field arguments in method unbind"))
-            .map_err(failure)?;
+        let (input, reserved_1) =
+            domain_short(input).map_err(fail_err("field reserved-1 in method unbind"))?;
+        let (input, queue) =
+            domain_queue_name(input).map_err(fail_err("field queue in method unbind"))?;
+        let (input, exchange) =
+            domain_exchange_name(input).map_err(fail_err("field exchange in method unbind"))?;
+        let (input, routing_key) =
+            domain_shortstr(input).map_err(fail_err("field routing-key in method unbind"))?;
+        let (input, arguments) =
+            domain_table(input).map_err(fail_err("field arguments in method unbind"))?;
         Ok((
             input,
             Method::QueueUnbind {
@@ -1413,15 +1347,11 @@ pub mod parse {
     fn queue_purge(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(30_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reserved_1) = domain_short(input)
-            .map_err(fail_err("field reserved-1 in method purge"))
-            .map_err(failure)?;
-        let (input, queue) = domain_queue_name(input)
-            .map_err(fail_err("field queue in method purge"))
-            .map_err(failure)?;
-        let (input, bits) = bit(input, 1)
-            .map_err(fail_err("field no-wait in method purge"))
-            .map_err(failure)?;
+        let (input, reserved_1) =
+            domain_short(input).map_err(fail_err("field reserved-1 in method purge"))?;
+        let (input, queue) =
+            domain_queue_name(input).map_err(fail_err("field queue in method purge"))?;
+        let (input, bits) = bit(input, 1).map_err(fail_err("field no-wait in method purge"))?;
         let no_wait = bits[0];
         Ok((
             input,
@@ -1436,22 +1366,17 @@ pub mod parse {
         let (input, _) =
             tag(31_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
         let (input, message_count) = domain_message_count(input)
-            .map_err(fail_err("field message-count in method purge-ok"))
-            .map_err(failure)?;
+            .map_err(fail_err("field message-count in method purge-ok"))?;
         Ok((input, Method::QueuePurgeOk { message_count }))
     }
     fn queue_delete(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(40_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reserved_1) = domain_short(input)
-            .map_err(fail_err("field reserved-1 in method delete"))
-            .map_err(failure)?;
-        let (input, queue) = domain_queue_name(input)
-            .map_err(fail_err("field queue in method delete"))
-            .map_err(failure)?;
-        let (input, bits) = bit(input, 3)
-            .map_err(fail_err("field if-unused in method delete"))
-            .map_err(failure)?;
+        let (input, reserved_1) =
+            domain_short(input).map_err(fail_err("field reserved-1 in method delete"))?;
+        let (input, queue) =
+            domain_queue_name(input).map_err(fail_err("field queue in method delete"))?;
+        let (input, bits) = bit(input, 3).map_err(fail_err("field if-unused in method delete"))?;
         let if_unused = bits[0];
         let if_empty = bits[1];
         let no_wait = bits[2];
@@ -1470,8 +1395,7 @@ pub mod parse {
         let (input, _) =
             tag(41_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
         let (input, message_count) = domain_message_count(input)
-            .map_err(fail_err("field message-count in method delete-ok"))
-            .map_err(failure)?;
+            .map_err(fail_err("field message-count in method delete-ok"))?;
         Ok((input, Method::QueueDeleteOk { message_count }))
     }
     fn basic(input: &[u8]) -> IResult<'_, Method> {
@@ -1501,15 +1425,11 @@ pub mod parse {
     fn basic_qos(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(10_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, prefetch_size) = domain_long(input)
-            .map_err(fail_err("field prefetch-size in method qos"))
-            .map_err(failure)?;
-        let (input, prefetch_count) = domain_short(input)
-            .map_err(fail_err("field prefetch-count in method qos"))
-            .map_err(failure)?;
-        let (input, bits) = bit(input, 1)
-            .map_err(fail_err("field global in method qos"))
-            .map_err(failure)?;
+        let (input, prefetch_size) =
+            domain_long(input).map_err(fail_err("field prefetch-size in method qos"))?;
+        let (input, prefetch_count) =
+            domain_short(input).map_err(fail_err("field prefetch-count in method qos"))?;
+        let (input, bits) = bit(input, 1).map_err(fail_err("field global in method qos"))?;
         let global = bits[0];
         Ok((
             input,
@@ -1528,25 +1448,19 @@ pub mod parse {
     fn basic_consume(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(20_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reserved_1) = domain_short(input)
-            .map_err(fail_err("field reserved-1 in method consume"))
-            .map_err(failure)?;
-        let (input, queue) = domain_queue_name(input)
-            .map_err(fail_err("field queue in method consume"))
-            .map_err(failure)?;
-        let (input, consumer_tag) = domain_consumer_tag(input)
-            .map_err(fail_err("field consumer-tag in method consume"))
-            .map_err(failure)?;
-        let (input, bits) = bit(input, 4)
-            .map_err(fail_err("field no-local in method consume"))
-            .map_err(failure)?;
+        let (input, reserved_1) =
+            domain_short(input).map_err(fail_err("field reserved-1 in method consume"))?;
+        let (input, queue) =
+            domain_queue_name(input).map_err(fail_err("field queue in method consume"))?;
+        let (input, consumer_tag) =
+            domain_consumer_tag(input).map_err(fail_err("field consumer-tag in method consume"))?;
+        let (input, bits) = bit(input, 4).map_err(fail_err("field no-local in method consume"))?;
         let no_local = bits[0];
         let no_ack = bits[1];
         let exclusive = bits[2];
         let no_wait = bits[3];
-        let (input, arguments) = domain_table(input)
-            .map_err(fail_err("field arguments in method consume"))
-            .map_err(failure)?;
+        let (input, arguments) =
+            domain_table(input).map_err(fail_err("field arguments in method consume"))?;
         Ok((
             input,
             Method::BasicConsume {
@@ -1565,19 +1479,15 @@ pub mod parse {
         let (input, _) =
             tag(21_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
         let (input, consumer_tag) = domain_consumer_tag(input)
-            .map_err(fail_err("field consumer-tag in method consume-ok"))
-            .map_err(failure)?;
+            .map_err(fail_err("field consumer-tag in method consume-ok"))?;
         Ok((input, Method::BasicConsumeOk { consumer_tag }))
     }
     fn basic_cancel(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(30_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, consumer_tag) = domain_consumer_tag(input)
-            .map_err(fail_err("field consumer-tag in method cancel"))
-            .map_err(failure)?;
-        let (input, bits) = bit(input, 1)
-            .map_err(fail_err("field no-wait in method cancel"))
-            .map_err(failure)?;
+        let (input, consumer_tag) =
+            domain_consumer_tag(input).map_err(fail_err("field consumer-tag in method cancel"))?;
+        let (input, bits) = bit(input, 1).map_err(fail_err("field no-wait in method cancel"))?;
         let no_wait = bits[0];
         Ok((
             input,
@@ -1591,25 +1501,19 @@ pub mod parse {
         let (input, _) =
             tag(31_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
         let (input, consumer_tag) = domain_consumer_tag(input)
-            .map_err(fail_err("field consumer-tag in method cancel-ok"))
-            .map_err(failure)?;
+            .map_err(fail_err("field consumer-tag in method cancel-ok"))?;
         Ok((input, Method::BasicCancelOk { consumer_tag }))
     }
     fn basic_publish(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(40_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reserved_1) = domain_short(input)
-            .map_err(fail_err("field reserved-1 in method publish"))
-            .map_err(failure)?;
-        let (input, exchange) = domain_exchange_name(input)
-            .map_err(fail_err("field exchange in method publish"))
-            .map_err(failure)?;
-        let (input, routing_key) = domain_shortstr(input)
-            .map_err(fail_err("field routing-key in method publish"))
-            .map_err(failure)?;
-        let (input, bits) = bit(input, 2)
-            .map_err(fail_err("field mandatory in method publish"))
-            .map_err(failure)?;
+        let (input, reserved_1) =
+            domain_short(input).map_err(fail_err("field reserved-1 in method publish"))?;
+        let (input, exchange) =
+            domain_exchange_name(input).map_err(fail_err("field exchange in method publish"))?;
+        let (input, routing_key) =
+            domain_shortstr(input).map_err(fail_err("field routing-key in method publish"))?;
+        let (input, bits) = bit(input, 2).map_err(fail_err("field mandatory in method publish"))?;
         let mandatory = bits[0];
         let immediate = bits[1];
         Ok((
@@ -1626,18 +1530,14 @@ pub mod parse {
     fn basic_return(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(50_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reply_code) = domain_reply_code(input)
-            .map_err(fail_err("field reply-code in method return"))
-            .map_err(failure)?;
-        let (input, reply_text) = domain_reply_text(input)
-            .map_err(fail_err("field reply-text in method return"))
-            .map_err(failure)?;
-        let (input, exchange) = domain_exchange_name(input)
-            .map_err(fail_err("field exchange in method return"))
-            .map_err(failure)?;
-        let (input, routing_key) = domain_shortstr(input)
-            .map_err(fail_err("field routing-key in method return"))
-            .map_err(failure)?;
+        let (input, reply_code) =
+            domain_reply_code(input).map_err(fail_err("field reply-code in method return"))?;
+        let (input, reply_text) =
+            domain_reply_text(input).map_err(fail_err("field reply-text in method return"))?;
+        let (input, exchange) =
+            domain_exchange_name(input).map_err(fail_err("field exchange in method return"))?;
+        let (input, routing_key) =
+            domain_shortstr(input).map_err(fail_err("field routing-key in method return"))?;
         Ok((
             input,
             Method::BasicReturn {
@@ -1651,22 +1551,17 @@ pub mod parse {
     fn basic_deliver(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(60_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, consumer_tag) = domain_consumer_tag(input)
-            .map_err(fail_err("field consumer-tag in method deliver"))
-            .map_err(failure)?;
-        let (input, delivery_tag) = domain_delivery_tag(input)
-            .map_err(fail_err("field delivery-tag in method deliver"))
-            .map_err(failure)?;
-        let (input, bits) = bit(input, 1)
-            .map_err(fail_err("field redelivered in method deliver"))
-            .map_err(failure)?;
+        let (input, consumer_tag) =
+            domain_consumer_tag(input).map_err(fail_err("field consumer-tag in method deliver"))?;
+        let (input, delivery_tag) =
+            domain_delivery_tag(input).map_err(fail_err("field delivery-tag in method deliver"))?;
+        let (input, bits) =
+            bit(input, 1).map_err(fail_err("field redelivered in method deliver"))?;
         let redelivered = bits[0];
-        let (input, exchange) = domain_exchange_name(input)
-            .map_err(fail_err("field exchange in method deliver"))
-            .map_err(failure)?;
-        let (input, routing_key) = domain_shortstr(input)
-            .map_err(fail_err("field routing-key in method deliver"))
-            .map_err(failure)?;
+        let (input, exchange) =
+            domain_exchange_name(input).map_err(fail_err("field exchange in method deliver"))?;
+        let (input, routing_key) =
+            domain_shortstr(input).map_err(fail_err("field routing-key in method deliver"))?;
         Ok((
             input,
             Method::BasicDeliver {
@@ -1681,15 +1576,11 @@ pub mod parse {
     fn basic_get(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(70_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reserved_1) = domain_short(input)
-            .map_err(fail_err("field reserved-1 in method get"))
-            .map_err(failure)?;
-        let (input, queue) = domain_queue_name(input)
-            .map_err(fail_err("field queue in method get"))
-            .map_err(failure)?;
-        let (input, bits) = bit(input, 1)
-            .map_err(fail_err("field no-ack in method get"))
-            .map_err(failure)?;
+        let (input, reserved_1) =
+            domain_short(input).map_err(fail_err("field reserved-1 in method get"))?;
+        let (input, queue) =
+            domain_queue_name(input).map_err(fail_err("field queue in method get"))?;
+        let (input, bits) = bit(input, 1).map_err(fail_err("field no-ack in method get"))?;
         let no_ack = bits[0];
         Ok((
             input,
@@ -1703,22 +1594,17 @@ pub mod parse {
     fn basic_get_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(71_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, delivery_tag) = domain_delivery_tag(input)
-            .map_err(fail_err("field delivery-tag in method get-ok"))
-            .map_err(failure)?;
-        let (input, bits) = bit(input, 1)
-            .map_err(fail_err("field redelivered in method get-ok"))
-            .map_err(failure)?;
+        let (input, delivery_tag) =
+            domain_delivery_tag(input).map_err(fail_err("field delivery-tag in method get-ok"))?;
+        let (input, bits) =
+            bit(input, 1).map_err(fail_err("field redelivered in method get-ok"))?;
         let redelivered = bits[0];
-        let (input, exchange) = domain_exchange_name(input)
-            .map_err(fail_err("field exchange in method get-ok"))
-            .map_err(failure)?;
-        let (input, routing_key) = domain_shortstr(input)
-            .map_err(fail_err("field routing-key in method get-ok"))
-            .map_err(failure)?;
+        let (input, exchange) =
+            domain_exchange_name(input).map_err(fail_err("field exchange in method get-ok"))?;
+        let (input, routing_key) =
+            domain_shortstr(input).map_err(fail_err("field routing-key in method get-ok"))?;
         let (input, message_count) = domain_message_count(input)
-            .map_err(fail_err("field message-count in method get-ok"))
-            .map_err(failure)?;
+            .map_err(fail_err("field message-count in method get-ok"))?;
         Ok((
             input,
             Method::BasicGetOk {
@@ -1733,20 +1619,16 @@ pub mod parse {
     fn basic_get_empty(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(72_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, reserved_1) = domain_shortstr(input)
-            .map_err(fail_err("field reserved-1 in method get-empty"))
-            .map_err(failure)?;
+        let (input, reserved_1) =
+            domain_shortstr(input).map_err(fail_err("field reserved-1 in method get-empty"))?;
         Ok((input, Method::BasicGetEmpty { reserved_1 }))
     }
     fn basic_ack(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(80_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, delivery_tag) = domain_delivery_tag(input)
-            .map_err(fail_err("field delivery-tag in method ack"))
-            .map_err(failure)?;
-        let (input, bits) = bit(input, 1)
-            .map_err(fail_err("field multiple in method ack"))
-            .map_err(failure)?;
+        let (input, delivery_tag) =
+            domain_delivery_tag(input).map_err(fail_err("field delivery-tag in method ack"))?;
+        let (input, bits) = bit(input, 1).map_err(fail_err("field multiple in method ack"))?;
         let multiple = bits[0];
         Ok((
             input,
@@ -1759,12 +1641,9 @@ pub mod parse {
     fn basic_reject(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(90_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, delivery_tag) = domain_delivery_tag(input)
-            .map_err(fail_err("field delivery-tag in method reject"))
-            .map_err(failure)?;
-        let (input, bits) = bit(input, 1)
-            .map_err(fail_err("field requeue in method reject"))
-            .map_err(failure)?;
+        let (input, delivery_tag) =
+            domain_delivery_tag(input).map_err(fail_err("field delivery-tag in method reject"))?;
+        let (input, bits) = bit(input, 1).map_err(fail_err("field requeue in method reject"))?;
         let requeue = bits[0];
         Ok((
             input,
@@ -1777,18 +1656,15 @@ pub mod parse {
     fn basic_recover_async(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(100_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, bits) = bit(input, 1)
-            .map_err(fail_err("field requeue in method recover-async"))
-            .map_err(failure)?;
+        let (input, bits) =
+            bit(input, 1).map_err(fail_err("field requeue in method recover-async"))?;
         let requeue = bits[0];
         Ok((input, Method::BasicRecoverAsync { requeue }))
     }
     fn basic_recover(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) =
             tag(110_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
-        let (input, bits) = bit(input, 1)
-            .map_err(fail_err("field requeue in method recover"))
-            .map_err(failure)?;
+        let (input, bits) = bit(input, 1).map_err(fail_err("field requeue in method recover"))?;
         let requeue = bits[0];
         Ok((input, Method::BasicRecover { requeue }))
     }
@@ -1847,8 +1723,8 @@ pub mod write {
     use crate::methods::write_helper::*;
     use std::io::Write;
 
-    pub fn write_method<W: Write>(class: Method, mut writer: W) -> Result<(), TransError> {
-        match class {
+    pub fn write_method<W: Write>(method: Method, mut writer: W) -> Result<(), TransError> {
+        match method {
             Method::ConnectionStart {
                 version_major,
                 version_minor,
