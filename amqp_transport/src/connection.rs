@@ -197,6 +197,7 @@ impl Connection {
 
     async fn main_loop(&mut self) -> Result<()> {
         loop {
+            debug!("Waiting for next frame");
             let frame = frame::read_frame(&mut self.stream, self.max_frame_size).await?;
             debug!(?frame);
             self.reset_timeout();
@@ -218,8 +219,8 @@ impl Connection {
                 // todo: handle closing
             }
             Method::ChannelOpen { .. } => self.channel_open(frame.channel).await?,
-
             _ => {
+                tokio::spawn(amqp_core::method::handle_method())
                 // we don't handle this here, forward it to *somewhere*
             }
         }
@@ -268,8 +269,6 @@ impl Connection {
             },
         )
         .await?;
-
-        time::sleep(Duration::from_secs(1000)).await; // for debugging the dashboard
 
         Ok(())
     }

@@ -2,25 +2,21 @@
 
 use anyhow::Result;
 use std::env;
-use tracing::Level;
 use tracing::{info_span, Instrument};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let mut dashboard = false;
-    let mut level = Level::INFO;
 
     for arg in env::args().skip(1) {
         match arg.as_str() {
-            "--debug" => level = Level::DEBUG,
-            "--trace" => level = Level::TRACE,
             "--dashboard" => dashboard = true,
             "ignore-this-clippy" => eprintln!("yes please"),
             _ => {}
         }
     }
 
-    setup_tracing(level);
+    setup_tracing();
 
     let global_data = amqp_core::GlobalData::default();
 
@@ -32,12 +28,14 @@ async fn main() -> Result<()> {
     amqp_transport::do_thing_i_guess(global_data).await
 }
 
-fn setup_tracing(level: Level) {
+fn setup_tracing() {
     tracing_subscriber::fmt()
         .with_level(true)
         .with_timer(tracing_subscriber::fmt::time::time())
         .with_ansi(true)
         .with_thread_names(true)
-        .with_max_level(level)
+        .with_env_filter(
+            std::env::var("RUST_LOG").unwrap_or_else(|_| "hyper=info,debug".to_string()),
+        )
         .init()
 }
