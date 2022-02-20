@@ -10,5 +10,4 @@ amqp_core = { path = "../amqp_core" }
 axum = "0.4.5"
 serde = { version = "1.0.136", features = ["derive"] }
 tokio = { version = "1.17.0", features = ["full"] }
-tower-http = { version = "0.2.3", features = ["fs"] }
 tracing = "0.1.31"

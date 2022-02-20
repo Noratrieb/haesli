@@ -1,4 +1,4 @@
-extern crate core;
+#![warn(rust_2018_idioms)]
 
 mod classes;
 mod connection;

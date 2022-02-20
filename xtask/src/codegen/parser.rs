@@ -176,7 +176,7 @@ fn function<F>(name: &str, ret_ty: &str, body: F)
 where
     F: FnOnce(),
 {
-    println!("fn {name}(input: &[u8]) -> IResult<{ret_ty}> {{");
+    println!("fn {name}(input: &[u8]) -> IResult<'_, {ret_ty}> {{");
     body();
     println!("}}");
 }

@@ -77,23 +77,23 @@ macro_rules! fail {
 use crate::classes::{FieldValue, TableFieldName};
 pub use fail;
 
-pub fn octet(input: &[u8]) -> IResult<Octet> {
+pub fn octet(input: &[u8]) -> IResult<'_, Octet> {
     u8(input)
 }
 
-pub fn short(input: &[u8]) -> IResult<Short> {
+pub fn short(input: &[u8]) -> IResult<'_, Short> {
     u16(Big)(input)
 }
 
-pub fn long(input: &[u8]) -> IResult<Long> {
+pub fn long(input: &[u8]) -> IResult<'_, Long> {
     u32(Big)(input)
 }
 
-pub fn longlong(input: &[u8]) -> IResult<Longlong> {
+pub fn longlong(input: &[u8]) -> IResult<'_, Longlong> {
     u64(Big)(input)
 }
 
-pub fn bit(input: &[u8], amount: usize) -> IResult<Vec<Bit>> {
+pub fn bit(input: &[u8], amount: usize) -> IResult<'_, Vec<Bit>> {
     let octets = (amount + 7) / 8;
     let (input, bytes) = take(octets)(input)?;
 
@@ -119,25 +119,25 @@ pub fn bit(input: &[u8], amount: usize) -> IResult<Vec<Bit>> {
     Ok((input, vec))
 }
 
-pub fn shortstr(input: &[u8]) -> IResult<Shortstr> {
+pub fn shortstr(input: &[u8]) -> IResult<'_, Shortstr> {
     let (input, len) = u8(input)?;
     let (input, str_data) = take(usize::from(len))(input)?;
     let data = String::from_utf8(str_data.into()).map_err(err_other("shortstr"))?;
     Ok((input, data))
 }
 
-pub fn longstr(input: &[u8]) -> IResult<Longstr> {
+pub fn longstr(input: &[u8]) -> IResult<'_, Longstr> {
     let (input, len) = u32(Big)(input)?;
     let (input, str_data) = take(usize::try_from(len).unwrap())(input)?;
     let data = str_data.into();
     Ok((input, data))
 }
 
-pub fn timestamp(input: &[u8]) -> IResult<Timestamp> {
+pub fn timestamp(input: &[u8]) -> IResult<'_, Timestamp> {
     u64(Big)(input)
 }
 
-pub fn table(input: &[u8]) -> IResult<Table> {
+pub fn table(input: &[u8]) -> IResult<'_, Table> {
     let (input, size) = u32(Big)(input)?;
     let (table_input, rest_input) = input.split_at(size.try_into().unwrap());
 
@@ -154,16 +154,16 @@ pub fn table(input: &[u8]) -> IResult<Table> {
     Ok((rest_input, table))
 }
 
-fn table_value_pair(input: &[u8]) -> IResult<(TableFieldName, FieldValue)> {
+fn table_value_pair(input: &[u8]) -> IResult<'_, (TableFieldName, FieldValue)> {
     let (input, field_name) = shortstr(input)?;
     let (input, field_value) = field_value(input).map_err(err(format!("field {field_name}")))?;
     Ok((input, (field_name, field_value)))
 }
 
-fn field_value(input: &[u8]) -> IResult<FieldValue> {
+fn field_value(input: &[u8]) -> IResult<'_, FieldValue> {
     type R<'a> = IResult<'a, FieldValue>;
 
-    fn boolean(input: &[u8]) -> R {
+    fn boolean(input: &[u8]) -> R<'_> {
         let (input, _) = tag(b"t")(input)?;
         let (input, bool_byte) = u8(input)?;
         match bool_byte {
@@ -182,37 +182,37 @@ fn field_value(input: &[u8]) -> IResult<FieldValue> {
         };
     }
 
-    number!(b"b", short_short_int, i8, ShortShortInt, R);
-    number!(b"B", short_short_uint, u8, ShortShortUInt, R);
-    number!(b"U", short_int, i16(Big), ShortInt, R);
-    number!(b"u", short_uint, u16(Big), ShortUInt, R);
-    number!(b"I", long_int, i32(Big), LongInt, R);
-    number!(b"i", long_uint, u32(Big), LongUInt, R);
-    number!(b"L", long_long_int, i64(Big), LongLongInt, R);
-    number!(b"l", long_long_uint, u64(Big), LongLongUInt, R);
-    number!(b"f", float, f32(Big), Float, R);
-    number!(b"d", double, f64(Big), Double, R);
+    number!(b"b", short_short_int, i8, ShortShortInt, R<'_>);
+    number!(b"B", short_short_uint, u8, ShortShortUInt, R<'_>);
+    number!(b"U", short_int, i16(Big), ShortInt, R<'_>);
+    number!(b"u", short_uint, u16(Big), ShortUInt, R<'_>);
+    number!(b"I", long_int, i32(Big), LongInt, R<'_>);
+    number!(b"i", long_uint, u32(Big), LongUInt, R<'_>);
+    number!(b"L", long_long_int, i64(Big), LongLongInt, R<'_>);
+    number!(b"l", long_long_uint, u64(Big), LongLongUInt, R<'_>);
+    number!(b"f", float, f32(Big), Float, R<'_>);
+    number!(b"d", double, f64(Big), Double, R<'_>);
 
-    fn decimal(input: &[u8]) -> R {
+    fn decimal(input: &[u8]) -> R<'_> {
         let (input, _) = tag("D")(input)?;
         let (input, scale) = u8(input)?;
         let (input, value) = u32(Big)(input)?;
         Ok((input, FieldValue::DecimalValue(scale, value)))
     }
 
-    fn short_str(input: &[u8]) -> R {
+    fn short_str(input: &[u8]) -> R<'_> {
         let (input, _) = tag("s")(input)?;
         let (input, str) = shortstr(input)?;
         Ok((input, FieldValue::ShortString(str)))
     }
 
-    fn long_str(input: &[u8]) -> R {
+    fn long_str(input: &[u8]) -> R<'_> {
         let (input, _) = tag("S")(input)?;
         let (input, str) = longstr(input)?;
         Ok((input, FieldValue::LongString(str)))
     }
 
-    fn field_array(input: &[u8]) -> R {
+    fn field_array(input: &[u8]) -> R<'_> {
         let (input, _) = tag("A")(input)?;
         // todo is it i32?
         let (input, len) = u32(Big)(input)?;
@@ -220,14 +220,14 @@ fn field_value(input: &[u8]) -> IResult<FieldValue> {
             .map(|(input, value)| (input, FieldValue::FieldArray(value)))
     }
 
-    number!(b"T", timestamp, u64(Big), Timestamp, R);
+    number!(b"T", timestamp, u64(Big), Timestamp, R<'_>);
 
-    fn field_table(input: &[u8]) -> R {
+    fn field_table(input: &[u8]) -> R<'_> {
         let (input, _) = tag("F")(input)?;
         table(input).map(|(input, value)| (input, FieldValue::FieldTable(value)))
     }
 
-    fn void(input: &[u8]) -> R {
+    fn void(input: &[u8]) -> R<'_> {
         tag("V")(input).map(|(input, _)| (input, FieldValue::Void))
     }
 

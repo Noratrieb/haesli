@@ -27,6 +27,7 @@ const CHANNEL_MAX: u16 = 0;
 const FRAME_SIZE_MAX: u32 = 0;
 const HEARTBEAT_DELAY: u16 = 0;
 
+#[allow(dead_code)]
 pub struct Channel {
     num: u16,
     channel_handle: amqp_core::ChannelHandle,

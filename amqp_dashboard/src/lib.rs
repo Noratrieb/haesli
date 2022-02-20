@@ -1,3 +1,5 @@
+#![warn(rust_2018_idioms)]
+
 use amqp_core::GlobalData;
 use axum::body::{boxed, Full};
 use axum::response::{Html, IntoResponse, Response};

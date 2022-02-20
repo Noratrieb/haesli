@@ -1,3 +1,5 @@
+#![allow(clippy::needless_late_init)] // because of a bad derive macro
+
 mod parser;
 mod random;
 mod write;
