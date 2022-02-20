@@ -1,5 +1,5 @@
-use amqp_transport::methods;
-use amqp_transport::methods::{Method, RandomMethod};
+use amqp_core::methods::Method;
+use amqp_transport::methods::{self, RandomMethod};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use rand::SeedableRng;
 
