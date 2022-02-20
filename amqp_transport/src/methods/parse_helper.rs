@@ -1,7 +1,8 @@
 use crate::error::{ConException, ProtocolError, TransError};
 use crate::methods::generated::parse::IResult;
-use crate::methods::generated::{
-    Bit, Long, Longlong, Longstr, Octet, Short, Shortstr, Table, Timestamp,
+use amqp_core::methods::{
+    Bit, FieldValue, Long, Longlong, Longstr, Octet, Short, Shortstr, Table, TableFieldName,
+    Timestamp,
 };
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take};
@@ -56,7 +57,6 @@ macro_rules! fail {
     };
 }
 
-use crate::methods::{FieldValue, TableFieldName};
 pub use fail;
 
 pub fn octet(input: &[u8]) -> IResult<'_, Octet> {

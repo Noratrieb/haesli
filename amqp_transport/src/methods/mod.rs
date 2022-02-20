@@ -1,4 +1,5 @@
 use crate::error::{ConException, TransError};
+use amqp_core::methods::{FieldValue, Method, Table};
 use rand::Rng;
 use std::collections::HashMap;
 
@@ -8,36 +9,10 @@ mod parse_helper;
 mod tests;
 mod write_helper;
 
-pub type TableFieldName = String;
-
-pub type Table = HashMap<TableFieldName, FieldValue>;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum FieldValue {
-    Boolean(bool),
-    ShortShortInt(i8),
-    ShortShortUInt(u8),
-    ShortInt(i16),
-    ShortUInt(u16),
-    LongInt(i32),
-    LongUInt(u32),
-    LongLongInt(i64),
-    LongLongUInt(u64),
-    Float(f32),
-    Double(f64),
-    DecimalValue(u8, u32),
-    ShortString(Shortstr),
-    LongString(Longstr),
-    FieldArray(Vec<FieldValue>),
-    Timestamp(u64),
-    FieldTable(Table),
-    Void,
-}
-
 pub use generated::*;
 
 /// Parses the payload of a method frame into the method
-pub fn parse_method(payload: &[u8]) -> Result<generated::Method, TransError> {
+pub fn parse_method(payload: &[u8]) -> Result<Method, TransError> {
     let nom_result = generated::parse::parse_method(payload);
 
     match nom_result {
@@ -92,7 +67,7 @@ macro_rules! rand_random_method {
 
 rand_random_method!(bool, u8, i8, u16, i16, u32, i32, u64, i64, f32, f64);
 
-impl<R: Rng> RandomMethod<R> for HashMap<String, FieldValue> {
+impl<R: Rng> RandomMethod<R> for Table {
     fn random(rng: &mut R) -> Self {
         let len = rng.gen_range(0..3);
         HashMap::from_iter((0..len).map(|_| (String::random(rng), FieldValue::random(rng))))
@@ -103,23 +78,23 @@ impl<R: Rng> RandomMethod<R> for FieldValue {
     fn random(rng: &mut R) -> Self {
         let index = rng.gen_range(0_u32..17);
         match index {
-            0 => FieldValue::Boolean(RandomMethod::random(rng)),
-            1 => FieldValue::ShortShortInt(RandomMethod::random(rng)),
-            2 => FieldValue::ShortShortUInt(RandomMethod::random(rng)),
-            3 => FieldValue::ShortInt(RandomMethod::random(rng)),
-            4 => FieldValue::ShortUInt(RandomMethod::random(rng)),
-            5 => FieldValue::LongInt(RandomMethod::random(rng)),
-            6 => FieldValue::LongUInt(RandomMethod::random(rng)),
-            7 => FieldValue::LongLongInt(RandomMethod::random(rng)),
-            8 => FieldValue::LongLongUInt(RandomMethod::random(rng)),
-            9 => FieldValue::Float(RandomMethod::random(rng)),
-            10 => FieldValue::Double(RandomMethod::random(rng)),
-            11 => FieldValue::ShortString(RandomMethod::random(rng)),
-            12 => FieldValue::LongString(RandomMethod::random(rng)),
-            13 => FieldValue::FieldArray(RandomMethod::random(rng)),
-            14 => FieldValue::Timestamp(RandomMethod::random(rng)),
-            15 => FieldValue::FieldTable(RandomMethod::random(rng)),
-            16 => FieldValue::Void,
+            0 => Self::Boolean(RandomMethod::random(rng)),
+            1 => Self::ShortShortInt(RandomMethod::random(rng)),
+            2 => Self::ShortShortUInt(RandomMethod::random(rng)),
+            3 => Self::ShortInt(RandomMethod::random(rng)),
+            4 => Self::ShortUInt(RandomMethod::random(rng)),
+            5 => Self::LongInt(RandomMethod::random(rng)),
+            6 => Self::LongUInt(RandomMethod::random(rng)),
+            7 => Self::LongLongInt(RandomMethod::random(rng)),
+            8 => Self::LongLongUInt(RandomMethod::random(rng)),
+            9 => Self::Float(RandomMethod::random(rng)),
+            10 => Self::Double(RandomMethod::random(rng)),
+            11 => Self::ShortString(RandomMethod::random(rng)),
+            12 => Self::LongString(RandomMethod::random(rng)),
+            13 => Self::FieldArray(RandomMethod::random(rng)),
+            14 => Self::Timestamp(RandomMethod::random(rng)),
+            15 => Self::FieldTable(RandomMethod::random(rng)),
+            16 => Self::Void,
             _ => unreachable!(),
         }
     }

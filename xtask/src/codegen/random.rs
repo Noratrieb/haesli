@@ -1,59 +1,78 @@
-use super::{snake_case, Amqp};
+use crate::codegen::{Amqp, Codegen};
 use heck::ToUpperCamelCase;
 
-pub(super) fn codegen_random(amqp: &Amqp) {
-    println!(
-        "
+impl Codegen {
+    pub fn codegen_random(&mut self, amqp: &Amqp) {
+        writeln!(
+            self.output,
+            "
 mod random {{
 use rand::Rng;
+use amqp_core::methods::*;
 use crate::methods::RandomMethod;
-use super::*;
 "
-    );
+        )
+        .ok();
 
-    impl_random("Method", || {
+        writeln!(
+            self.output,
+            "impl<R: Rng> RandomMethod<R> for Method {{
+    #[allow(unused_variables)]
+    fn random(rng: &mut R) -> Self {{"
+        )
+        .ok();
+
         let class_lens = amqp.classes.len();
-        println!("        match rng.gen_range(0u32..{class_lens}) {{");
+        writeln!(
+            self.output,
+            "        match rng.gen_range(0u32..{class_lens}) {{"
+        )
+        .ok();
         for (i, class) in amqp.classes.iter().enumerate() {
             let class_name = class.name.to_upper_camel_case();
-            println!("            {i} => {{");
+            writeln!(self.output, "            {i} => {{").ok();
 
             let method_len = class.methods.len();
-            println!("                match rng.gen_range(0u32..{method_len}) {{");
+            writeln!(
+                self.output,
+                "                match rng.gen_range(0u32..{method_len}) {{"
+            )
+            .ok();
 
             for (i, method) in class.methods.iter().enumerate() {
                 let method_name = method.name.to_upper_camel_case();
-                println!("                    {i} => Method::{class_name}{method_name} {{");
+                writeln!(
+                    self.output,
+                    "                    {i} => Method::{class_name}{method_name} {{"
+                )
+                .ok();
                 for field in &method.fields {
-                    let field_name = snake_case(&field.name);
-                    println!("                        {field_name}: RandomMethod::random(rng),");
+                    let field_name = self.snake_case(&field.name);
+                    writeln!(
+                        self.output,
+                        "                        {field_name}: RandomMethod::random(rng),"
+                    )
+                    .ok();
                 }
-                println!("                    }},");
+                writeln!(self.output, "                    }},").ok();
             }
-            println!(
+            writeln!(
+                self.output,
                 "                    _ => unreachable!(),
                 }}"
-            );
+            )
+            .ok();
 
-            println!("            }}");
+            writeln!(self.output, "            }}").ok();
         }
-        println!(
+        writeln!(
+            self.output,
             "            _ => unreachable!(),
         }}"
-        );
-    });
+        )
+        .ok();
+        writeln!(self.output, "    }}\n}}").ok();
 
-    println!("}}");
-}
-
-fn impl_random(name: &str, body: impl FnOnce()) {
-    println!(
-        "impl<R: Rng> RandomMethod<R> for {name} {{
-    #[allow(unused_variables)]
-    fn random(rng: &mut R) -> Self {{"
-    );
-
-    body();
-
-    println!("    }}\n}}");
+        writeln!(self.output, "}}").ok();
+    }
 }

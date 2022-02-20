@@ -1,6 +1,6 @@
 use crate::frame::FrameType;
-use crate::methods::{FieldValue, Method};
 use crate::{frame, methods};
+use amqp_core::methods::{FieldValue, Method};
 use std::collections::HashMap;
 
 #[tokio::test]

@@ -1,5 +1,7 @@
 #![warn(rust_2018_idioms)]
 
+pub mod methods;
+
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::net::SocketAddr;

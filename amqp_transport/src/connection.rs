@@ -1,7 +1,7 @@
 use crate::error::{ConException, ProtocolError, Result};
 use crate::frame::{Frame, FrameType};
-use crate::methods::Method;
 use crate::{frame, methods, sasl};
+use amqp_core::methods::{FieldValue, Method, Table};
 use amqp_core::GlobalData;
 use anyhow::Context;
 use std::collections::HashMap;
@@ -220,7 +220,17 @@ impl Connection {
             }
             Method::ChannelOpen { .. } => self.channel_open(frame.channel).await?,
             _ => {
-                tokio::spawn(amqp_core::method::handle_method())
+                let channel_handle = self
+                    .channels
+                    .get(&frame.channel)
+                    .ok_or_else(|| ConException::Todo.into_trans())?
+                    .channel_handle
+                    .clone();
+
+                tokio::spawn(amqp_messaging::methods::handle_method(
+                    channel_handle,
+                    method,
+                ));
                 // we don't handle this here, forward it to *somewhere*
             }
         }
@@ -325,9 +335,9 @@ impl Drop for Channel {
     }
 }
 
-fn server_properties(host: SocketAddr) -> methods::Table {
-    fn ls(str: &str) -> methods::FieldValue {
-        methods::FieldValue::LongString(str.into())
+fn server_properties(host: SocketAddr) -> Table {
+    fn ls(str: &str) -> FieldValue {
+        FieldValue::LongString(str.into())
     }
 
     let host_str = host.ip().to_string();
