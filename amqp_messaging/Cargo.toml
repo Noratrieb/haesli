@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 amqp_core = { path = "../amqp_core" }
 tracing = "0.1.31"
+tokio = { version = "1.17.0", features = ["full"] }

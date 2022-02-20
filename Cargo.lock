@@ -48,6 +48,7 @@ name = "amqp_messaging"
 version = "0.1.0"
 dependencies = [
  "amqp_core",
+ "tokio",
  "tracing",
 ]
 

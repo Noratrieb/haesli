@@ -199,7 +199,6 @@ impl Connection {
         loop {
             debug!("Waiting for next frame");
             let frame = frame::read_frame(&mut self.stream, self.max_frame_size).await?;
-            debug!(?frame);
             self.reset_timeout();
 
             match frame.kind {
@@ -219,6 +218,7 @@ impl Connection {
                 // todo: handle closing
             }
             Method::ChannelOpen { .. } => self.channel_open(frame.channel).await?,
+            Method::ChannelClose { .. } => self.channel_close(frame.channel, method).await?,
             _ => {
                 let channel_handle = self
                     .channels
@@ -280,6 +280,27 @@ impl Connection {
         )
         .await?;
 
+        Ok(())
+    }
+
+    async fn channel_close(&mut self, num: u16, method: Method) -> Result<()> {
+        if let Method::ChannelClose {
+            reply_code: code,
+            reply_text: reason,
+            ..
+        } = method
+        {
+            info!(%code, %reason, "Closing channel");
+
+            if let Some(channel) = self.channels.remove(&num) {
+                drop(channel);
+                self.send_method(num, Method::ChannelCloseOk).await?;
+            } else {
+                return Err(ConException::Todo.into_trans());
+            }
+        } else {
+            unreachable!()
+        }
         Ok(())
     }
 

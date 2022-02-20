@@ -93,7 +93,12 @@ pub type IResult<'a, T> = nom::IResult<&'a [u8], T, TransError>;
                 .ok();
 
                 for assert in &domain.asserts {
-                    self.assert_check(assert, &type_name, "result");
+                    // channel.close requires a reply code, but there exists no reply code for
+                    // a regular shutdown, and pythons `pika` just sends 0, even though the spec
+                    // technically says that reply-code must be nonnull. Ignore that here.
+                    if domain.name != "reply-code" {
+                        self.assert_check(assert, &type_name, "result");
+                    }
                 }
                 writeln!(self.output, "    Ok((input, result))").ok();
             }

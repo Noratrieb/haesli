@@ -66,9 +66,6 @@ pub mod parse {
     }
     fn domain_reply_code(input: &[u8]) -> IResult<'_, ReplyCode> {
         let (input, result) = short(input)?;
-        if result == 0 {
-            fail!("number was 0 for field result")
-        }
         Ok((input, result))
     }
     fn domain_reply_text(input: &[u8]) -> IResult<'_, ReplyText> {
