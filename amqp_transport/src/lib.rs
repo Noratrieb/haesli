@@ -8,7 +8,6 @@ mod sasl;
 #[cfg(test)]
 mod tests;
 
-
 use crate::connection::Connection;
 use amqp_core::GlobalData;
 use anyhow::Result;
@@ -39,6 +38,8 @@ pub async fn do_thing_i_guess(global_data: GlobalData) -> Result<()> {
 
         let connection = Connection::new(id, stream, connection_handle, global_data.clone());
 
-        tokio::spawn(connection.start_connection_processing().instrument(span));
+        tokio::task::Builder::new()
+            .name(&format!("connection {id}"))
+            .spawn(connection.start_connection_processing().instrument(span));
     }
 }

@@ -1,2 +1,6 @@
 [alias]
 xtask = "run --package xtask --"
+
+[build]
+# note: if this doesn't apply, update your global rustflags in "~/.cargo/config.toml"
+rustflags = ["--cfg", "tokio_unstable"]
