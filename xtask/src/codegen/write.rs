@@ -9,7 +9,7 @@ use crate::classes::write_helper::*;
 use crate::error::TransError;
 use std::io::Write;
 
-pub fn write_method<W: Write>(class: Class, mut writer: W) -> Result<(), TransError> {{
+pub fn write_method<W: Write>(class: Method, mut writer: W) -> Result<(), TransError> {{
     match class {{"
     );
 
@@ -19,12 +19,12 @@ pub fn write_method<W: Write>(class: Class, mut writer: W) -> Result<(), TransEr
         for method in &class.methods {
             let method_name = method.name.to_upper_camel_case();
             let method_index = method.index;
-            println!("        Class::{class_name}({class_name}::{method_name} {{");
+            println!("        Method::{class_name}{method_name} {{");
             for field in &method.fields {
                 let field_name = snake_case(&field.name);
                 println!("            {field_name},");
             }
-            println!("        }}) => {{");
+            println!("        }} => {{");
             let [ci0, ci1] = class_index.to_be_bytes();
             let [mi0, mi1] = method_index.to_be_bytes();
             println!("            writer.write_all(&[{ci0}, {ci1}, {mi0}, {mi1}])?;");

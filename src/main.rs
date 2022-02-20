@@ -12,6 +12,7 @@ async fn main() -> Result<()> {
 
     for arg in env::args().skip(1) {
         match arg.as_str() {
+            "--debug" => level = Level::DEBUG,
             "--trace" => level = Level::TRACE,
             "--dashboard" => dashboard = true,
             "ignore-this-clippy" => eprintln!("yes please"),

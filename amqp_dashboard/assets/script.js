@@ -40,7 +40,7 @@ const renderConnections = (connections) => {
 };
 
 const refresh = async () => {
-  const fetched = await fetch('http://localhost:3000/api/data');
+  const fetched = await fetch('api/data');
   const data = await fetched.json();
   renderConnections(data.connections);
 };

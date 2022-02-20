@@ -1,4 +1,4 @@
-use crate::classes::{Class, Connection, FieldValue};
+use crate::classes::{FieldValue, Method};
 use crate::frame::FrameType;
 use crate::{classes, frame};
 use std::collections::HashMap;
@@ -6,7 +6,7 @@ use std::collections::HashMap;
 #[tokio::test]
 async fn write_start_ok_frame() {
     let mut payload = Vec::new();
-    let method = classes::Class::Connection(classes::Connection::Start {
+    let method = Method::ConnectionStart {
         version_major: 0,
         version_minor: 9,
         server_properties: HashMap::from([(
@@ -15,7 +15,7 @@ async fn write_start_ok_frame() {
         )]),
         mechanisms: "PLAIN".into(),
         locales: "en_US".into(),
-    });
+    };
 
     classes::write::write_method(method, &mut payload).unwrap();
 
@@ -140,7 +140,7 @@ fn read_start_ok_payload() {
 
     assert_eq!(
         method,
-        Class::Connection(Connection::StartOk {
+        Method::ConnectionStartOk {
             client_properties: HashMap::from([
                 (
                     "product".to_string(),
@@ -178,6 +178,6 @@ fn read_start_ok_payload() {
             mechanism: "PLAIN".to_string(),
             response: "\x00admin\x00".into(),
             locale: "en_US".to_string()
-        })
+        }
     );
 }

@@ -31,7 +31,7 @@ pub type IResult<'a, T> = nom::IResult<&'a [u8], T, TransError>;
 "
     );
     println!(
-        "pub fn parse_method(input: &[u8]) -> Result<(&[u8], Class), nom::Err<TransError>> {{
+        "pub fn parse_method(input: &[u8]) -> Result<(&[u8], Method), nom::Err<TransError>> {{
     alt(({}))(input)
 }}",
         amqp.classes
@@ -47,7 +47,7 @@ pub type IResult<'a, T> = nom::IResult<&'a [u8], T, TransError>;
     for class in &amqp.classes {
         let class_name = class.name.to_snake_case();
 
-        function(&class_name, "Class", || {
+        function(&class_name, "Method", || {
             let class_index = class.index;
             let all_methods = class
                 .methods
@@ -56,8 +56,8 @@ pub type IResult<'a, T> = nom::IResult<&'a [u8], T, TransError>;
                 .join(", ");
             let class_name_raw = &class.name;
             println!(
-                r#"    let (input, _) = tag({class_index}_u16.to_be_bytes())(input).map_err(err("invalid tag for class {class_name_raw}"))?;
-    alt(({all_methods}))(input).map_err(err("class {class_name_raw}")).map_err(failure)"#
+                r#"    let (input, _) = tag({class_index}_u16.to_be_bytes())(input).map_err(fail_err("invalid tag for class {class_name_raw}"))?;
+    alt(({all_methods}))(input).map_err(fail_err("class {class_name_raw}"))"#
             );
         });
 
@@ -94,10 +94,10 @@ fn method_parser(amqp: &Amqp, class: &Class, method: &Method) {
     let method_name_raw = &method.name;
 
     let function_name = method_function_name(&class_name)(method);
-    function(&function_name, "Class", || {
+    function(&function_name, "Method", || {
         let method_index = method.index;
         println!(
-            r#"    let (input, _) = tag({method_index}_u16.to_be_bytes())(input).map_err(err("parsing method index"))?;"#
+            r#"    let (input, _) = tag({method_index}_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;"#
         );
         let mut iter = method.fields.iter().peekable();
         while let Some(field) = iter.next() {
@@ -108,8 +108,9 @@ fn method_parser(amqp: &Amqp, class: &Class, method: &Method) {
                 let fields_with_bit = subsequent_bit_fields(amqp, field, &mut iter);
 
                 let amount = fields_with_bit.len();
+                // todo: remove those map_err(failure)
                 println!(
-                    r#"    let (input, bits) = bit(input, {amount}).map_err(err("field {field_name_raw} in method {method_name_raw}")).map_err(failure)?;"#
+                    r#"    let (input, bits) = bit(input, {amount}).map_err(fail_err("field {field_name_raw} in method {method_name_raw}")).map_err(failure)?;"#
                 );
 
                 for (i, field) in fields_with_bit.iter().enumerate() {
@@ -120,7 +121,7 @@ fn method_parser(amqp: &Amqp, class: &Class, method: &Method) {
                 let fn_name = domain_function_name(field_type(field));
                 let field_name = snake_case(&field.name);
                 println!(
-                    r#"    let (input, {field_name}) = {fn_name}(input).map_err(err("field {field_name_raw} in method {method_name_raw}")).map_err(failure)?;"#
+                    r#"    let (input, {field_name}) = {fn_name}(input).map_err(fail_err("field {field_name_raw} in method {method_name_raw}")).map_err(failure)?;"#
                 );
 
                 for assert in &field.asserts {
@@ -130,12 +131,12 @@ fn method_parser(amqp: &Amqp, class: &Class, method: &Method) {
         }
         let class_name = class_name.to_upper_camel_case();
         let method_name = method.name.to_upper_camel_case();
-        println!("    Ok((input, Class::{class_name}({class_name}::{method_name} {{");
+        println!("    Ok((input, Method::{class_name}{method_name} {{");
         for field in &method.fields {
             let field_name = snake_case(&field.name);
             println!("        {field_name},");
         }
-        println!("    }})))");
+        println!("    }}))");
     });
 }
 

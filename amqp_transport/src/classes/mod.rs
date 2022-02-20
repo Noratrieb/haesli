@@ -36,7 +36,7 @@ pub enum FieldValue {
 pub use generated::*;
 
 /// Parses the payload of a method frame into the class/method
-pub fn parse_method(payload: &[u8]) -> Result<generated::Class, TransError> {
+pub fn parse_method(payload: &[u8]) -> Result<generated::Method, TransError> {
     let nom_result = generated::parse::parse_method(payload);
 
     match nom_result {

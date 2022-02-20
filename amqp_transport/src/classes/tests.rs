@@ -1,7 +1,7 @@
 // create random methods to test the ser/de code together. if they diverge, we have a bug
 // this is not perfect, if they both have the same bug it won't be found, but tha's an ok tradeoff
 
-use crate::classes::{Class, FieldValue};
+use crate::classes::{FieldValue, Method};
 use rand::{Rng, SeedableRng};
 use std::collections::HashMap;
 
@@ -103,7 +103,7 @@ fn random_ser_de() {
     let mut rng = rand::rngs::StdRng::from_seed([0; 32]);
 
     for _ in 0..ITERATIONS {
-        let class = Class::random(&mut rng);
+        let class = Method::random(&mut rng);
         let mut bytes = Vec::new();
 
         if let Err(err) = super::write::write_method(class.clone(), &mut bytes) {

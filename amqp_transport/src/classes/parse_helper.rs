@@ -25,8 +25,7 @@ impl<T> nom::error::ParseError<T> for TransError {
     }
 }
 
-// todo: make this into fail_err to avoid useless allocations
-pub fn err<S: Into<String>>(msg: S) -> impl FnOnce(Err<TransError>) -> Err<TransError> {
+pub fn fail_err<S: Into<String>>(msg: S) -> impl FnOnce(Err<TransError>) -> Err<TransError> {
     move |err| {
         let error_level = if matches!(err, nom::Err::Failure(_)) {
             Err::Failure
@@ -156,7 +155,8 @@ pub fn table(input: &[u8]) -> IResult<'_, Table> {
 
 fn table_value_pair(input: &[u8]) -> IResult<'_, (TableFieldName, FieldValue)> {
     let (input, field_name) = shortstr(input)?;
-    let (input, field_value) = field_value(input).map_err(err(format!("field {field_name}")))?;
+    let (input, field_value) =
+        field_value(input).map_err(fail_err(format!("field {field_name}")))?;
     Ok((input, (field_name, field_value)))
 }
 
