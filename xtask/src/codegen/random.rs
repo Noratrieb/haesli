@@ -3,10 +3,10 @@ use heck::ToUpperCamelCase;
 
 pub(super) fn codegen_random(amqp: &Amqp) {
     println!(
-        "#[cfg(test)]
+        "
 mod random {{
 use rand::Rng;
-use crate::methods::tests::RandomMethod;
+use crate::methods::RandomMethod;
 use super::*;
 "
     );

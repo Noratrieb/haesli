@@ -12,9 +12,6 @@ use nom::number::Endianness::Big;
 use nom::Err;
 use std::collections::HashMap;
 
-// todo: remove the debug machinery or change it in a way that actually does what it should lmao
-// I'm probably misusing nom hard
-
 impl<T> nom::error::ParseError<T> for TransError {
     fn from_error_kind(_input: T, _kind: ErrorKind) -> Self {
         ConException::SyntaxError(vec![]).into_trans()
@@ -27,12 +24,6 @@ impl<T> nom::error::ParseError<T> for TransError {
 
 pub fn fail_err<S: Into<String>>(msg: S) -> impl FnOnce(Err<TransError>) -> Err<TransError> {
     move |err| {
-        let error_level = if matches!(err, nom::Err::Failure(_)) {
-            Err::Failure
-        } else {
-            Err::Error
-        };
-
         let msg = msg.into();
         let stack = match err {
             Err::Error(e) | Err::Failure(e) => match e {
@@ -46,7 +37,7 @@ pub fn fail_err<S: Into<String>>(msg: S) -> impl FnOnce(Err<TransError>) -> Err<
             },
             _ => vec![msg],
         };
-        error_level(ConException::SyntaxError(stack).into_trans())
+        Err::Failure(ConException::SyntaxError(stack).into_trans())
     }
 }
 pub fn err_other<E, S: Into<String>>(msg: S) -> impl FnOnce(E) -> Err<TransError> {

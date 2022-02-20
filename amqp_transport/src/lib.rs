@@ -3,10 +3,11 @@
 mod connection;
 mod error;
 mod frame;
-mod methods;
+pub mod methods;
 mod sasl;
 #[cfg(test)]
 mod tests;
+
 
 use crate::connection::Connection;
 use amqp_core::GlobalData;

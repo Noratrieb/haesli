@@ -887,8 +887,7 @@ pub mod parse {
         table(input)
     }
     fn connection(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) = tag(10_u16.to_be_bytes())(input)
-            .map_err(fail_err("invalid tag for class connection"))?;
+        let (input, _) = tag(10_u16.to_be_bytes())(input)?;
         alt((
             connection_start,
             connection_start_ok,
@@ -904,8 +903,7 @@ pub mod parse {
         .map_err(fail_err("class connection"))
     }
     fn connection_start(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(10_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(10_u16.to_be_bytes())(input)?;
         let (input, version_major) =
             domain_octet(input).map_err(fail_err("field version-major in method start"))?;
         let (input, version_minor) =
@@ -934,8 +932,7 @@ pub mod parse {
         ))
     }
     fn connection_start_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(11_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(11_u16.to_be_bytes())(input)?;
         let (input, client_properties) = domain_peer_properties(input)
             .map_err(fail_err("field client-properties in method start-ok"))?;
         let (input, mechanism) =
@@ -964,15 +961,13 @@ pub mod parse {
         ))
     }
     fn connection_secure(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(20_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(20_u16.to_be_bytes())(input)?;
         let (input, challenge) =
             domain_longstr(input).map_err(fail_err("field challenge in method secure"))?;
         Ok((input, Method::ConnectionSecure { challenge }))
     }
     fn connection_secure_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(21_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(21_u16.to_be_bytes())(input)?;
         let (input, response) =
             domain_longstr(input).map_err(fail_err("field response in method secure-ok"))?;
         if response.is_empty() {
@@ -981,8 +976,7 @@ pub mod parse {
         Ok((input, Method::ConnectionSecureOk { response }))
     }
     fn connection_tune(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(30_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(30_u16.to_be_bytes())(input)?;
         let (input, channel_max) =
             domain_short(input).map_err(fail_err("field channel-max in method tune"))?;
         let (input, frame_max) =
@@ -999,8 +993,7 @@ pub mod parse {
         ))
     }
     fn connection_tune_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(31_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(31_u16.to_be_bytes())(input)?;
         let (input, channel_max) =
             domain_short(input).map_err(fail_err("field channel-max in method tune-ok"))?;
         if channel_max == 0 {
@@ -1020,8 +1013,7 @@ pub mod parse {
         ))
     }
     fn connection_open(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(40_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(40_u16.to_be_bytes())(input)?;
         let (input, virtual_host) =
             domain_path(input).map_err(fail_err("field virtual-host in method open"))?;
         let (input, reserved_1) =
@@ -1038,15 +1030,13 @@ pub mod parse {
         ))
     }
     fn connection_open_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(41_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(41_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_shortstr(input).map_err(fail_err("field reserved-1 in method open-ok"))?;
         Ok((input, Method::ConnectionOpenOk { reserved_1 }))
     }
     fn connection_close(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(50_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(50_u16.to_be_bytes())(input)?;
         let (input, reply_code) =
             domain_reply_code(input).map_err(fail_err("field reply-code in method close"))?;
         let (input, reply_text) =
@@ -1066,13 +1056,11 @@ pub mod parse {
         ))
     }
     fn connection_close_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(51_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(51_u16.to_be_bytes())(input)?;
         Ok((input, Method::ConnectionCloseOk {}))
     }
     fn channel(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(20_u16.to_be_bytes())(input).map_err(fail_err("invalid tag for class channel"))?;
+        let (input, _) = tag(20_u16.to_be_bytes())(input)?;
         alt((
             channel_open,
             channel_open_ok,
@@ -1084,36 +1072,31 @@ pub mod parse {
         .map_err(fail_err("class channel"))
     }
     fn channel_open(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(10_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(10_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_shortstr(input).map_err(fail_err("field reserved-1 in method open"))?;
         Ok((input, Method::ChannelOpen { reserved_1 }))
     }
     fn channel_open_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(11_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(11_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_longstr(input).map_err(fail_err("field reserved-1 in method open-ok"))?;
         Ok((input, Method::ChannelOpenOk { reserved_1 }))
     }
     fn channel_flow(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(20_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(20_u16.to_be_bytes())(input)?;
         let (input, bits) = bit(input, 1).map_err(fail_err("field active in method flow"))?;
         let active = bits[0];
         Ok((input, Method::ChannelFlow { active }))
     }
     fn channel_flow_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(21_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(21_u16.to_be_bytes())(input)?;
         let (input, bits) = bit(input, 1).map_err(fail_err("field active in method flow-ok"))?;
         let active = bits[0];
         Ok((input, Method::ChannelFlowOk { active }))
     }
     fn channel_close(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(40_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(40_u16.to_be_bytes())(input)?;
         let (input, reply_code) =
             domain_reply_code(input).map_err(fail_err("field reply-code in method close"))?;
         let (input, reply_text) =
@@ -1133,13 +1116,11 @@ pub mod parse {
         ))
     }
     fn channel_close_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(41_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(41_u16.to_be_bytes())(input)?;
         Ok((input, Method::ChannelCloseOk {}))
     }
     fn exchange(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(40_u16.to_be_bytes())(input).map_err(fail_err("invalid tag for class exchange"))?;
+        let (input, _) = tag(40_u16.to_be_bytes())(input)?;
         alt((
             exchange_declare,
             exchange_declare_ok,
@@ -1149,8 +1130,7 @@ pub mod parse {
         .map_err(fail_err("class exchange"))
     }
     fn exchange_declare(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(10_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(10_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_short(input).map_err(fail_err("field reserved-1 in method declare"))?;
         let (input, exchange) =
@@ -1184,13 +1164,11 @@ pub mod parse {
         ))
     }
     fn exchange_declare_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(11_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(11_u16.to_be_bytes())(input)?;
         Ok((input, Method::ExchangeDeclareOk {}))
     }
     fn exchange_delete(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(20_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(20_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_short(input).map_err(fail_err("field reserved-1 in method delete"))?;
         let (input, exchange) =
@@ -1212,13 +1190,11 @@ pub mod parse {
         ))
     }
     fn exchange_delete_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(21_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(21_u16.to_be_bytes())(input)?;
         Ok((input, Method::ExchangeDeleteOk {}))
     }
     fn queue(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(50_u16.to_be_bytes())(input).map_err(fail_err("invalid tag for class queue"))?;
+        let (input, _) = tag(50_u16.to_be_bytes())(input)?;
         alt((
             queue_declare,
             queue_declare_ok,
@@ -1234,8 +1210,7 @@ pub mod parse {
         .map_err(fail_err("class queue"))
     }
     fn queue_declare(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(10_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(10_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_short(input).map_err(fail_err("field reserved-1 in method declare"))?;
         let (input, queue) =
@@ -1263,8 +1238,7 @@ pub mod parse {
         ))
     }
     fn queue_declare_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(11_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(11_u16.to_be_bytes())(input)?;
         let (input, queue) =
             domain_queue_name(input).map_err(fail_err("field queue in method declare-ok"))?;
         if queue.is_empty() {
@@ -1284,8 +1258,7 @@ pub mod parse {
         ))
     }
     fn queue_bind(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(20_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(20_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_short(input).map_err(fail_err("field reserved-1 in method bind"))?;
         let (input, queue) =
@@ -1311,13 +1284,11 @@ pub mod parse {
         ))
     }
     fn queue_bind_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(21_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(21_u16.to_be_bytes())(input)?;
         Ok((input, Method::QueueBindOk {}))
     }
     fn queue_unbind(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(50_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(50_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_short(input).map_err(fail_err("field reserved-1 in method unbind"))?;
         let (input, queue) =
@@ -1340,13 +1311,11 @@ pub mod parse {
         ))
     }
     fn queue_unbind_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(51_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(51_u16.to_be_bytes())(input)?;
         Ok((input, Method::QueueUnbindOk {}))
     }
     fn queue_purge(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(30_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(30_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_short(input).map_err(fail_err("field reserved-1 in method purge"))?;
         let (input, queue) =
@@ -1363,15 +1332,13 @@ pub mod parse {
         ))
     }
     fn queue_purge_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(31_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(31_u16.to_be_bytes())(input)?;
         let (input, message_count) = domain_message_count(input)
             .map_err(fail_err("field message-count in method purge-ok"))?;
         Ok((input, Method::QueuePurgeOk { message_count }))
     }
     fn queue_delete(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(40_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(40_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_short(input).map_err(fail_err("field reserved-1 in method delete"))?;
         let (input, queue) =
@@ -1392,15 +1359,13 @@ pub mod parse {
         ))
     }
     fn queue_delete_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(41_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(41_u16.to_be_bytes())(input)?;
         let (input, message_count) = domain_message_count(input)
             .map_err(fail_err("field message-count in method delete-ok"))?;
         Ok((input, Method::QueueDeleteOk { message_count }))
     }
     fn basic(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(60_u16.to_be_bytes())(input).map_err(fail_err("invalid tag for class basic"))?;
+        let (input, _) = tag(60_u16.to_be_bytes())(input)?;
         alt((
             basic_qos,
             basic_qos_ok,
@@ -1423,8 +1388,7 @@ pub mod parse {
         .map_err(fail_err("class basic"))
     }
     fn basic_qos(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(10_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(10_u16.to_be_bytes())(input)?;
         let (input, prefetch_size) =
             domain_long(input).map_err(fail_err("field prefetch-size in method qos"))?;
         let (input, prefetch_count) =
@@ -1441,13 +1405,11 @@ pub mod parse {
         ))
     }
     fn basic_qos_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(11_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(11_u16.to_be_bytes())(input)?;
         Ok((input, Method::BasicQosOk {}))
     }
     fn basic_consume(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(20_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(20_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_short(input).map_err(fail_err("field reserved-1 in method consume"))?;
         let (input, queue) =
@@ -1476,15 +1438,13 @@ pub mod parse {
         ))
     }
     fn basic_consume_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(21_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(21_u16.to_be_bytes())(input)?;
         let (input, consumer_tag) = domain_consumer_tag(input)
             .map_err(fail_err("field consumer-tag in method consume-ok"))?;
         Ok((input, Method::BasicConsumeOk { consumer_tag }))
     }
     fn basic_cancel(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(30_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(30_u16.to_be_bytes())(input)?;
         let (input, consumer_tag) =
             domain_consumer_tag(input).map_err(fail_err("field consumer-tag in method cancel"))?;
         let (input, bits) = bit(input, 1).map_err(fail_err("field no-wait in method cancel"))?;
@@ -1498,15 +1458,13 @@ pub mod parse {
         ))
     }
     fn basic_cancel_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(31_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(31_u16.to_be_bytes())(input)?;
         let (input, consumer_tag) = domain_consumer_tag(input)
             .map_err(fail_err("field consumer-tag in method cancel-ok"))?;
         Ok((input, Method::BasicCancelOk { consumer_tag }))
     }
     fn basic_publish(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(40_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(40_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_short(input).map_err(fail_err("field reserved-1 in method publish"))?;
         let (input, exchange) =
@@ -1528,8 +1486,7 @@ pub mod parse {
         ))
     }
     fn basic_return(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(50_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(50_u16.to_be_bytes())(input)?;
         let (input, reply_code) =
             domain_reply_code(input).map_err(fail_err("field reply-code in method return"))?;
         let (input, reply_text) =
@@ -1549,8 +1506,7 @@ pub mod parse {
         ))
     }
     fn basic_deliver(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(60_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(60_u16.to_be_bytes())(input)?;
         let (input, consumer_tag) =
             domain_consumer_tag(input).map_err(fail_err("field consumer-tag in method deliver"))?;
         let (input, delivery_tag) =
@@ -1574,8 +1530,7 @@ pub mod parse {
         ))
     }
     fn basic_get(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(70_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(70_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_short(input).map_err(fail_err("field reserved-1 in method get"))?;
         let (input, queue) =
@@ -1592,8 +1547,7 @@ pub mod parse {
         ))
     }
     fn basic_get_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(71_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(71_u16.to_be_bytes())(input)?;
         let (input, delivery_tag) =
             domain_delivery_tag(input).map_err(fail_err("field delivery-tag in method get-ok"))?;
         let (input, bits) =
@@ -1617,15 +1571,13 @@ pub mod parse {
         ))
     }
     fn basic_get_empty(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(72_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(72_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_shortstr(input).map_err(fail_err("field reserved-1 in method get-empty"))?;
         Ok((input, Method::BasicGetEmpty { reserved_1 }))
     }
     fn basic_ack(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(80_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(80_u16.to_be_bytes())(input)?;
         let (input, delivery_tag) =
             domain_delivery_tag(input).map_err(fail_err("field delivery-tag in method ack"))?;
         let (input, bits) = bit(input, 1).map_err(fail_err("field multiple in method ack"))?;
@@ -1639,8 +1591,7 @@ pub mod parse {
         ))
     }
     fn basic_reject(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(90_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(90_u16.to_be_bytes())(input)?;
         let (input, delivery_tag) =
             domain_delivery_tag(input).map_err(fail_err("field delivery-tag in method reject"))?;
         let (input, bits) = bit(input, 1).map_err(fail_err("field requeue in method reject"))?;
@@ -1654,28 +1605,24 @@ pub mod parse {
         ))
     }
     fn basic_recover_async(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(100_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(100_u16.to_be_bytes())(input)?;
         let (input, bits) =
             bit(input, 1).map_err(fail_err("field requeue in method recover-async"))?;
         let requeue = bits[0];
         Ok((input, Method::BasicRecoverAsync { requeue }))
     }
     fn basic_recover(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(110_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(110_u16.to_be_bytes())(input)?;
         let (input, bits) = bit(input, 1).map_err(fail_err("field requeue in method recover"))?;
         let requeue = bits[0];
         Ok((input, Method::BasicRecover { requeue }))
     }
     fn basic_recover_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(111_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(111_u16.to_be_bytes())(input)?;
         Ok((input, Method::BasicRecoverOk {}))
     }
     fn tx(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(90_u16.to_be_bytes())(input).map_err(fail_err("invalid tag for class tx"))?;
+        let (input, _) = tag(90_u16.to_be_bytes())(input)?;
         alt((
             tx_select,
             tx_select_ok,
@@ -1687,33 +1634,27 @@ pub mod parse {
         .map_err(fail_err("class tx"))
     }
     fn tx_select(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(10_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(10_u16.to_be_bytes())(input)?;
         Ok((input, Method::TxSelect {}))
     }
     fn tx_select_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(11_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(11_u16.to_be_bytes())(input)?;
         Ok((input, Method::TxSelectOk {}))
     }
     fn tx_commit(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(20_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(20_u16.to_be_bytes())(input)?;
         Ok((input, Method::TxCommit {}))
     }
     fn tx_commit_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(21_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(21_u16.to_be_bytes())(input)?;
         Ok((input, Method::TxCommitOk {}))
     }
     fn tx_rollback(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(30_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(30_u16.to_be_bytes())(input)?;
         Ok((input, Method::TxRollback {}))
     }
     fn tx_rollback_ok(input: &[u8]) -> IResult<'_, Method> {
-        let (input, _) =
-            tag(31_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;
+        let (input, _) = tag(31_u16.to_be_bytes())(input)?;
         Ok((input, Method::TxRollbackOk {}))
     }
 }
@@ -2134,10 +2075,10 @@ pub mod write {
         Ok(())
     }
 }
-#[cfg(test)]
+
 mod random {
     use super::*;
-    use crate::methods::tests::RandomMethod;
+    use crate::methods::RandomMethod;
     use rand::Rng;
 
     impl<R: Rng> RandomMethod<R> for Method {

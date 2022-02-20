@@ -56,7 +56,7 @@ pub type IResult<'a, T> = nom::IResult<&'a [u8], T, TransError>;
                 .join(", ");
             let class_name_raw = &class.name;
             println!(
-                r#"    let (input, _) = tag({class_index}_u16.to_be_bytes())(input).map_err(fail_err("invalid tag for class {class_name_raw}"))?;
+                r#"    let (input, _) = tag({class_index}_u16.to_be_bytes())(input)?;
     alt(({all_methods}))(input).map_err(fail_err("class {class_name_raw}"))"#
             );
         });
@@ -96,9 +96,7 @@ fn method_parser(amqp: &Amqp, class: &Class, method: &Method) {
     let function_name = method_function_name(&class_name)(method);
     function(&function_name, "Method", || {
         let method_index = method.index;
-        println!(
-            r#"    let (input, _) = tag({method_index}_u16.to_be_bytes())(input).map_err(fail_err("parsing method index"))?;"#
-        );
+        println!(r#"    let (input, _) = tag({method_index}_u16.to_be_bytes())(input)?;"#);
         let mut iter = method.fields.iter().peekable();
         while let Some(field) = iter.next() {
             let field_name_raw = &field.name;

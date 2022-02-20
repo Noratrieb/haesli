@@ -18,3 +18,10 @@ tracing = "0.1.30"
 uuid = "0.8.2"
 
 [features]
+
+[dev-dependencies]
+criterion = "0.3.5"
+
+[[bench]]
+name = "parser"
+harness = false
