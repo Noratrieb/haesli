@@ -787,8 +787,8 @@ pub enum Method {
 
 pub mod parse {
     use super::*;
-    use crate::classes::parse_helper::*;
     use crate::error::TransError;
+    use crate::methods::parse_helper::*;
     use nom::{branch::alt, bytes::complete::tag};
     use once_cell::sync::Lazy;
     use regex::Regex;
@@ -1843,8 +1843,8 @@ pub mod parse {
 }
 pub mod write {
     use super::*;
-    use crate::classes::write_helper::*;
     use crate::error::TransError;
+    use crate::methods::write_helper::*;
     use std::io::Write;
 
     pub fn write_method<W: Write>(class: Method, mut writer: W) -> Result<(), TransError> {
@@ -2261,7 +2261,7 @@ pub mod write {
 #[cfg(test)]
 mod random {
     use super::*;
-    use crate::classes::tests::RandomMethod;
+    use crate::methods::tests::RandomMethod;
     use rand::Rng;
 
     impl<R: Rng> RandomMethod<R> for Method {

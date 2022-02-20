@@ -1,7 +1,7 @@
 // create random methods to test the ser/de code together. if they diverge, we have a bug
 // this is not perfect, if they both have the same bug it won't be found, but tha's an ok tradeoff
 
-use crate::classes::{FieldValue, Method};
+use crate::methods::{FieldValue, Method};
 use rand::{Rng, SeedableRng};
 use std::collections::HashMap;
 
@@ -138,10 +138,10 @@ fn nested_table() {
     eprintln!("{table:?}");
 
     let mut bytes = Vec::new();
-    crate::classes::write_helper::table(table.clone(), &mut bytes).unwrap();
+    crate::methods::write_helper::table(table.clone(), &mut bytes).unwrap();
     eprintln!("{bytes:?}");
 
-    let (rest, parsed_table) = crate::classes::parse_helper::table(&bytes).unwrap();
+    let (rest, parsed_table) = crate::methods::parse_helper::table(&bytes).unwrap();
 
     assert!(rest.is_empty());
     assert_eq!(table, parsed_table);

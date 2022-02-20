@@ -1,9 +1,9 @@
 #![warn(rust_2018_idioms)]
 
-mod classes;
 mod connection;
 mod error;
 mod frame;
+mod methods;
 mod sasl;
 #[cfg(test)]
 mod tests;

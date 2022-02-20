@@ -1,8 +1,8 @@
-use crate::classes::generated::{
+use crate::error::TransError;
+use crate::methods::generated::{
     Bit, Long, Longlong, Longstr, Octet, Short, Shortstr, Table, Timestamp,
 };
-use crate::classes::FieldValue;
-use crate::error::TransError;
+use crate::methods::FieldValue;
 use anyhow::Context;
 use std::io::Write;
 

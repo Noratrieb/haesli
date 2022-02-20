@@ -1,6 +1,6 @@
-use crate::classes::{FieldValue, Method};
 use crate::frame::FrameType;
-use crate::{classes, frame};
+use crate::methods::{FieldValue, Method};
+use crate::{frame, methods};
 use std::collections::HashMap;
 
 #[tokio::test]
@@ -17,7 +17,7 @@ async fn write_start_ok_frame() {
         locales: "en_US".into(),
     };
 
-    classes::write::write_method(method, &mut payload).unwrap();
+    methods::write::write_method(method, &mut payload).unwrap();
 
     let frame = frame::Frame {
         kind: FrameType::Method,
@@ -136,7 +136,7 @@ fn read_start_ok_payload() {
         5, 101, 110, 95, 85, 83,
     ];
 
-    let method = classes::parse_method(&raw_data).unwrap();
+    let method = methods::parse_method(&raw_data).unwrap();
 
     assert_eq!(
         method,

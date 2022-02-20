@@ -1,8 +1,8 @@
-use crate::classes::generated::parse::IResult;
-use crate::classes::generated::{
+use crate::error::{ConException, ProtocolError, TransError};
+use crate::methods::generated::parse::IResult;
+use crate::methods::generated::{
     Bit, Long, Longlong, Longstr, Octet, Short, Shortstr, Table, Timestamp,
 };
-use crate::error::{ConException, ProtocolError, TransError};
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take};
 use nom::error::ErrorKind;
@@ -73,7 +73,7 @@ macro_rules! fail {
     };
 }
 
-use crate::classes::{FieldValue, TableFieldName};
+use crate::methods::{FieldValue, TableFieldName};
 pub use fail;
 
 pub fn octet(input: &[u8]) -> IResult<'_, Octet> {

@@ -1,7 +1,7 @@
-use crate::classes::Method;
 use crate::error::{ConException, ProtocolError, Result};
 use crate::frame::{Frame, FrameType};
-use crate::{classes, frame, sasl};
+use crate::methods::Method;
+use crate::{frame, methods, sasl};
 use amqp_core::GlobalData;
 use anyhow::Context;
 use std::collections::HashMap;
@@ -90,7 +90,7 @@ impl Connection {
 
     async fn send_method(&mut self, channel: u16, method: Method) -> Result<()> {
         let mut payload = Vec::with_capacity(64);
-        classes::write::write_method(method, &mut payload)?;
+        methods::write::write_method(method, &mut payload)?;
         frame::write_frame(
             &Frame {
                 kind: FrameType::Method,
@@ -107,7 +107,7 @@ impl Connection {
 
         ensure_conn(start_ok_frame.kind == FrameType::Method)?;
 
-        let class = classes::parse_method(&start_ok_frame.payload)?;
+        let class = methods::parse_method(&start_ok_frame.payload)?;
         Ok(class)
     }
 
@@ -210,7 +210,7 @@ impl Connection {
     }
 
     async fn dispatch_method(&mut self, frame: Frame) -> Result<()> {
-        let method = classes::parse_method(&frame.payload)?;
+        let method = methods::parse_method(&frame.payload)?;
         debug!(?method, "Received method");
 
         match method {
@@ -326,9 +326,9 @@ impl Drop for Channel {
     }
 }
 
-fn server_properties(host: SocketAddr) -> classes::Table {
-    fn ls(str: &str) -> classes::FieldValue {
-        classes::FieldValue::LongString(str.into())
+fn server_properties(host: SocketAddr) -> methods::Table {
+    fn ls(str: &str) -> methods::FieldValue {
+        methods::FieldValue::LongString(str.into())
     }
 
     let host_str = host.ip().to_string();
