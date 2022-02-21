@@ -252,7 +252,7 @@ impl Connection {
         }
     }
 
-    async fn dispatch_method(&mut self, frame: Frame) -> Result<()> {
+    async fn dispatch_method(&mut self, frame: Frame) -> Result<WaitForBodyStatus> {
         let method = methods::parse_method(&frame.payload)?;
         debug!(?method, "Received method");
 
@@ -373,15 +373,14 @@ impl Connection {
 
         let version = &read_header_buf[5..8];
 
-        self.stream
-            .write_all(OWN_PROTOCOL_HEADER)
-            .await
-            .context("write protocol header")?;
-
         if &read_header_buf[0..5] == b"AMQP\0" && version == SUPPORTED_PROTOCOL_VERSION {
             debug!(?version, "Version negotiation successful");
             Ok(())
         } else {
+            self.stream
+                .write_all(OWN_PROTOCOL_HEADER)
+                .await
+                .context("write protocol header")?;
             debug!(?version, expected_version = ?SUPPORTED_PROTOCOL_VERSION, "Version negotiation failed, unsupported version");
             Err(ProtocolError::CloseNow.into())
         }

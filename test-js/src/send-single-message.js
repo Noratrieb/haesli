@@ -1,6 +1,6 @@
-import { connect } from 'amqplib';
+import {connectAmqp} from "./utils/utils.js";
 
-const connection = await connect('amqp://localhost');
+const connection = await connectAmqp();
 
 const channel = await connection.createChannel();
 

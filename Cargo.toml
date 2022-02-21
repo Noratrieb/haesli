@@ -13,7 +13,6 @@ anyhow = "1.0.53"
 amqp_core = { path = "./amqp_core" }
 amqp_dashboard = { path = "./amqp_dashboard" }
 amqp_transport = { path = "./amqp_transport" }
-tokio = { version = "1.16.1", features = ["full", "tracing"] }
+tokio = { version = "1.16.1", features = ["full"] }
 tracing = "0.1.30"
 tracing-subscriber = { version = "0.3.8", features = ["env-filter"] }
-console-subscriber = "0.1.3"

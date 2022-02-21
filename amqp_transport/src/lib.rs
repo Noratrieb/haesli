@@ -38,8 +38,6 @@ pub async fn do_thing_i_guess(global_data: GlobalData) -> Result<()> {
 
         let connection = Connection::new(id, stream, connection_handle, global_data.clone());
 
-        tokio::task::Builder::new()
-            .name(&format!("connection {id}"))
-            .spawn(connection.start_connection_processing().instrument(span));
+        tokio::spawn(connection.start_connection_processing().instrument(span));
     }
 }
