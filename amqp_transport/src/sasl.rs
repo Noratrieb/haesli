@@ -1,6 +1,6 @@
 //! (Very) partial implementation of SASL Authentication (see [RFC 4422](https://datatracker.ietf.org/doc/html/rfc4422))
 //!
-//! Currently only supports PLAN (see [RFC 4616](https://datatracker.ietf.org/doc/html/rfc4616))
+//! Currently only supports PLAIN (see [RFC 4616](https://datatracker.ietf.org/doc/html/rfc4616))
 
 use crate::error::{ConException, Result};
 

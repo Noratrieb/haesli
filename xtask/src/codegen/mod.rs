@@ -4,13 +4,14 @@ mod parser;
 mod random;
 mod write;
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use heck::ToUpperCamelCase;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::iter::Peekable;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::str::FromStr;
 use strong_xml::XmlRead;
 
@@ -105,6 +106,15 @@ struct Codegen {
     output: Box<dyn Write>,
 }
 
+fn fmt(path: &Path) -> anyhow::Result<()> {
+    println!("Formatting {path:?}...");
+    let status = Command::new("rustfmt").arg(path).status()?;
+    if !status.success() {
+        bail!("error formatting {path:?}");
+    }
+    Ok(())
+}
+
 pub fn main() -> anyhow::Result<()> {
     let this_file = PathBuf::from_str(file!()).context("own file path")?;
     let xtask_root = this_file
@@ -125,8 +135,8 @@ pub fn main() -> anyhow::Result<()> {
     let amqp = Amqp::from_str(&content).context("parse amqp spec file")?;
 
     let transport_output =
-        File::create(transport_generated_path).context("transport output file create")?;
-    let core_output = File::create(core_generated_path).context("core output file create")?;
+        File::create(&transport_generated_path).context("transport output file create")?;
+    let core_output = File::create(&core_generated_path).context("core output file create")?;
 
     Codegen {
         output: Box::new(transport_output),
@@ -137,6 +147,9 @@ pub fn main() -> anyhow::Result<()> {
         output: Box::new(core_output),
     }
     .core_codegen(&amqp);
+
+    fmt(&transport_generated_path)?;
+    fmt(&core_generated_path)?;
 
     Ok(())
 }
