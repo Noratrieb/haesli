@@ -45,6 +45,8 @@ pub enum ConException {
     SyntaxError(Vec<String>),
     #[error("504 Channel error")]
     ChannelError,
+    #[error("505 Unexpected Frame")]
+    UnexpectedFrame,
     #[error("xxx Not decided yet")]
     Todo,
 }

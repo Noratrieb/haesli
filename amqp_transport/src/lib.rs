@@ -8,6 +8,8 @@ mod sasl;
 #[cfg(test)]
 mod tests;
 
+// TODO: handle big types
+
 use crate::connection::Connection;
 use amqp_core::GlobalData;
 use anyhow::Result;

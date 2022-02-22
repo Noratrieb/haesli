@@ -29,5 +29,5 @@ jobs:
       run: cargo fmt --verbose --all -- --check
     - name: Run tests
       run: cargo test --verbose --all
-    - name: Run client integration tests
-      run: cargo xtask test-js
+   # - name: Run client integration tests
+   #   run: cargo xtask test-js
