@@ -176,11 +176,14 @@ pub type IResult<'a, T> = nom::IResult<&'a [u8], T, TransError>;
                     ).ok();
                 }
                 "short" => {
-                    writeln!(
+                    // todo https://github.com/amqp-node/amqplib/issues/672
+                    if var_name != "channel_max" {
+                        writeln!(
                         self.output,
                         r#"    if {var_name} == 0 {{ fail!("number was 0 for field {var_name}") }}"#
                     )
                     .ok();
+                    }
                 }
                 _ => unimplemented!(),
             },

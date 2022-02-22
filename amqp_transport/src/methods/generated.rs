@@ -209,9 +209,6 @@ pub mod parse {
         let (input, _) = tag(31_u16.to_be_bytes())(input)?;
         let (input, channel_max) =
             domain_short(input).map_err(fail_err("field channel-max in method tune-ok"))?;
-        if channel_max == 0 {
-            fail!("number was 0 for field channel_max")
-        }
         let (input, frame_max) =
             domain_long(input).map_err(fail_err("field frame-max in method tune-ok"))?;
         let (input, heartbeat) =

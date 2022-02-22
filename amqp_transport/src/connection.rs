@@ -257,8 +257,15 @@ impl Connection {
         debug!(?method, "Received method");
 
         match method {
-            Method::ConnectionClose { .. } => {
-                // todo: handle closing
+            Method::ConnectionClose {
+                reply_code,
+                reply_text,
+                class_id,
+                method_id,
+            } => {
+                info!(%reply_code, %reply_text, %class_id, %method_id, "Closing connection");
+                self.send_method(0, Method::ConnectionCloseOk {}).await?;
+                return Err(ProtocolError::GracefulClose.into());
             }
             Method::ChannelOpen { .. } => self.channel_open(frame.channel).await?,
             Method::ChannelClose { .. } => self.channel_close(frame.channel, method).await?,
