@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 mod codegen;
+mod fmt;
 mod test_js;
 
 use clap::{Parser, Subcommand};
@@ -18,6 +19,8 @@ enum Commands {
     Generate,
     /// Run Javascript integration tests
     TestJs,
+    /// Format all code
+    Fmt,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -26,15 +29,12 @@ fn main() -> anyhow::Result<()> {
     match args.command {
         Commands::Generate => codegen::main(),
         Commands::TestJs => test_js::main(),
+        Commands::Fmt => fmt::main(),
     }
 }
 
 pub fn project_root() -> PathBuf {
-    PathBuf::from(file!())
-        .parent()
-        .expect("src directory path")
-        .parent()
-        .expect("xtask root path")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("project root path")
         .to_path_buf()
