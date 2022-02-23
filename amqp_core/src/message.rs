@@ -8,13 +8,15 @@ use uuid::Uuid;
 
 pub type Message = Arc<RawMessage>;
 
+#[derive(Debug)]
 pub struct RawMessage {
-    id: Uuid,
-    properties: methods::Table,
-    routing: RoutingInformation,
-    content: SmallVec<[Bytes; 1]>,
+    pub id: Uuid,
+    pub properties: methods::Table,
+    pub routing: RoutingInformation,
+    pub content: SmallVec<[Bytes; 1]>,
 }
 
+#[derive(Debug)]
 pub struct RoutingInformation {
     pub exchange: String,
     pub routing_key: String,

@@ -1,6 +1,6 @@
 #![warn(rust_2018_idioms)]
 
-mod message;
+pub mod message;
 pub mod methods;
 
 use parking_lot::Mutex;

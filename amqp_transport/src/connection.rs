@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::pin::Pin;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
@@ -13,6 +14,7 @@ use tokio::time;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
+use amqp_core::message::{RawMessage, RoutingInformation};
 use amqp_core::methods::{FieldValue, Method, Table};
 use amqp_core::GlobalData;
 
@@ -32,6 +34,8 @@ const FRAME_SIZE_MIN_MAX: usize = 4096;
 const CHANNEL_MAX: u16 = 0;
 const FRAME_SIZE_MAX: u32 = 0;
 const HEARTBEAT_DELAY: u16 = 0;
+
+const BASIC_CLASS_ID: u16 = 60;
 
 pub struct Channel {
     /// A handle to the global channel representation. Used to remove the channel when it's dropped
@@ -254,15 +258,12 @@ impl Connection {
             }
             Method::ChannelOpen { .. } => self.channel_open(frame.channel).await?,
             Method::ChannelClose { .. } => self.channel_close(frame.channel, method).await?,
-            Method::BasicPublish { .. } => {
-                const BASIC_CLASS_ID: u16 = 60;
-                match self.channels.get_mut(&frame.channel) {
-                    Some(channel) => {
-                        channel.status = ChannelStatus::NeedHeader(BASIC_CLASS_ID, Box::new(method))
-                    }
-                    None => return Err(ConException::Todo.into_trans()),
+            Method::BasicPublish { .. } => match self.channels.get_mut(&frame.channel) {
+                Some(channel) => {
+                    channel.status = ChannelStatus::NeedHeader(BASIC_CLASS_ID, Box::new(method))
                 }
-            }
+                None => return Err(ConException::Todo.into_trans()),
+            },
             _ => {
                 let channel_handle = self
                     .channels
@@ -305,33 +306,84 @@ impl Connection {
     }
 
     fn dispatch_body(&mut self, frame: Frame) -> Result<()> {
-        self.channels
+        let channel = self
+            .channels
             .get_mut(&frame.channel)
-            .ok_or_else(|| ConException::Todo.into_trans())
-            .and_then(|channel| match channel.status.take() {
-                ChannelStatus::Default => {
-                    warn!(channel = %frame.channel, "unexpected body");
-                    Err(ConException::UnexpectedFrame.into_trans())
-                }
-                ChannelStatus::NeedHeader(_, _) => {
-                    warn!(channel = %frame.channel, "unexpected body");
-                    Err(ConException::UnexpectedFrame.into_trans())
-                }
-                ChannelStatus::NeedsBody(_, header, mut vec) => {
-                    vec.push(frame.payload);
-                    match vec
-                        .iter()
-                        .map(Bytes::len)
-                        .sum::<usize>()
-                        .cmp(&usize::try_from(header.body_size).unwrap())
-                    {
-                        Ordering::Equal => todo!("process body"),
-                        Ordering::Greater => todo!("too much data!"),
-                        Ordering::Less => {} // wait for next body
+            .ok_or_else(|| ConException::Todo.into_trans())?;
+
+        match channel.status.take() {
+            ChannelStatus::Default => {
+                warn!(channel = %frame.channel, "unexpected body");
+                Err(ConException::UnexpectedFrame.into_trans())
+            }
+            ChannelStatus::NeedHeader(_, _) => {
+                warn!(channel = %frame.channel, "unexpected body");
+                Err(ConException::UnexpectedFrame.into_trans())
+            }
+            ChannelStatus::NeedsBody(method, header, mut vec) => {
+                vec.push(frame.payload);
+                match vec
+                    .iter()
+                    .map(Bytes::len)
+                    .sum::<usize>()
+                    .cmp(&usize::try_from(header.body_size).unwrap())
+                {
+                    Ordering::Equal => {
+                        self.process_method_with_body(*method, *header, vec, frame.channel)
                     }
-                    Ok(())
+                    Ordering::Greater => Err(ConException::Todo.into_trans()),
+                    Ordering::Less => Ok(()), // wait for next body
                 }
-            })
+            }
+        }
+    }
+
+    fn process_method_with_body(
+        &mut self,
+        method: Method,
+        header: ContentHeader,
+        payloads: SmallVec<[Bytes; 1]>,
+        channel: ChannelId,
+    ) -> Result<()> {
+        // The only method with content that is sent to the server is Basic.Publish.
+        ensure_conn(header.class_id == BASIC_CLASS_ID)?;
+
+        if let Method::BasicPublish {
+            exchange,
+            routing_key,
+            mandatory,
+            immediate,
+            ..
+        } = method
+        {
+            let message = RawMessage {
+                id: Uuid::from_bytes(rand::random()),
+                properties: header.property_fields,
+                routing: RoutingInformation {
+                    exchange,
+                    routing_key,
+                    mandatory,
+                    immediate,
+                },
+                content: payloads,
+            };
+            let message = Arc::new(message);
+
+            let channel = self
+                .channels
+                .get(&channel)
+                .ok_or_else(|| ConException::Todo.into_trans())?;
+
+            // Spawn the handler for the publish. The connection task goes back to handling
+            // just the connection.
+            tokio::spawn(amqp_messaging::methods::handle_basic_publish(
+                channel.handle.clone(),
+                message,
+            ));
+            Ok(())
+        } else {
+            Err(ConException::Todo.into_trans())
+        }
     }
 
     async fn channel_open(&mut self, channel_id: ChannelId) -> Result<()> {

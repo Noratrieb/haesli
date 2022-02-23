@@ -4,7 +4,7 @@ use rand::Rng;
 use std::collections::HashMap;
 
 mod generated;
-mod parse_helper;
+pub mod parse_helper;
 #[cfg(test)]
 mod tests;
 mod write_helper;

@@ -57,41 +57,65 @@ pub enum FrameType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct BasicProperties {
-    content_type: Option<methods::Shortstr>,
-    content_encoding: Option<methods::Shortstr>,
-    headers: Option<methods::Table>,
-    delivery_mode: Option<methods::Octet>,
-    priority: Option<methods::Octet>,
-    correlation_id: Option<methods::Shortstr>,
-    reply_to: Option<methods::Shortstr>,
-    expiration: Option<methods::Shortstr>,
-    message_id: Option<methods::Shortstr>,
-    timestamp: Option<methods::Timestamp>,
-    r#type: Option<methods::Shortstr>,
-    user_id: Option<methods::Shortstr>,
-    app_id: Option<methods::Shortstr>,
-    reserved: Option<methods::Shortstr>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct ContentHeader {
     pub class_id: u16,
     pub weight: u16,
     pub body_size: u64,
-    pub property_fields: BasicProperties,
+    pub property_fields: methods::Table,
 }
 
 mod content_header_parse {
     use crate::error::TransError;
-    use crate::frame::{BasicProperties, ContentHeader};
+    use crate::frame::ContentHeader;
+    use crate::methods::parse_helper::{octet, shortstr, table, timestamp};
+    use amqp_core::methods;
+    use amqp_core::methods::FieldValue::{FieldTable, ShortShortUInt, ShortString, Timestamp};
     use nom::number::complete::{u16, u64};
     use nom::number::Endianness::Big;
 
     type IResult<'a, T> = nom::IResult<&'a [u8], T, TransError>;
 
-    pub fn basic_properties(_property_flags: u16, _input: &[u8]) -> IResult<'_, BasicProperties> {
-        todo!()
+    pub fn basic_properties(flags: u16, input: &[u8]) -> IResult<'_, methods::Table> {
+        macro_rules! parse_property {
+            (if $flags:ident >> $n:literal, $parser:ident($input:ident)?, $map:ident.insert($name:expr, $ctor:path)) => {
+                if (($flags >> $n) & 1) == 1 {
+                    let (input, value) = $parser($input)?;
+                    $map.insert(String::from($name), $ctor(value));
+                    input
+                } else {
+                    $input
+                }
+            };
+        }
+
+        let mut map = methods::Table::new();
+
+        let input = parse_property!(if flags >> 15, shortstr(input)?, map.insert("content-type", ShortString));
+        let input = parse_property!(if flags >> 14, shortstr(input)?, map.insert("content-encoding", ShortString));
+        let input =
+            parse_property!(if flags >> 13, table(input)?, map.insert("headers", FieldTable));
+        let input = parse_property!(if flags >> 12, octet(input)?, map.insert("delivery-mode", ShortShortUInt));
+        let input =
+            parse_property!(if flags >> 11, octet(input)?, map.insert("priority", ShortShortUInt));
+        let input = parse_property!(if flags >> 10, shortstr(input)?, map.insert("correlation-id", ShortString));
+        let input =
+            parse_property!(if flags >> 9, shortstr(input)?, map.insert("reply-to", ShortString));
+        let input =
+            parse_property!(if flags >> 8, shortstr(input)?, map.insert("expiration", ShortString));
+        let input =
+            parse_property!(if flags >> 7, shortstr(input)?, map.insert("message-id", ShortString));
+        let input =
+            parse_property!(if flags >> 6, timestamp(input)?, map.insert("timestamp", Timestamp));
+        let input =
+            parse_property!(if flags >> 5, shortstr(input)?, map.insert("type", ShortString));
+        let input =
+            parse_property!(if flags >> 4, shortstr(input)?, map.insert("user-id", ShortString));
+        let input =
+            parse_property!(if flags >> 3, shortstr(input)?, map.insert("app-id", ShortString));
+        let input =
+            parse_property!(if flags >> 2, shortstr(input)?, map.insert("reserved", ShortString));
+
+        Ok((input, map))
     }
 
     pub fn header(input: &[u8]) -> IResult<'_, Box<ContentHeader>> {
@@ -101,6 +125,7 @@ mod content_header_parse {
 
         // I do not quite understand this here. Apparently, there can be more than 15 flags?
         // But the Basic class only specifies 15, so idk. Don't care about this for now
+        // Todo: But probably later.
         let (input, property_flags) = u16(Big)(input)?;
         let (input, property_fields) = basic_properties(property_flags, input)?;
 
