@@ -1,7 +1,7 @@
 use crate::project_root;
 use anyhow::{bail, Context, Result};
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 pub fn main() -> Result<()> {
     let project_root = project_root();
