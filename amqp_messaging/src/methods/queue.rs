@@ -1,14 +1,13 @@
 #![deny(clippy::future_not_send)]
 
+use amqp_core::connection::ChannelHandle;
 use amqp_core::error::{ConException, ProtocolError};
 use amqp_core::methods::{Bit, ExchangeName, NoWait, QueueName, Shortstr, Table};
-use amqp_core::queue::{QueueDeletion, RawQueue};
-use amqp_core::ChannelHandle;
+use amqp_core::queue::{QueueDeletion, QueueId, RawQueue};
 use amqp_core::{amqp_todo, GlobalData};
 use parking_lot::Mutex;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
-use uuid::Uuid;
 
 #[allow(clippy::too_many_arguments)]
 pub async fn declare(
@@ -32,7 +31,7 @@ pub async fn declare(
             amqp_todo!();
         }
 
-        let id = amqp_core::gen_uuid();
+        let id = QueueId::random();
         let queue = Arc::new(RawQueue {
             id,
             name: queue_name.clone(),
@@ -72,7 +71,7 @@ pub async fn bind(
 
 async fn bind_queue(
     _global_data: GlobalData,
-    _queue: Uuid,
+    _queue: QueueId,
     _exchange: (),
     _routing_key: String,
 ) -> Result<(), ProtocolError> {

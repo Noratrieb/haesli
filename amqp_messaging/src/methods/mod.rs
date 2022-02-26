@@ -2,10 +2,10 @@ mod consume;
 mod queue;
 
 use amqp_core::amqp_todo;
+use amqp_core::connection::ChannelHandle;
 use amqp_core::error::ProtocolError;
 use amqp_core::message::Message;
 use amqp_core::methods::Method;
-use amqp_core::ChannelHandle;
 use tracing::info;
 
 pub async fn handle_basic_publish(_channel_handle: ChannelHandle, message: Message) {

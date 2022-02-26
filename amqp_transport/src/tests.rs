@@ -1,4 +1,4 @@
-use crate::frame::{ChannelId, FrameType};
+use crate::frame::{ChannelNum, FrameType};
 use crate::{frame, methods};
 use amqp_core::methods::{FieldValue, Method};
 use std::collections::HashMap;
@@ -21,7 +21,7 @@ async fn write_start_ok_frame() {
 
     let frame = frame::Frame {
         kind: FrameType::Method,
-        channel: ChannelId::zero(),
+        channel: ChannelNum::zero(),
         payload: payload.into(),
     };
 

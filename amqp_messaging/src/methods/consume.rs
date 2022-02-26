@@ -1,6 +1,6 @@
+use amqp_core::connection::ChannelHandle;
 use amqp_core::error::ProtocolError;
 use amqp_core::methods::{Bit, ConsumerTag, NoAck, NoLocal, NoWait, QueueName, Table};
-use amqp_core::ChannelHandle;
 
 #[allow(clippy::too_many_arguments)]
 pub async fn consume(

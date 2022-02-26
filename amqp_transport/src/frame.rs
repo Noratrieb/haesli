@@ -1,35 +1,12 @@
 use crate::error::{ConException, ProtocolError, Result};
+use amqp_core::connection::ChannelNum;
 use amqp_core::methods;
 use anyhow::Context;
 use bytes::Bytes;
-use std::fmt::{Display, Formatter};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::trace;
 
 const REQUIRED_FRAME_END: u8 = 0xCE;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ChannelId(u16);
-
-impl ChannelId {
-    pub fn num(self) -> u16 {
-        self.0
-    }
-
-    pub fn is_zero(self) -> bool {
-        self.0 == 0
-    }
-
-    pub fn zero() -> Self {
-        Self(0)
-    }
-}
-
-impl Display for ChannelId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
 
 mod frame_type {
     pub const METHOD: u8 = 1;
@@ -42,7 +19,7 @@ mod frame_type {
 pub struct Frame {
     /// The type of the frame including its parsed metadata.
     pub kind: FrameType,
-    pub channel: ChannelId,
+    pub channel: ChannelNum,
     /// Includes the whole payload, also including the metadata from each type.
     pub payload: Bytes,
 }
@@ -181,7 +158,7 @@ where
 {
     let kind = r.read_u8().await.context("read type")?;
     let channel = r.read_u16().await.context("read channel")?;
-    let channel = ChannelId(channel);
+    let channel = ChannelNum::new(channel);
     let size = r.read_u32().await.context("read size")?;
 
     let mut payload = vec![0; size.try_into().unwrap()];
@@ -210,7 +187,7 @@ where
     Ok(frame)
 }
 
-fn parse_frame_type(kind: u8, channel: ChannelId) -> Result<FrameType> {
+fn parse_frame_type(kind: u8, channel: ChannelNum) -> Result<FrameType> {
     match kind {
         frame_type::METHOD => Ok(FrameType::Method),
         frame_type::HEADER => Ok(FrameType::Header),
@@ -228,7 +205,7 @@ fn parse_frame_type(kind: u8, channel: ChannelId) -> Result<FrameType> {
 
 #[cfg(test)]
 mod tests {
-    use crate::frame::{ChannelId, Frame, FrameType};
+    use crate::frame::{ChannelNum, Frame, FrameType};
     use bytes::Bytes;
 
     #[tokio::test]
@@ -257,7 +234,7 @@ mod tests {
             frame,
             Frame {
                 kind: FrameType::Method,
-                channel: ChannelId(0),
+                channel: ChannelNum::new(0),
                 payload: Bytes::from_static(&[1, 2, 3]),
             }
         );

@@ -1,16 +1,18 @@
 #![allow(dead_code)]
 
 use crate::methods;
+use crate::newtype_id;
 use bytes::Bytes;
 use smallvec::SmallVec;
 use std::sync::Arc;
-use uuid::Uuid;
 
 pub type Message = Arc<RawMessage>;
 
+newtype_id!(pub MessageId);
+
 #[derive(Debug)]
 pub struct RawMessage {
-    pub id: Uuid,
+    pub id: MessageId,
     pub properties: methods::Table,
     pub routing: RoutingInformation,
     pub content: SmallVec<[Bytes; 1]>,

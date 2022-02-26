@@ -24,13 +24,13 @@ pub async fn do_thing_i_guess(global_data: GlobalData) -> Result<()> {
     loop {
         let (stream, peer_addr) = listener.accept().await?;
 
-        let id = amqp_core::gen_uuid();
+        let id = rand::random();
 
         info!(local_addr = ?stream.local_addr(), %id, "Accepted new connection");
         let span = info_span!("client-connection", %id);
 
         let connection_handle =
-            amqp_core::Connection::new_handle(id, peer_addr, global_data.clone());
+            amqp_core::connection::Connection::new_handle(id, peer_addr, global_data.clone());
 
         let mut global_data_guard = global_data.lock();
         global_data_guard

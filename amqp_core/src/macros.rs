@@ -1,0 +1,32 @@
+#[macro_export]
+macro_rules! newtype_id {
+    ($vis:vis $name:ident) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+        $vis struct $name(::uuid::Uuid);
+        
+        impl $name {
+            pub fn random() -> Self {
+                ::rand::random()
+            }
+        }
+
+        impl ::std::fmt::Display for $name {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                self.0.fmt(f)
+            }
+        }
+
+        impl ::rand::prelude::Distribution<$name> for ::rand::distributions::Standard {
+             fn sample<R: ::rand::Rng + ?Sized>(&self, rng: &mut R) -> $name {
+                 $name(::uuid::Uuid::from_bytes(rng.gen()))
+             }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! amqp_todo {
+    () => {
+        return Err(::amqp_core::error::ConException::NotImplemented.into())
+    };
+}

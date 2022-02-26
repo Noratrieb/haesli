@@ -1,7 +1,8 @@
 use crate::error::{ConException, ProtocolError, Result};
-use crate::frame::{ChannelId, ContentHeader, Frame, FrameType};
+use crate::frame::{ContentHeader, Frame, FrameType};
 use crate::{frame, methods, sasl};
-use amqp_core::message::{RawMessage, RoutingInformation};
+use amqp_core::connection::{ChannelHandle, ChannelNum, ConnectionHandle, ConnectionId};
+use amqp_core::message::{MessageId, RawMessage, RoutingInformation};
 use amqp_core::methods::{FieldValue, Method, Table};
 use amqp_core::GlobalData;
 use anyhow::Context;
@@ -17,7 +18,6 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time;
 use tracing::{debug, error, info, warn};
-use uuid::Uuid;
 
 fn ensure_conn(condition: bool) -> Result<()> {
     if condition {
@@ -36,21 +36,21 @@ const BASIC_CLASS_ID: u16 = 60;
 
 pub struct Channel {
     /// A handle to the global channel representation. Used to remove the channel when it's dropped
-    handle: amqp_core::ChannelHandle,
+    handle: ChannelHandle,
     /// The current status of the channel, whether it has sent a method that expects a body
     status: ChannelStatus,
 }
 
 pub struct Connection {
-    id: Uuid,
+    id: ConnectionId,
     stream: TcpStream,
     max_frame_size: usize,
     heartbeat_delay: u16,
     channel_max: u16,
     /// When the next heartbeat expires
     next_timeout: Pin<Box<time::Sleep>>,
-    channels: HashMap<ChannelId, Channel>,
-    handle: amqp_core::ConnectionHandle,
+    channels: HashMap<ChannelNum, Channel>,
+    handle: ConnectionHandle,
     global_data: GlobalData,
 }
 
@@ -71,9 +71,9 @@ impl ChannelStatus {
 
 impl Connection {
     pub fn new(
-        id: Uuid,
+        id: ConnectionId,
         stream: TcpStream,
-        connection_handle: amqp_core::ConnectionHandle,
+        connection_handle: ConnectionHandle,
         global_data: GlobalData,
     ) -> Self {
         Self {
@@ -110,7 +110,7 @@ impl Connection {
         self.main_loop().await
     }
 
-    async fn send_method(&mut self, channel: ChannelId, method: Method) -> Result<()> {
+    async fn send_method(&mut self, channel: ChannelNum, method: Method) -> Result<()> {
         let mut payload = Vec::with_capacity(64);
         methods::write::write_method(method, &mut payload)?;
         frame::write_frame(
@@ -147,7 +147,7 @@ impl Connection {
         };
 
         debug!(?start_method, "Sending Start method");
-        self.send_method(ChannelId::zero(), start_method).await?;
+        self.send_method(ChannelNum::zero(), start_method).await?;
 
         let start_ok = self.recv_method().await?;
         debug!(?start_ok, "Received Start-Ok");
@@ -178,7 +178,7 @@ impl Connection {
         };
 
         debug!("Sending Tune method");
-        self.send_method(ChannelId::zero(), tune_method).await?;
+        self.send_method(ChannelNum::zero(), tune_method).await?;
 
         let tune_ok = self.recv_method().await?;
         debug!(?tune_ok, "Received Tune-Ok method");
@@ -207,7 +207,7 @@ impl Connection {
         }
 
         self.send_method(
-            ChannelId::zero(),
+            ChannelNum::zero(),
             Method::ConnectionOpenOk {
                 reserved_1: "".to_string(),
             },
@@ -249,7 +249,7 @@ impl Connection {
                 method_id,
             } => {
                 info!(%reply_code, %reply_text, %class_id, %method_id, "Closing connection");
-                self.send_method(ChannelId::zero(), Method::ConnectionCloseOk {})
+                self.send_method(ChannelNum::zero(), Method::ConnectionCloseOk {})
                     .await?;
                 return Err(ProtocolError::GracefulClose.into());
             }
@@ -339,7 +339,7 @@ impl Connection {
         method: Method,
         header: ContentHeader,
         payloads: SmallVec<[Bytes; 1]>,
-        channel: ChannelId,
+        channel: ChannelNum,
     ) -> Result<()> {
         // The only method with content that is sent to the server is Basic.Publish.
         ensure_conn(header.class_id == BASIC_CLASS_ID)?;
@@ -353,7 +353,7 @@ impl Connection {
         } = method
         {
             let message = RawMessage {
-                id: amqp_core::gen_uuid(),
+                id: MessageId::random(),
                 properties: header.property_fields,
                 routing: RoutingInformation {
                     exchange,
@@ -379,11 +379,11 @@ impl Connection {
         }
     }
 
-    async fn channel_open(&mut self, channel_id: ChannelId) -> Result<()> {
-        let id = amqp_core::gen_uuid();
-        let channel_handle = amqp_core::Channel::new_handle(
+    async fn channel_open(&mut self, channel_num: ChannelNum) -> Result<()> {
+        let id = rand::random();
+        let channel_handle = amqp_core::connection::Channel::new_handle(
             id,
-            channel_id.num(),
+            channel_num.num(),
             self.handle.clone(),
             self.global_data.clone(),
         );
@@ -393,9 +393,9 @@ impl Connection {
             status: ChannelStatus::Default,
         };
 
-        let prev = self.channels.insert(channel_id, channel);
+        let prev = self.channels.insert(channel_num, channel);
         if let Some(prev) = prev {
-            self.channels.insert(channel_id, prev); // restore previous state
+            self.channels.insert(channel_num, prev); // restore previous state
             return Err(ConException::ChannelError.into());
         }
 
@@ -408,13 +408,13 @@ impl Connection {
                 .unwrap()
                 .lock()
                 .channels
-                .insert(channel_id.num(), channel_handle);
+                .insert(channel_num.num(), channel_handle);
         }
 
-        info!(%channel_id, "Opened new channel");
+        info!(%channel_num, "Opened new channel");
 
         self.send_method(
-            channel_id,
+            channel_num,
             Method::ChannelOpenOk {
                 reserved_1: Vec::new(),
             },
@@ -424,7 +424,7 @@ impl Connection {
         Ok(())
     }
 
-    async fn channel_close(&mut self, channel_id: ChannelId, method: Method) -> Result<()> {
+    async fn channel_close(&mut self, channel_id: ChannelNum, method: Method) -> Result<()> {
         if let Method::ChannelClose {
             reply_code: code,
             reply_text: reason,
