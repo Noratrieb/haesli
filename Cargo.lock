@@ -30,6 +30,7 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "parking_lot",
+ "rand",
  "smallvec",
  "thiserror",
  "uuid",
@@ -51,8 +52,10 @@ name = "amqp_messaging"
 version = "0.1.0"
 dependencies = [
  "amqp_core",
+ "parking_lot",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]

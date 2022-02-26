@@ -42,8 +42,8 @@ pub fn fail_err<S: Into<String>>(msg: S) -> impl FnOnce(Err<TransError>) -> Err<
         Err::Failure(ConException::SyntaxError(stack).into())
     }
 }
-pub fn err_other<E, S: Into<String>>(msg: S) -> impl FnOnce(E) -> Err<TransError> {
-    move |_| Err::Error(ConException::SyntaxError(vec![msg.into()]).into())
+pub fn other_fail<E, S: Into<String>>(msg: S) -> impl FnOnce(E) -> Err<TransError> {
+    move |_| Err::Failure(ConException::SyntaxError(vec![msg.into()]).into())
 }
 
 #[macro_export]
@@ -105,7 +105,7 @@ pub fn bit(input: &[u8], amount: usize) -> IResult<'_, Vec<Bit>> {
 pub fn shortstr(input: &[u8]) -> IResult<'_, Shortstr> {
     let (input, len) = u8(input)?;
     let (input, str_data) = take(usize::from(len))(input)?;
-    let data = String::from_utf8(str_data.into()).map_err(err_other("shortstr"))?;
+    let data = String::from_utf8(str_data.into()).map_err(other_fail("shortstr"))?;
     Ok((input, data))
 }
 

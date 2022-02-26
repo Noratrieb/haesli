@@ -12,6 +12,7 @@ pub struct RawQueue {
     pub name: String,
     pub messages: Mutex<Vec<Message>>, // use a concurrent linked list???
     pub durable: bool,
+    pub exclusive: Option<Uuid>,
     /// Whether the queue will automatically be deleted when no consumers uses it anymore.
     /// The queue can always be manually deleted.
     /// If auto-delete is enabled, it keeps track of the consumer count.

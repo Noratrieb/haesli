@@ -25,6 +25,8 @@ impl Default for GlobalData {
             inner: Arc::new(Mutex::new(GlobalDataInner {
                 connections: HashMap::new(),
                 channels: HashMap::new(),
+                queues: HashMap::new(),
+                default_exchange: HashMap::new(),
             })),
         }
     }
@@ -40,6 +42,9 @@ impl GlobalData {
 pub struct GlobalDataInner {
     pub connections: HashMap<Uuid, ConnectionHandle>,
     pub channels: HashMap<Uuid, ChannelHandle>,
+    pub queues: HashMap<Uuid, Queue>,
+    /// Todo: This is just for testing and will be removed later!
+    pub default_exchange: HashMap<String, Queue>,
 }
 
 pub type ConnectionHandle = Handle<Connection>;
@@ -103,4 +108,15 @@ impl Channel {
         let mut global_data = self.global_data.lock();
         global_data.channels.remove(&self.id);
     }
+}
+
+pub fn gen_uuid() -> Uuid {
+    Uuid::from_bytes(rand::random())
+}
+
+#[macro_export]
+macro_rules! amqp_todo {
+    () => {
+        return Err(::amqp_core::error::ConException::NotImplemented.into())
+    };
 }

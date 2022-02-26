@@ -15,7 +15,6 @@ use amqp_core::GlobalData;
 use anyhow::Result;
 use tokio::net;
 use tracing::{info, info_span, Instrument};
-use uuid::Uuid;
 
 pub async fn do_thing_i_guess(global_data: GlobalData) -> Result<()> {
     info!("Binding TCP listener...");
@@ -25,7 +24,7 @@ pub async fn do_thing_i_guess(global_data: GlobalData) -> Result<()> {
     loop {
         let (stream, peer_addr) = listener.accept().await?;
 
-        let id = Uuid::from_bytes(rand::random());
+        let id = amqp_core::gen_uuid();
 
         info!(local_addr = ?stream.local_addr(), %id, "Accepted new connection");
         let span = info_span!("client-connection", %id);

@@ -353,7 +353,7 @@ impl Connection {
         } = method
         {
             let message = RawMessage {
-                id: Uuid::from_bytes(rand::random()),
+                id: amqp_core::gen_uuid(),
                 properties: header.property_fields,
                 routing: RoutingInformation {
                     exchange,
@@ -380,7 +380,7 @@ impl Connection {
     }
 
     async fn channel_open(&mut self, channel_id: ChannelId) -> Result<()> {
-        let id = Uuid::from_bytes(rand::random());
+        let id = amqp_core::gen_uuid();
         let channel_handle = amqp_core::Channel::new_handle(
             id,
             channel_id.num(),

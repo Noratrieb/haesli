@@ -16,9 +16,9 @@ pub fn parse_sasl_plain_response(response: &[u8]) -> Result<PlainUser> {
         .split(|&n| n == 0)
         .map(|bytes| String::from_utf8(bytes.into()).map_err(|_| ConException::Todo));
 
-    let authorization_identity = parts.next().ok_or_else(|| ConException::Todo)??;
-    let authentication_identity = parts.next().ok_or_else(|| ConException::Todo)??;
-    let password = parts.next().ok_or_else(|| ConException::Todo)??;
+    let authorization_identity = parts.next().ok_or(ConException::Todo)??;
+    let authentication_identity = parts.next().ok_or(ConException::Todo)??;
+    let password = parts.next().ok_or(ConException::Todo)??;
 
     Ok(PlainUser {
         authorization_identity,
