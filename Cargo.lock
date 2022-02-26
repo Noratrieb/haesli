@@ -55,7 +55,6 @@ dependencies = [
  "parking_lot",
  "tokio",
  "tracing",
- "uuid",
 ]
 
 [[package]]
@@ -75,7 +74,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
- "uuid",
 ]
 
 [[package]]

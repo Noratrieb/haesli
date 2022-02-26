@@ -10,4 +10,3 @@ amqp_core = { path = "../amqp_core" }
 parking_lot = "0.12.0"
 tracing = "0.1.31"
 tokio = { version = "1.17.0", features = ["full"] }
-uuid = "0.8.2"
