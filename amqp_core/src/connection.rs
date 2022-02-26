@@ -12,18 +12,22 @@ newtype_id!(pub ChannelId);
 pub struct ChannelNum(u16);
 
 impl ChannelNum {
+    #[must_use]
     pub fn new(num: u16) -> Self {
         Self(num)
     }
 
+    #[must_use]
     pub fn num(self) -> u16 {
         self.0
     }
 
+    #[must_use]
     pub fn is_zero(self) -> bool {
         self.0 == 0
     }
 
+    #[must_use]
     pub fn zero() -> Self {
         Self(0)
     }
@@ -47,6 +51,7 @@ pub struct Connection {
 }
 
 impl Connection {
+    #[must_use]
     pub fn new_handle(
         id: ConnectionId,
         peer_addr: SocketAddr,
@@ -78,6 +83,7 @@ pub struct Channel {
 }
 
 impl Channel {
+    #[must_use]
     pub fn new_handle(
         id: ChannelId,
         num: u16,

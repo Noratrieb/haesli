@@ -162,7 +162,7 @@ impl Connection {
             ensure_conn(mechanism == "PLAIN")?;
             ensure_conn(locale == "en_US")?;
             let plain_user = sasl::parse_sasl_plain_response(&response)?;
-            info!(username = %plain_user.authentication_identity, "SASL Authentication successful")
+            info!(username = %plain_user.authentication_identity, "SASL Authentication successful");
         } else {
             return Err(ConException::Todo.into());
         }
@@ -257,7 +257,7 @@ impl Connection {
             Method::ChannelClose { .. } => self.channel_close(frame.channel, method).await?,
             Method::BasicPublish { .. } => match self.channels.get_mut(&frame.channel) {
                 Some(channel) => {
-                    channel.status = ChannelStatus::NeedHeader(BASIC_CLASS_ID, Box::new(method))
+                    channel.status = ChannelStatus::NeedHeader(BASIC_CLASS_ID, Box::new(method));
                 }
                 None => return Err(ConException::Todo.into()),
             },

@@ -1,5 +1,6 @@
-use crate::frame::{ChannelNum, FrameType};
+use crate::frame::FrameType;
 use crate::{frame, methods};
+use amqp_core::connection::ChannelNum;
 use amqp_core::methods::{FieldValue, Method};
 use std::collections::HashMap;
 

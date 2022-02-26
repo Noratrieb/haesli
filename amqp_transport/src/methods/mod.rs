@@ -2,7 +2,6 @@ use crate::error::TransError;
 use amqp_core::error::ConException;
 use amqp_core::methods::{FieldValue, Method, Table};
 use rand::Rng;
-use std::collections::HashMap;
 
 mod generated;
 pub mod parse_helper;
@@ -65,7 +64,9 @@ rand_random_method!(bool, u8, i8, u16, i16, u32, i32, u64, i64, f32, f64);
 impl<R: Rng> RandomMethod<R> for Table {
     fn random(rng: &mut R) -> Self {
         let len = rng.gen_range(0..3);
-        HashMap::from_iter((0..len).map(|_| (String::random(rng), FieldValue::random(rng))))
+        (0..len)
+            .map(|_| (String::random(rng), FieldValue::random(rng)))
+            .collect()
     }
 }
 

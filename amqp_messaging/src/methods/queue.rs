@@ -1,5 +1,3 @@
-#![deny(clippy::future_not_send)]
-
 use amqp_core::connection::ChannelHandle;
 use amqp_core::error::{ConException, ProtocolError};
 use amqp_core::methods::{Bit, ExchangeName, NoWait, QueueName, Shortstr, Table};

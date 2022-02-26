@@ -138,7 +138,7 @@ impl ContentHeader {
 
 pub async fn write_frame<W>(frame: &Frame, mut w: W) -> Result<()>
 where
-    W: AsyncWriteExt + Unpin,
+    W: AsyncWriteExt + Unpin + Send,
 {
     trace!(?frame, "Sending frame");
 
@@ -154,7 +154,7 @@ where
 
 pub async fn read_frame<R>(r: &mut R, max_frame_size: usize) -> Result<Frame>
 where
-    R: AsyncReadExt + Unpin,
+    R: AsyncReadExt + Unpin + Send,
 {
     let kind = r.read_u8().await.context("read type")?;
     let channel = r.read_u16().await.context("read channel")?;

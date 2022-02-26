@@ -12,7 +12,6 @@ use nom::multi::{count, many0};
 use nom::number::complete::{f32, f64, i16, i32, i64, i8, u16, u32, u64, u8};
 use nom::number::Endianness::Big;
 use nom::Err;
-use std::collections::HashMap;
 
 impl<T> nom::error::ParseError<T> for TransError {
     fn from_error_kind(_input: T, _kind: ErrorKind) -> Self {
@@ -37,7 +36,7 @@ pub fn fail_err<S: Into<String>>(msg: S) -> impl FnOnce(Err<TransError>) -> Err<
                 }
                 _ => vec![msg],
             },
-            _ => vec![msg],
+            Err::Incomplete(_) => vec![msg],
         };
         Err::Failure(ConException::SyntaxError(stack).into())
     }
@@ -133,7 +132,7 @@ pub fn table(input: &[u8]) -> IResult<'_, Table> {
         ));
     }
 
-    let table = HashMap::from_iter(values.into_iter());
+    let table = values.into_iter().collect();
     Ok((rest_input, table))
 }
 

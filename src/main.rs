@@ -29,8 +29,8 @@ async fn main() -> Result<()> {
 }
 
 fn setup_tracing() {
-    let rust_log = std::env::var("RUST_LOG");
     const DEFAULT_LOG: &str = "hyper=info,debug";
+    let rust_log = std::env::var("RUST_LOG");
 
     tracing_subscriber::fmt()
         .with_level(true)

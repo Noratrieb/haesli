@@ -3,8 +3,9 @@ macro_rules! newtype_id {
     ($vis:vis $name:ident) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
         $vis struct $name(::uuid::Uuid);
-        
+
         impl $name {
+            #[must_use]
             pub fn random() -> Self {
                 ::rand::random()
             }
@@ -20,6 +21,32 @@ macro_rules! newtype_id {
              fn sample<R: ::rand::Rng + ?Sized>(&self, rng: &mut R) -> $name {
                  $name(::uuid::Uuid::from_bytes(rng.gen()))
              }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! newtype {
+    ($(#[$meta:meta])* $vis:vis $name:ident: $ty:ty) => {
+        $(#[$meta])*
+        $vis struct $name($ty);
+
+        impl $name {
+            pub fn new(inner: $ty) -> Self {
+                Self(inner)
+            }
+
+            pub fn into_inner(self) -> $ty {
+                self.0
+            }
+        }
+
+        impl std::ops::Deref for $name {
+            type Target = $ty;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
         }
     };
 }
