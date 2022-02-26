@@ -1,8 +1,11 @@
 #![warn(rust_2018_idioms)]
 
+pub mod error;
 pub mod message;
 pub mod methods;
+pub mod queue;
 
+use crate::queue::Queue;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -47,6 +50,7 @@ pub struct Connection {
     pub peer_addr: SocketAddr,
     pub global_data: GlobalData,
     pub channels: HashMap<u16, ChannelHandle>,
+    pub exclusive_queues: Vec<Queue>,
 }
 
 impl Connection {
@@ -60,6 +64,7 @@ impl Connection {
             peer_addr,
             global_data,
             channels: HashMap::new(),
+            exclusive_queues: vec![],
         }))
     }
 

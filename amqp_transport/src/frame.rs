@@ -148,14 +148,11 @@ impl ContentHeader {
             Ok((_, _)) => {
                 Err(
                     ConException::SyntaxError(vec!["could not consume all input".to_string()])
-                        .into_trans(),
+                        .into(),
                 )
             }
             Err(nom::Err::Incomplete(_)) => {
-                Err(
-                    ConException::SyntaxError(vec!["there was not enough data".to_string()])
-                        .into_trans(),
-                )
+                Err(ConException::SyntaxError(vec!["there was not enough data".to_string()]).into())
             }
             Err(nom::Err::Failure(err) | nom::Err::Error(err)) => Err(err),
         }
@@ -197,7 +194,7 @@ where
     }
 
     if max_frame_size != 0 && payload.len() > max_frame_size {
-        return Err(ConException::FrameError.into_trans());
+        return Err(ConException::FrameError.into());
     }
 
     let kind = parse_frame_type(kind, channel)?;
@@ -225,7 +222,7 @@ fn parse_frame_type(kind: u8, channel: ChannelId) -> Result<FrameType> {
                 Err(ProtocolError::ConException(ConException::FrameError).into())
             }
         }
-        _ => Err(ConException::FrameError.into_trans()),
+        _ => Err(ConException::FrameError.into()),
     }
 }
 

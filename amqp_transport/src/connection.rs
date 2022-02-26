@@ -1,32 +1,29 @@
+use crate::error::{ConException, ProtocolError, Result};
+use crate::frame::{ChannelId, ContentHeader, Frame, FrameType};
+use crate::{frame, methods, sasl};
+use amqp_core::message::{RawMessage, RoutingInformation};
+use amqp_core::methods::{FieldValue, Method, Table};
+use amqp_core::GlobalData;
+use anyhow::Context;
+use bytes::Bytes;
+use smallvec::SmallVec;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
-
-use anyhow::Context;
-use bytes::Bytes;
-use smallvec::SmallVec;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
-use amqp_core::message::{RawMessage, RoutingInformation};
-use amqp_core::methods::{FieldValue, Method, Table};
-use amqp_core::GlobalData;
-
-use crate::error::{ConException, ProtocolError, Result};
-use crate::frame::{ChannelId, ContentHeader, Frame, FrameType};
-use crate::{frame, methods, sasl};
-
 fn ensure_conn(condition: bool) -> Result<()> {
     if condition {
         Ok(())
     } else {
-        Err(ConException::Todo.into_trans())
+        Err(ConException::Todo.into())
     }
 }
 
@@ -167,7 +164,7 @@ impl Connection {
             let plain_user = sasl::parse_sasl_plain_response(&response)?;
             info!(username = %plain_user.authentication_identity, "SASL Authentication successful")
         } else {
-            return Err(ConException::Todo.into_trans());
+            return Err(ConException::Todo.into());
         }
 
         Ok(())
@@ -262,21 +259,20 @@ impl Connection {
                 Some(channel) => {
                     channel.status = ChannelStatus::NeedHeader(BASIC_CLASS_ID, Box::new(method))
                 }
-                None => return Err(ConException::Todo.into_trans()),
+                None => return Err(ConException::Todo.into()),
             },
             _ => {
                 let channel_handle = self
                     .channels
                     .get(&frame.channel)
-                    .ok_or_else(|| ConException::Todo.into_trans())?
+                    .ok_or(ConException::Todo)?
                     .handle
                     .clone();
 
-                tokio::spawn(amqp_messaging::methods::handle_method(
-                    channel_handle,
-                    method,
-                ));
-                // we don't handle this here, forward it to *somewhere*
+                // call into amqp_messaging to handle the method
+                // amqp_messaging then branches and spawns a new task for longer running things,
+                // so the connection task will only be "blocked" for a short amount of time
+                amqp_messaging::methods::handle_method(channel_handle, method).await?;
             }
         }
         Ok(())
@@ -285,11 +281,11 @@ impl Connection {
     fn dispatch_header(&mut self, frame: Frame) -> Result<()> {
         self.channels
             .get_mut(&frame.channel)
-            .ok_or_else(|| ConException::Todo.into_trans())
+            .ok_or_else(|| ConException::Todo.into())
             .and_then(|channel| match channel.status.take() {
                 ChannelStatus::Default => {
                     warn!(channel = %frame.channel, "unexpected header");
-                    Err(ConException::UnexpectedFrame.into_trans())
+                    Err(ConException::UnexpectedFrame.into())
                 }
                 ChannelStatus::NeedHeader(class_id, method) => {
                     let header = ContentHeader::parse(&frame.payload)?;
@@ -300,7 +296,7 @@ impl Connection {
                 }
                 ChannelStatus::NeedsBody(_, _, _) => {
                     warn!(channel = %frame.channel, "already got header");
-                    Err(ConException::UnexpectedFrame.into_trans())
+                    Err(ConException::UnexpectedFrame.into())
                 }
             })
     }
@@ -309,16 +305,16 @@ impl Connection {
         let channel = self
             .channels
             .get_mut(&frame.channel)
-            .ok_or_else(|| ConException::Todo.into_trans())?;
+            .ok_or(ConException::Todo)?;
 
         match channel.status.take() {
             ChannelStatus::Default => {
                 warn!(channel = %frame.channel, "unexpected body");
-                Err(ConException::UnexpectedFrame.into_trans())
+                Err(ConException::UnexpectedFrame.into())
             }
             ChannelStatus::NeedHeader(_, _) => {
                 warn!(channel = %frame.channel, "unexpected body");
-                Err(ConException::UnexpectedFrame.into_trans())
+                Err(ConException::UnexpectedFrame.into())
             }
             ChannelStatus::NeedsBody(method, header, mut vec) => {
                 vec.push(frame.payload);
@@ -331,7 +327,7 @@ impl Connection {
                     Ordering::Equal => {
                         self.process_method_with_body(*method, *header, vec, frame.channel)
                     }
-                    Ordering::Greater => Err(ConException::Todo.into_trans()),
+                    Ordering::Greater => Err(ConException::Todo.into()),
                     Ordering::Less => Ok(()), // wait for next body
                 }
             }
@@ -369,10 +365,7 @@ impl Connection {
             };
             let message = Arc::new(message);
 
-            let channel = self
-                .channels
-                .get(&channel)
-                .ok_or_else(|| ConException::Todo.into_trans())?;
+            let channel = self.channels.get(&channel).ok_or(ConException::Todo)?;
 
             // Spawn the handler for the publish. The connection task goes back to handling
             // just the connection.
@@ -382,7 +375,7 @@ impl Connection {
             ));
             Ok(())
         } else {
-            Err(ConException::Todo.into_trans())
+            Err(ConException::Todo.into())
         }
     }
 
@@ -403,7 +396,7 @@ impl Connection {
         let prev = self.channels.insert(channel_id, channel);
         if let Some(prev) = prev {
             self.channels.insert(channel_id, prev); // restore previous state
-            return Err(ConException::ChannelError.into_trans());
+            return Err(ConException::ChannelError.into());
         }
 
         {
@@ -444,7 +437,7 @@ impl Connection {
                 drop(channel);
                 self.send_method(channel_id, Method::ChannelCloseOk).await?;
             } else {
-                return Err(ConException::Todo.into_trans());
+                return Err(ConException::Todo.into());
             }
         } else {
             unreachable!()

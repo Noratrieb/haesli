@@ -9,4 +9,5 @@ edition = "2021"
 bytes = "1.1.0"
 parking_lot = "0.12.0"
 smallvec = { version = "1.8.0", features = ["union"] }
+thiserror = "1.0.30"
 uuid = "0.8.2"

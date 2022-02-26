@@ -1,4 +1,5 @@
-use crate::error::{ConException, TransError};
+use crate::error::TransError;
+use amqp_core::error::ConException;
 use amqp_core::methods::{FieldValue, Method, Table};
 use rand::Rng;
 use std::collections::HashMap;
@@ -18,16 +19,10 @@ pub fn parse_method(payload: &[u8]) -> Result<Method, TransError> {
     match nom_result {
         Ok(([], method)) => Ok(method),
         Ok((_, _)) => {
-            Err(
-                ConException::SyntaxError(vec!["could not consume all input".to_string()])
-                    .into_trans(),
-            )
+            Err(ConException::SyntaxError(vec!["could not consume all input".to_string()]).into())
         }
         Err(nom::Err::Incomplete(_)) => {
-            Err(
-                ConException::SyntaxError(vec!["there was not enough data".to_string()])
-                    .into_trans(),
-            )
+            Err(ConException::SyntaxError(vec!["there was not enough data".to_string()]).into())
         }
         Err(nom::Err::Failure(err) | nom::Err::Error(err)) => Err(err),
     }

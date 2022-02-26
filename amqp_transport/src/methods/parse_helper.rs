@@ -1,5 +1,6 @@
-use crate::error::{ConException, ProtocolError, TransError};
+use crate::error::TransError;
 use crate::methods::generated::parse::IResult;
+use amqp_core::error::{ConException, ProtocolError};
 use amqp_core::methods::{
     Bit, FieldValue, Long, Longlong, Longstr, Octet, Short, Shortstr, Table, TableFieldName,
     Timestamp,
@@ -15,7 +16,7 @@ use std::collections::HashMap;
 
 impl<T> nom::error::ParseError<T> for TransError {
     fn from_error_kind(_input: T, _kind: ErrorKind) -> Self {
-        ConException::SyntaxError(vec![]).into_trans()
+        ConException::SyntaxError(vec![]).into()
     }
 
     fn append(_input: T, _kind: ErrorKind, other: Self) -> Self {
@@ -28,7 +29,7 @@ pub fn fail_err<S: Into<String>>(msg: S) -> impl FnOnce(Err<TransError>) -> Err<
         let msg = msg.into();
         let stack = match err {
             Err::Error(e) | Err::Failure(e) => match e {
-                TransError::Invalid(ProtocolError::ConException(ConException::SyntaxError(
+                TransError::Protocol(ProtocolError::ConException(ConException::SyntaxError(
                     mut stack,
                 ))) => {
                     stack.push(msg);
@@ -38,20 +39,20 @@ pub fn fail_err<S: Into<String>>(msg: S) -> impl FnOnce(Err<TransError>) -> Err<
             },
             _ => vec![msg],
         };
-        Err::Failure(ConException::SyntaxError(stack).into_trans())
+        Err::Failure(ConException::SyntaxError(stack).into())
     }
 }
 pub fn err_other<E, S: Into<String>>(msg: S) -> impl FnOnce(E) -> Err<TransError> {
-    move |_| Err::Error(ConException::SyntaxError(vec![msg.into()]).into_trans())
+    move |_| Err::Error(ConException::SyntaxError(vec![msg.into()]).into())
 }
 
 #[macro_export]
 macro_rules! fail {
     ($cause:expr) => {
         return Err(nom::Err::Failure(
-            crate::error::ProtocolError::ConException(crate::error::ConException::SyntaxError(
-                vec![String::from($cause)],
-            ))
+            ::amqp_core::error::ProtocolError::ConException(
+                ::amqp_core::error::ConException::SyntaxError(vec![String::from($cause)]),
+            )
             .into(),
         ))
     };

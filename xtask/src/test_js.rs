@@ -9,6 +9,7 @@ pub fn main() -> Result<()> {
 
     let mut amqp_server = Command::new("cargo")
         .arg("run")
+        .env("RUST_LOG", "trace")
         .spawn()
         .context("`cargo run` amqp")?;
 
