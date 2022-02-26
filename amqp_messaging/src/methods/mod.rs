@@ -22,82 +22,23 @@ pub async fn handle_method(
     info!(?method, "Handling method");
 
     match method {
-        Method::ExchangeDeclare { .. } => amqp_todo!(),
-        Method::ExchangeDeclareOk => amqp_todo!(),
-        Method::ExchangeDelete { .. } => amqp_todo!(),
-        Method::ExchangeDeleteOk => amqp_todo!(),
-        Method::QueueDeclare {
-            queue,
-            passive,
-            durable,
-            exclusive,
-            auto_delete,
-            no_wait,
-            arguments,
-            ..
-        } => {
-            queue::declare(
-                channel_handle,
-                queue,
-                passive,
-                durable,
-                exclusive,
-                auto_delete,
-                no_wait,
-                arguments,
-            )
-            .await
-        }
+        Method::ExchangeDeclare(_) => amqp_todo!(),
+        Method::ExchangeDeclareOk(_) => amqp_todo!(),
+        Method::ExchangeDelete(_) => amqp_todo!(),
+        Method::ExchangeDeleteOk(_) => amqp_todo!(),
+        Method::QueueDeclare(queue_declare) => queue::declare(channel_handle, queue_declare).await,
         Method::QueueDeclareOk { .. } => amqp_todo!(),
-        Method::QueueBind {
-            queue,
-            exchange,
-            routing_key,
-            no_wait,
-            arguments,
-            ..
-        } => {
-            queue::bind(
-                channel_handle,
-                queue,
-                exchange,
-                routing_key,
-                no_wait,
-                arguments,
-            )
-            .await
-        }
-        Method::QueueBindOk => amqp_todo!(),
+        Method::QueueBind(queue_bind) => queue::bind(channel_handle, queue_bind).await,
+        Method::QueueBindOk(_) => amqp_todo!(),
         Method::QueueUnbind { .. } => amqp_todo!(),
-        Method::QueueUnbindOk => amqp_todo!(),
+        Method::QueueUnbindOk(_) => amqp_todo!(),
         Method::QueuePurge { .. } => amqp_todo!(),
         Method::QueuePurgeOk { .. } => amqp_todo!(),
         Method::QueueDelete { .. } => amqp_todo!(),
         Method::QueueDeleteOk { .. } => amqp_todo!(),
         Method::BasicQos { .. } => amqp_todo!(),
-        Method::BasicQosOk => amqp_todo!(),
-        Method::BasicConsume {
-            queue,
-            consumer_tag,
-            no_local,
-            no_ack,
-            exclusive,
-            no_wait,
-            arguments,
-            ..
-        } => {
-            consume::consume(
-                channel_handle,
-                queue,
-                consumer_tag,
-                no_local,
-                no_ack,
-                exclusive,
-                no_wait,
-                arguments,
-            )
-            .await
-        }
+        Method::BasicQosOk(_) => amqp_todo!(),
+        Method::BasicConsume(consume) => consume::consume(channel_handle, consume).await,
         Method::BasicConsumeOk { .. } => amqp_todo!(),
         Method::BasicCancel { .. } => amqp_todo!(),
         Method::BasicCancelOk { .. } => amqp_todo!(),
@@ -110,13 +51,13 @@ pub async fn handle_method(
         Method::BasicReject { .. } => amqp_todo!(),
         Method::BasicRecoverAsync { .. } => amqp_todo!(),
         Method::BasicRecover { .. } => amqp_todo!(),
-        Method::BasicRecoverOk => amqp_todo!(),
-        Method::TxSelect
-        | Method::TxSelectOk
-        | Method::TxCommit
-        | Method::TxCommitOk
-        | Method::TxRollback
-        | Method::TxRollbackOk => amqp_todo!(),
+        Method::BasicRecoverOk(_) => amqp_todo!(),
+        Method::TxSelect(_)
+        | Method::TxSelectOk(_)
+        | Method::TxCommit(_)
+        | Method::TxCommitOk(_)
+        | Method::TxRollback(_)
+        | Method::TxRollbackOk(_) => amqp_todo!(),
         Method::BasicPublish { .. } => {
             unreachable!("Basic.Publish is handled somewhere else because it has a body")
         }

@@ -154,14 +154,14 @@ pub type IResult<'a, T> = nom::IResult<&'a [u8], T, TransError>;
         let method_name = method.name.to_upper_camel_case();
         writeln!(
             self.output,
-            "    Ok((input, Method::{class_name}{method_name} {{"
+            "    Ok((input, Method::{class_name}{method_name}({class_name}{method_name} {{"
         )
         .ok();
         for field in &method.fields {
             let field_name = self.snake_case(&field.name);
             writeln!(self.output, "        {field_name},").ok();
         }
-        writeln!(self.output, "    }}))").ok();
+        writeln!(self.output, "    }})))").ok();
 
         writeln!(self.output, "}}").ok();
     }

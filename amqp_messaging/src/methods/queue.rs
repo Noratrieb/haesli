@@ -1,23 +1,27 @@
 use amqp_core::connection::ChannelHandle;
 use amqp_core::error::{ConException, ProtocolError};
-use amqp_core::methods::{Bit, ExchangeName, NoWait, QueueName, Shortstr, Table};
+use amqp_core::methods::{QueueBind, QueueDeclare};
 use amqp_core::queue::{QueueDeletion, QueueId, RawQueue};
 use amqp_core::{amqp_todo, GlobalData};
 use parking_lot::Mutex;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 
-#[allow(clippy::too_many_arguments)]
 pub async fn declare(
     channel_handle: ChannelHandle,
-    queue_name: QueueName,
-    passive: Bit,
-    durable: Bit,
-    exclusive: Bit,
-    auto_delete: Bit,
-    no_wait: NoWait,
-    arguments: Table,
+    queue_declare: QueueDeclare,
 ) -> Result<(), ProtocolError> {
+    let QueueDeclare {
+        queue: queue_name,
+        passive,
+        durable,
+        exclusive,
+        auto_delete,
+        no_wait,
+        arguments,
+        ..
+    } = queue_declare;
+
     if !arguments.is_empty() {
         return Err(ConException::Todo.into());
     }
@@ -58,11 +62,7 @@ pub async fn declare(
 
 pub async fn bind(
     _channel_handle: ChannelHandle,
-    _queue: QueueName,
-    _exchange: ExchangeName,
-    _routing_key: Shortstr,
-    _no_wait: NoWait,
-    _arguments: Table,
+    _queue_bind: QueueBind,
 ) -> Result<(), ProtocolError> {
     amqp_todo!();
 }

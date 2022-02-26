@@ -22,12 +22,16 @@ pub fn write_method<W: Write>(method: Method, mut writer: W) -> Result<(), Trans
             for method in &class.methods {
                 let method_name = method.name.to_upper_camel_case();
                 let method_index = method.index;
-                writeln!(self.output, "        Method::{class_name}{method_name} {{").ok();
+                writeln!(
+                    self.output,
+                    "        Method::{class_name}{method_name}({class_name}{method_name} {{"
+                )
+                .ok();
                 for field in &method.fields {
                     let field_name = self.snake_case(&field.name);
                     writeln!(self.output, "            {field_name},").ok();
                 }
-                writeln!(self.output, "        }} => {{").ok();
+                writeln!(self.output, "        }}) => {{").ok();
                 let [ci0, ci1] = class_index.to_be_bytes();
                 let [mi0, mi1] = method_index.to_be_bytes();
                 writeln!(

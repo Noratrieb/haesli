@@ -213,9 +213,29 @@ impl Codegen {
             let enum_name = class.name.to_upper_camel_case();
             for method in &class.methods {
                 let method_name = method.name.to_upper_camel_case();
+                write!(
+                    self.output,
+                    "    {enum_name}{method_name}({enum_name}{method_name}),"
+                )
+                .ok();
+            }
+        }
+
+        writeln!(self.output, "}}\n").ok();
+
+        // now codegen the individual structs
+        for class in &amqp.classes {
+            let class_name = class.name.to_upper_camel_case();
+            for method in &class.methods {
+                let method_name = method.name.to_upper_camel_case();
                 self.doc_comment(&class.doc, 4);
                 self.doc_comment(&method.doc, 4);
-                write!(self.output, "    {enum_name}{method_name}").ok();
+                writeln!(
+                    self.output,
+                    "#[derive(Debug, Clone, PartialEq)]
+pub struct {class_name}{method_name}"
+                )
+                .ok();
                 if !method.fields.is_empty() {
                     writeln!(self.output, " {{").ok();
                     for field in &method.fields {
@@ -225,24 +245,22 @@ impl Codegen {
                             field.asserts.as_ref(),
                         );
                         if !field_docs.is_empty() {
-                            writeln!(self.output, "        /// {field_docs}").ok();
+                            writeln!(self.output, "    /// {field_docs}").ok();
                             if !field.doc.is_empty() {
-                                writeln!(self.output, "        ///").ok();
-                                self.doc_comment(&field.doc, 8);
+                                writeln!(self.output, "    ///").ok();
+                                self.doc_comment(&field.doc, 4);
                             }
                         } else {
-                            self.doc_comment(&field.doc, 8);
+                            self.doc_comment(&field.doc, 4);
                         }
-                        writeln!(self.output, "        {field_name}: {field_type},").ok();
+                        writeln!(self.output, "    pub {field_name}: {field_type},").ok();
                     }
-                    writeln!(self.output, "    }},").ok();
+                    writeln!(self.output, "    }}\n").ok();
                 } else {
-                    writeln!(self.output, ",").ok();
+                    writeln!(self.output, ";\n").ok();
                 }
             }
         }
-
-        writeln!(self.output, "}}\n").ok();
     }
 
     fn amqp_type_to_rust_type(&self, amqp_type: &str) -> &'static str {
