@@ -4,8 +4,10 @@ use amqp_core::error::ProtocolError;
 use amqp_core::methods::{BasicConsume, Method};
 
 pub async fn consume(
-    _channel_handle: ChannelHandle,
+    channel_handle: ChannelHandle,
     _basic_consume: BasicConsume,
 ) -> Result<Method, ProtocolError> {
+    let _channel = channel_handle.lock();
+
     amqp_todo!()
 }

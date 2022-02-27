@@ -25,16 +25,16 @@ pub async fn declare(
     let queue_name = QueueName::new(queue_name.into());
 
     if !arguments.is_empty() {
-        return Err(ConException::Todo.into());
+        amqp_todo!();
+    }
+
+    if passive || no_wait || durable {
+        amqp_todo!();
     }
 
     let global_data = {
         let channel = channel_handle.lock();
         let global_data = channel.global_data.clone();
-
-        if passive || no_wait {
-            amqp_todo!();
-        }
 
         let id = QueueId::random();
         let queue = Arc::new(RawQueue {

@@ -39,10 +39,23 @@ const renderConnections = (connections) => {
   wrapper.replaceChildren(table);
 };
 
+const renderQueues = (queues) => {
+  const wrapper = document.getElementById('queue-wrapper');
+
+  const table = renderTable(
+    ['Queue ID', 'Name', 'Durable'],
+    queues.map((queue) => {
+      return [queue.id, queue.name, queue.durable ? 'Yes' : 'No'];
+    })
+  );
+  wrapper.replaceChildren(table);
+};
+
 const refresh = async () => {
   const fetched = await fetch('api/data');
   const data = await fetched.json();
   renderConnections(data.connections);
+  renderQueues(data.queues);
 };
 
 setInterval(refresh, 1000);
