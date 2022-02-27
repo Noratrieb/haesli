@@ -7,8 +7,8 @@ impl Codegen {
             self.output,
             "pub mod write {{
 use amqp_core::methods::*;
-use crate::methods::write_helper::*;
 use crate::error::TransError;
+use crate::methods::write_helper::*;
 use std::io::Write;
 
 pub fn write_method<W: Write>(method: Method, mut writer: W) -> Result<(), TransError> {{

@@ -25,8 +25,8 @@ pub enum ConException {
     ChannelError,
     #[error("505 Unexpected Frame")]
     UnexpectedFrame,
-    #[error("540 Not implemented")]
-    NotImplemented,
+    #[error("540 Not implemented. '{0}'")]
+    NotImplemented(&'static str),
     #[error("xxx Not decided yet")]
     Todo,
 }

@@ -223,7 +223,6 @@ impl Connection {
 
     async fn main_loop(&mut self) -> Result<()> {
         loop {
-            debug!("Waiting for next frame");
             let frame = frame::read_frame(&mut self.stream, self.max_frame_size).await?;
             self.reset_timeout();
 
@@ -277,9 +276,11 @@ impl Connection {
                     .clone();
 
                 // call into amqp_messaging to handle the method
-                // amqp_messaging then branches and spawns a new task for longer running things,
-                // so the connection task will only be "blocked" for a short amount of time
-                amqp_messaging::methods::handle_method(channel_handle, method).await?;
+                // it returns the response method that we are supposed to send
+                // maybe this might become an `Option` in the future
+                let return_method =
+                    amqp_messaging::methods::handle_method(channel_handle, method).await?;
+                self.send_method(frame.channel, return_method).await?;
             }
         }
         Ok(())

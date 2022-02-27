@@ -18,17 +18,19 @@ pub async fn handle_basic_publish(_channel_handle: ChannelHandle, message: Messa
 pub async fn handle_method(
     channel_handle: ChannelHandle,
     method: Method,
-) -> Result<(), ProtocolError> {
+) -> Result<Method, ProtocolError> {
     info!(?method, "Handling method");
 
-    match method {
+    let response = match method {
         Method::ExchangeDeclare(_) => amqp_todo!(),
         Method::ExchangeDeclareOk(_) => amqp_todo!(),
         Method::ExchangeDelete(_) => amqp_todo!(),
         Method::ExchangeDeleteOk(_) => amqp_todo!(),
-        Method::QueueDeclare(queue_declare) => queue::declare(channel_handle, queue_declare).await,
+        Method::QueueDeclare(queue_declare) => {
+            queue::declare(channel_handle, queue_declare).await?
+        }
         Method::QueueDeclareOk { .. } => amqp_todo!(),
-        Method::QueueBind(queue_bind) => queue::bind(channel_handle, queue_bind).await,
+        Method::QueueBind(queue_bind) => queue::bind(channel_handle, queue_bind).await?,
         Method::QueueBindOk(_) => amqp_todo!(),
         Method::QueueUnbind { .. } => amqp_todo!(),
         Method::QueueUnbindOk(_) => amqp_todo!(),
@@ -38,7 +40,7 @@ pub async fn handle_method(
         Method::QueueDeleteOk { .. } => amqp_todo!(),
         Method::BasicQos { .. } => amqp_todo!(),
         Method::BasicQosOk(_) => amqp_todo!(),
-        Method::BasicConsume(consume) => consume::consume(channel_handle, consume).await,
+        Method::BasicConsume(consume) => consume::consume(channel_handle, consume).await?,
         Method::BasicConsumeOk { .. } => amqp_todo!(),
         Method::BasicCancel { .. } => amqp_todo!(),
         Method::BasicCancelOk { .. } => amqp_todo!(),
@@ -62,5 +64,7 @@ pub async fn handle_method(
             unreachable!("Basic.Publish is handled somewhere else because it has a body")
         }
         _ => unreachable!("Method handled by transport layer"),
-    }
+    };
+
+    Ok(response)
 }

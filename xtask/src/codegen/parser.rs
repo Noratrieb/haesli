@@ -21,8 +21,8 @@ impl Codegen {
             self.output,
             "pub mod parse {{
 use amqp_core::methods::*;
-use crate::methods::parse_helper::*;
 use crate::error::TransError;
+use crate::methods::parse_helper::*;
 use nom::{{branch::alt, bytes::complete::tag}};
 use regex::Regex;
 use once_cell::sync::Lazy;

@@ -1,7 +1,7 @@
 use amqp_core::connection::ChannelHandle;
 use amqp_core::error::{ConException, ProtocolError};
-use amqp_core::methods::{QueueBind, QueueDeclare};
-use amqp_core::queue::{QueueDeletion, QueueId, RawQueue};
+use amqp_core::methods::{Method, QueueBind, QueueDeclare, QueueDeclareOk};
+use amqp_core::queue::{QueueDeletion, QueueId, QueueName, RawQueue};
 use amqp_core::{amqp_todo, GlobalData};
 use parking_lot::Mutex;
 use std::sync::atomic::AtomicUsize;
@@ -10,7 +10,7 @@ use std::sync::Arc;
 pub async fn declare(
     channel_handle: ChannelHandle,
     queue_declare: QueueDeclare,
-) -> Result<(), ProtocolError> {
+) -> Result<Method, ProtocolError> {
     let QueueDeclare {
         queue: queue_name,
         passive,
@@ -22,12 +22,15 @@ pub async fn declare(
         ..
     } = queue_declare;
 
+    let queue_name = QueueName::new(queue_name.into());
+
     if !arguments.is_empty() {
         return Err(ConException::Todo.into());
     }
 
-    let (global_data, id) = {
+    let global_data = {
         let channel = channel_handle.lock();
+        let global_data = channel.global_data.clone();
 
         if passive || no_wait {
             amqp_todo!();
@@ -47,31 +50,46 @@ pub async fn declare(
             },
         });
 
-        let global_data = channel.global_data.clone();
-
         {
             let mut global_data_lock = global_data.lock();
-            global_data_lock.queues.insert(id, queue);
+            global_data_lock.queues.insert(queue_name.clone(), queue);
         }
 
-        (global_data, id)
+        global_data
     };
 
-    bind_queue(global_data, id, (), queue_name).await
+    bind_queue(global_data, (), queue_name.clone().into_inner()).await?;
+
+    Ok(Method::QueueDeclareOk(QueueDeclareOk {
+        queue: queue_name.to_string(),
+        message_count: 0,
+        consumer_count: 0,
+    }))
 }
 
 pub async fn bind(
     _channel_handle: ChannelHandle,
     _queue_bind: QueueBind,
-) -> Result<(), ProtocolError> {
+) -> Result<Method, ProtocolError> {
     amqp_todo!();
 }
 
 async fn bind_queue(
-    _global_data: GlobalData,
-    _queue: QueueId,
+    global_data: GlobalData,
     _exchange: (),
-    _routing_key: String,
+    routing_key: Arc<str>,
 ) -> Result<(), ProtocolError> {
-    amqp_todo!();
+    let mut global_data = global_data.lock();
+
+    // todo: don't
+    let queue = global_data
+        .queues
+        .get(&QueueName::new(routing_key.clone()))
+        .unwrap()
+        .clone();
+    global_data
+        .default_exchange
+        .insert(routing_key.to_string(), queue);
+
+    Ok(())
 }

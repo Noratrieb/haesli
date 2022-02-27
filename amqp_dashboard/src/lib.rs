@@ -51,6 +51,7 @@ async fn get_style_css() -> Response {
 #[derive(Serialize)]
 struct Data {
     connections: Vec<Connection>,
+    queues: Vec<Queue>,
 }
 
 #[derive(Serialize)]
@@ -64,6 +65,13 @@ struct Connection {
 struct Channel {
     id: String,
     number: u16,
+}
+
+#[derive(Serialize)]
+struct Queue {
+    id: String,
+    name: String,
+    durable: bool,
 }
 
 async fn get_data(global_data: GlobalData) -> impl IntoResponse {
@@ -92,7 +100,20 @@ async fn get_data(global_data: GlobalData) -> impl IntoResponse {
         })
         .collect();
 
-    let data = Data { connections };
+    let queues = global_data
+        .queues
+        .values()
+        .map(|queue| Queue {
+            id: queue.id.to_string(),
+            name: queue.name.to_string(),
+            durable: queue.durable,
+        })
+        .collect();
+
+    let data = Data {
+        connections,
+        queues,
+    };
 
     Json(data)
 }

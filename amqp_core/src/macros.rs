@@ -48,12 +48,23 @@ macro_rules! newtype {
                 &self.0
             }
         }
+
+        impl<T> std::convert::From<T> for $name
+        where
+            $ty: From<T>,
+        {
+            fn from(other: T) -> Self {
+                Self(other.into())
+            }
+        }
     };
 }
 
 #[macro_export]
 macro_rules! amqp_todo {
     () => {
-        return Err(::amqp_core::error::ConException::NotImplemented.into())
+        return Err(
+            ::amqp_core::error::ConException::NotImplemented(concat!(file!(), ":", line!())).into(),
+        )
     };
 }

@@ -8,7 +8,7 @@ pub mod methods;
 pub mod queue;
 
 use crate::connection::{ChannelHandle, ConnectionHandle};
-use crate::queue::{Queue, QueueId};
+use crate::queue::{Queue, QueueName};
 use connection::{ChannelId, ConnectionId};
 use parking_lot::Mutex;
 use std::collections::HashMap;
@@ -44,7 +44,7 @@ impl GlobalData {
 pub struct GlobalDataInner {
     pub connections: HashMap<ConnectionId, ConnectionHandle>,
     pub channels: HashMap<ChannelId, ChannelHandle>,
-    pub queues: HashMap<QueueId, Queue>,
+    pub queues: HashMap<QueueName, Queue>,
     /// Todo: This is just for testing and will be removed later!
     pub default_exchange: HashMap<String, Queue>,
 }

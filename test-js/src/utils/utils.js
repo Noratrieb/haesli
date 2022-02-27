@@ -16,3 +16,9 @@ export const connectAmqp = async () => {
     {}
   );
 };
+
+export const assert = (cond, msg) => {
+  if (!cond) {
+    throw new Error(`Assertion failed: ${msg}`);
+  }
+};

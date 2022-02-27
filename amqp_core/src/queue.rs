@@ -1,5 +1,5 @@
 use crate::message::Message;
-use crate::{newtype_id, ChannelId};
+use crate::{newtype, newtype_id, ChannelId};
 use parking_lot::Mutex;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
@@ -8,10 +8,16 @@ pub type Queue = Arc<RawQueue>;
 
 newtype_id!(pub QueueId);
 
+newtype!(
+    /// The name of a queue. A newtype wrapper around `Arc<str>`, which guarantees cheap clones.
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+    pub QueueName: Arc<str>
+);
+
 #[derive(Debug)]
 pub struct RawQueue {
     pub id: QueueId,
-    pub name: String,
+    pub name: QueueName,
     pub messages: Mutex<Vec<Message>>, // use a concurrent linked list???
     pub durable: bool,
     pub exclusive: Option<ChannelId>,

@@ -1,10 +1,8 @@
-#![allow(dead_code)]
-
 use std::io::Error;
 
 pub use amqp_core::error::{ConException, ProtocolError};
 
-pub type StdResult<T, E> = std::result::Result<T, E>;
+type StdResult<T, E> = std::result::Result<T, E>;
 
 pub type Result<T> = StdResult<T, TransError>;
 
