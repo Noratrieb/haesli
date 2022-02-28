@@ -474,7 +474,7 @@ impl Connection {
                 .unwrap()
                 .lock()
                 .channels
-                .insert(channel_num.num(), channel_handle);
+                .insert(channel_num, channel_handle);
         }
 
         info!(%channel_num, "Opened new channel");
@@ -522,6 +522,7 @@ impl Connection {
     async fn negotiate_version(&mut self) -> Result<()> {
         const HEADER_SIZE: usize = 8;
         const SUPPORTED_PROTOCOL_VERSION: &[u8] = &[0, 9, 1];
+        const AMQP_PROTOCOL: &[u8] = b"AMQP";
         const OWN_PROTOCOL_HEADER: &[u8] = b"AMQP\0\0\x09\x01";
 
         debug!("Negotiating version");
@@ -535,7 +536,17 @@ impl Connection {
 
         debug!(received_header = ?read_header_buf,"Received protocol header");
 
+        let protocol = &read_header_buf[0..4];
         let version = &read_header_buf[5..8];
+
+        if protocol != AMQP_PROTOCOL {
+            self.stream
+                .write_all(OWN_PROTOCOL_HEADER)
+                .await
+                .context("write protocol header")?;
+            debug!(?protocol, "Version negotiation failed");
+            return Err(ProtocolError::ProtocolNegotiationFailed.into());
+        }
 
         if &read_header_buf[0..5] == b"AMQP\0" && version == SUPPORTED_PROTOCOL_VERSION {
             debug!(?version, "Version negotiation successful");
@@ -545,8 +556,8 @@ impl Connection {
                 .write_all(OWN_PROTOCOL_HEADER)
                 .await
                 .context("write protocol header")?;
-            debug!(?version, expected_version = ?SUPPORTED_PROTOCOL_VERSION, "Version negotiation failed, unsupported version");
-            Err(ProtocolError::CloseNow.into())
+            debug!(?version, expected_version = ?SUPPORTED_PROTOCOL_VERSION, "Version negotiation failed");
+            Err(ProtocolError::ProtocolNegotiationFailed.into())
         }
     }
 }

@@ -8,8 +8,8 @@ pub enum ProtocolError {
     ConException(#[from] ConException),
     #[error("{0}")]
     ChannelException(#[from] ChannelException),
-    #[error("Connection must be closed")]
-    CloseNow,
+    #[error("Protocol negotiation failed")]
+    ProtocolNegotiationFailed,
     #[error("Graceful connection closing requested")]
     GracefullyClosed,
 }

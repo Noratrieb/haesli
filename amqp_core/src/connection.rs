@@ -46,7 +46,7 @@ pub struct Connection {
     pub id: ConnectionId,
     pub peer_addr: SocketAddr,
     pub global_data: GlobalData,
-    pub channels: HashMap<u16, ChannelHandle>,
+    pub channels: HashMap<ChannelNum, ChannelHandle>,
     pub exclusive_queues: Vec<Queue>,
 }
 
