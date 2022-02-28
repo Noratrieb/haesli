@@ -1,4 +1,4 @@
-import { connectAmqp, sleep } from './utils/utils.js';
+import { connectAmqp } from './utils/utils.js';
 
 const connection = await connectAmqp();
 

@@ -1,5 +1,6 @@
-use crate::error::{ConException, ProtocolError, TransError};
+use crate::error::TransError;
 use crate::methods::generated::parse::IResult;
+use amqp_core::error::{ConException, ProtocolError};
 use amqp_core::methods::{
     Bit, FieldValue, Long, Longlong, Longstr, Octet, Short, Shortstr, Table, TableFieldName,
     Timestamp,
@@ -11,11 +12,10 @@ use nom::multi::{count, many0};
 use nom::number::complete::{f32, f64, i16, i32, i64, i8, u16, u32, u64, u8};
 use nom::number::Endianness::Big;
 use nom::Err;
-use std::collections::HashMap;
 
 impl<T> nom::error::ParseError<T> for TransError {
     fn from_error_kind(_input: T, _kind: ErrorKind) -> Self {
-        ConException::SyntaxError(vec![]).into_trans()
+        ConException::SyntaxError(vec![]).into()
     }
 
     fn append(_input: T, _kind: ErrorKind, other: Self) -> Self {
@@ -28,7 +28,7 @@ pub fn fail_err<S: Into<String>>(msg: S) -> impl FnOnce(Err<TransError>) -> Err<
         let msg = msg.into();
         let stack = match err {
             Err::Error(e) | Err::Failure(e) => match e {
-                TransError::Invalid(ProtocolError::ConException(ConException::SyntaxError(
+                TransError::Protocol(ProtocolError::ConException(ConException::SyntaxError(
                     mut stack,
                 ))) => {
                     stack.push(msg);
@@ -36,22 +36,22 @@ pub fn fail_err<S: Into<String>>(msg: S) -> impl FnOnce(Err<TransError>) -> Err<
                 }
                 _ => vec![msg],
             },
-            _ => vec![msg],
+            Err::Incomplete(_) => vec![msg],
         };
-        Err::Failure(ConException::SyntaxError(stack).into_trans())
+        Err::Failure(ConException::SyntaxError(stack).into())
     }
 }
-pub fn err_other<E, S: Into<String>>(msg: S) -> impl FnOnce(E) -> Err<TransError> {
-    move |_| Err::Error(ConException::SyntaxError(vec![msg.into()]).into_trans())
+pub fn other_fail<E, S: Into<String>>(msg: S) -> impl FnOnce(E) -> Err<TransError> {
+    move |_| Err::Failure(ConException::SyntaxError(vec![msg.into()]).into())
 }
 
 #[macro_export]
 macro_rules! fail {
     ($cause:expr) => {
         return Err(nom::Err::Failure(
-            crate::error::ProtocolError::ConException(crate::error::ConException::SyntaxError(
-                vec![String::from($cause)],
-            ))
+            ::amqp_core::error::ProtocolError::ConException(
+                ::amqp_core::error::ConException::SyntaxError(vec![String::from($cause)]),
+            )
             .into(),
         ))
     };
@@ -104,7 +104,7 @@ pub fn bit(input: &[u8], amount: usize) -> IResult<'_, Vec<Bit>> {
 pub fn shortstr(input: &[u8]) -> IResult<'_, Shortstr> {
     let (input, len) = u8(input)?;
     let (input, str_data) = take(usize::from(len))(input)?;
-    let data = String::from_utf8(str_data.into()).map_err(err_other("shortstr"))?;
+    let data = String::from_utf8(str_data.into()).map_err(other_fail("shortstr"))?;
     Ok((input, data))
 }
 
@@ -132,7 +132,7 @@ pub fn table(input: &[u8]) -> IResult<'_, Table> {
         ));
     }
 
-    let table = HashMap::from_iter(values.into_iter());
+    let table = values.into_iter().collect();
     Ok((rest_input, table))
 }
 

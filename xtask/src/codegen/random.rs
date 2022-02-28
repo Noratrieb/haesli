@@ -43,7 +43,7 @@ use crate::methods::RandomMethod;
                 let method_name = method.name.to_upper_camel_case();
                 writeln!(
                     self.output,
-                    "                    {i} => Method::{class_name}{method_name} {{"
+                    "                    {i} => Method::{class_name}{method_name}( {class_name}{method_name}{{"
                 )
                 .ok();
                 for field in &method.fields {
@@ -54,7 +54,7 @@ use crate::methods::RandomMethod;
                     )
                     .ok();
                 }
-                writeln!(self.output, "                    }},").ok();
+                writeln!(self.output, "                    }}),").ok();
             }
             writeln!(
                 self.output,

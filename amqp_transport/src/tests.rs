@@ -1,12 +1,13 @@
 use crate::frame::FrameType;
 use crate::{frame, methods};
-use amqp_core::methods::{FieldValue, Method};
+use amqp_core::connection::ChannelNum;
+use amqp_core::methods::{ConnectionStart, ConnectionStartOk, FieldValue, Method};
 use std::collections::HashMap;
 
 #[tokio::test]
 async fn write_start_ok_frame() {
     let mut payload = Vec::new();
-    let method = Method::ConnectionStart {
+    let method = Method::ConnectionStart(ConnectionStart {
         version_major: 0,
         version_minor: 9,
         server_properties: HashMap::from([(
@@ -15,13 +16,13 @@ async fn write_start_ok_frame() {
         )]),
         mechanisms: "PLAIN".into(),
         locales: "en_US".into(),
-    };
+    });
 
     methods::write::write_method(method, &mut payload).unwrap();
 
     let frame = frame::Frame {
         kind: FrameType::Method,
-        channel: 0,
+        channel: ChannelNum::zero(),
         payload: payload.into(),
     };
 
@@ -140,7 +141,7 @@ fn read_start_ok_payload() {
 
     assert_eq!(
         method,
-        Method::ConnectionStartOk {
+        Method::ConnectionStartOk(ConnectionStartOk {
             client_properties: HashMap::from([
                 (
                     "product".to_string(),
@@ -178,6 +179,6 @@ fn read_start_ok_payload() {
             mechanism: "PLAIN".to_string(),
             response: "\x00admin\x00".into(),
             locale: "en_US".to_string()
-        }
+        })
     );
 }

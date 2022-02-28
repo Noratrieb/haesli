@@ -135,13 +135,13 @@ pub mod parse {
         }
         Ok((
             input,
-            Method::ConnectionStart {
+            Method::ConnectionStart(ConnectionStart {
                 version_major,
                 version_minor,
                 server_properties,
                 mechanisms,
                 locales,
-            },
+            }),
         ))
     }
     fn connection_start_ok(input: &[u8]) -> IResult<'_, Method> {
@@ -165,19 +165,22 @@ pub mod parse {
         }
         Ok((
             input,
-            Method::ConnectionStartOk {
+            Method::ConnectionStartOk(ConnectionStartOk {
                 client_properties,
                 mechanism,
                 response,
                 locale,
-            },
+            }),
         ))
     }
     fn connection_secure(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(20_u16.to_be_bytes())(input)?;
         let (input, challenge) =
             domain_longstr(input).map_err(fail_err("field challenge in method secure"))?;
-        Ok((input, Method::ConnectionSecure { challenge }))
+        Ok((
+            input,
+            Method::ConnectionSecure(ConnectionSecure { challenge }),
+        ))
     }
     fn connection_secure_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(21_u16.to_be_bytes())(input)?;
@@ -186,7 +189,10 @@ pub mod parse {
         if response.is_empty() {
             fail!("string was null for field response")
         }
-        Ok((input, Method::ConnectionSecureOk { response }))
+        Ok((
+            input,
+            Method::ConnectionSecureOk(ConnectionSecureOk { response }),
+        ))
     }
     fn connection_tune(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(30_u16.to_be_bytes())(input)?;
@@ -198,11 +204,11 @@ pub mod parse {
             domain_short(input).map_err(fail_err("field heartbeat in method tune"))?;
         Ok((
             input,
-            Method::ConnectionTune {
+            Method::ConnectionTune(ConnectionTune {
                 channel_max,
                 frame_max,
                 heartbeat,
-            },
+            }),
         ))
     }
     fn connection_tune_ok(input: &[u8]) -> IResult<'_, Method> {
@@ -215,11 +221,11 @@ pub mod parse {
             domain_short(input).map_err(fail_err("field heartbeat in method tune-ok"))?;
         Ok((
             input,
-            Method::ConnectionTuneOk {
+            Method::ConnectionTuneOk(ConnectionTuneOk {
                 channel_max,
                 frame_max,
                 heartbeat,
-            },
+            }),
         ))
     }
     fn connection_open(input: &[u8]) -> IResult<'_, Method> {
@@ -232,18 +238,21 @@ pub mod parse {
         let reserved_2 = bits[0];
         Ok((
             input,
-            Method::ConnectionOpen {
+            Method::ConnectionOpen(ConnectionOpen {
                 virtual_host,
                 reserved_1,
                 reserved_2,
-            },
+            }),
         ))
     }
     fn connection_open_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(41_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_shortstr(input).map_err(fail_err("field reserved-1 in method open-ok"))?;
-        Ok((input, Method::ConnectionOpenOk { reserved_1 }))
+        Ok((
+            input,
+            Method::ConnectionOpenOk(ConnectionOpenOk { reserved_1 }),
+        ))
     }
     fn connection_close(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(50_u16.to_be_bytes())(input)?;
@@ -257,17 +266,17 @@ pub mod parse {
             domain_method_id(input).map_err(fail_err("field method-id in method close"))?;
         Ok((
             input,
-            Method::ConnectionClose {
+            Method::ConnectionClose(ConnectionClose {
                 reply_code,
                 reply_text,
                 class_id,
                 method_id,
-            },
+            }),
         ))
     }
     fn connection_close_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(51_u16.to_be_bytes())(input)?;
-        Ok((input, Method::ConnectionCloseOk {}))
+        Ok((input, Method::ConnectionCloseOk(ConnectionCloseOk {})))
     }
     fn channel(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(20_u16.to_be_bytes())(input)?;
@@ -285,25 +294,25 @@ pub mod parse {
         let (input, _) = tag(10_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_shortstr(input).map_err(fail_err("field reserved-1 in method open"))?;
-        Ok((input, Method::ChannelOpen { reserved_1 }))
+        Ok((input, Method::ChannelOpen(ChannelOpen { reserved_1 })))
     }
     fn channel_open_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(11_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_longstr(input).map_err(fail_err("field reserved-1 in method open-ok"))?;
-        Ok((input, Method::ChannelOpenOk { reserved_1 }))
+        Ok((input, Method::ChannelOpenOk(ChannelOpenOk { reserved_1 })))
     }
     fn channel_flow(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(20_u16.to_be_bytes())(input)?;
         let (input, bits) = bit(input, 1).map_err(fail_err("field active in method flow"))?;
         let active = bits[0];
-        Ok((input, Method::ChannelFlow { active }))
+        Ok((input, Method::ChannelFlow(ChannelFlow { active })))
     }
     fn channel_flow_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(21_u16.to_be_bytes())(input)?;
         let (input, bits) = bit(input, 1).map_err(fail_err("field active in method flow-ok"))?;
         let active = bits[0];
-        Ok((input, Method::ChannelFlowOk { active }))
+        Ok((input, Method::ChannelFlowOk(ChannelFlowOk { active })))
     }
     fn channel_close(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(40_u16.to_be_bytes())(input)?;
@@ -317,17 +326,17 @@ pub mod parse {
             domain_method_id(input).map_err(fail_err("field method-id in method close"))?;
         Ok((
             input,
-            Method::ChannelClose {
+            Method::ChannelClose(ChannelClose {
                 reply_code,
                 reply_text,
                 class_id,
                 method_id,
-            },
+            }),
         ))
     }
     fn channel_close_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(41_u16.to_be_bytes())(input)?;
-        Ok((input, Method::ChannelCloseOk {}))
+        Ok((input, Method::ChannelCloseOk(ChannelCloseOk {})))
     }
     fn exchange(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(40_u16.to_be_bytes())(input)?;
@@ -360,7 +369,7 @@ pub mod parse {
             domain_table(input).map_err(fail_err("field arguments in method declare"))?;
         Ok((
             input,
-            Method::ExchangeDeclare {
+            Method::ExchangeDeclare(ExchangeDeclare {
                 reserved_1,
                 exchange,
                 r#type,
@@ -370,12 +379,12 @@ pub mod parse {
                 reserved_3,
                 no_wait,
                 arguments,
-            },
+            }),
         ))
     }
     fn exchange_declare_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(11_u16.to_be_bytes())(input)?;
-        Ok((input, Method::ExchangeDeclareOk {}))
+        Ok((input, Method::ExchangeDeclareOk(ExchangeDeclareOk {})))
     }
     fn exchange_delete(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(20_u16.to_be_bytes())(input)?;
@@ -391,17 +400,17 @@ pub mod parse {
         let no_wait = bits[1];
         Ok((
             input,
-            Method::ExchangeDelete {
+            Method::ExchangeDelete(ExchangeDelete {
                 reserved_1,
                 exchange,
                 if_unused,
                 no_wait,
-            },
+            }),
         ))
     }
     fn exchange_delete_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(21_u16.to_be_bytes())(input)?;
-        Ok((input, Method::ExchangeDeleteOk {}))
+        Ok((input, Method::ExchangeDeleteOk(ExchangeDeleteOk {})))
     }
     fn queue(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(50_u16.to_be_bytes())(input)?;
@@ -435,7 +444,7 @@ pub mod parse {
             domain_table(input).map_err(fail_err("field arguments in method declare"))?;
         Ok((
             input,
-            Method::QueueDeclare {
+            Method::QueueDeclare(QueueDeclare {
                 reserved_1,
                 queue,
                 passive,
@@ -444,7 +453,7 @@ pub mod parse {
                 auto_delete,
                 no_wait,
                 arguments,
-            },
+            }),
         ))
     }
     fn queue_declare_ok(input: &[u8]) -> IResult<'_, Method> {
@@ -460,11 +469,11 @@ pub mod parse {
             domain_long(input).map_err(fail_err("field consumer-count in method declare-ok"))?;
         Ok((
             input,
-            Method::QueueDeclareOk {
+            Method::QueueDeclareOk(QueueDeclareOk {
                 queue,
                 message_count,
                 consumer_count,
-            },
+            }),
         ))
     }
     fn queue_bind(input: &[u8]) -> IResult<'_, Method> {
@@ -483,19 +492,19 @@ pub mod parse {
             domain_table(input).map_err(fail_err("field arguments in method bind"))?;
         Ok((
             input,
-            Method::QueueBind {
+            Method::QueueBind(QueueBind {
                 reserved_1,
                 queue,
                 exchange,
                 routing_key,
                 no_wait,
                 arguments,
-            },
+            }),
         ))
     }
     fn queue_bind_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(21_u16.to_be_bytes())(input)?;
-        Ok((input, Method::QueueBindOk {}))
+        Ok((input, Method::QueueBindOk(QueueBindOk {})))
     }
     fn queue_unbind(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(50_u16.to_be_bytes())(input)?;
@@ -511,18 +520,18 @@ pub mod parse {
             domain_table(input).map_err(fail_err("field arguments in method unbind"))?;
         Ok((
             input,
-            Method::QueueUnbind {
+            Method::QueueUnbind(QueueUnbind {
                 reserved_1,
                 queue,
                 exchange,
                 routing_key,
                 arguments,
-            },
+            }),
         ))
     }
     fn queue_unbind_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(51_u16.to_be_bytes())(input)?;
-        Ok((input, Method::QueueUnbindOk {}))
+        Ok((input, Method::QueueUnbindOk(QueueUnbindOk {})))
     }
     fn queue_purge(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(30_u16.to_be_bytes())(input)?;
@@ -534,18 +543,18 @@ pub mod parse {
         let no_wait = bits[0];
         Ok((
             input,
-            Method::QueuePurge {
+            Method::QueuePurge(QueuePurge {
                 reserved_1,
                 queue,
                 no_wait,
-            },
+            }),
         ))
     }
     fn queue_purge_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(31_u16.to_be_bytes())(input)?;
         let (input, message_count) = domain_message_count(input)
             .map_err(fail_err("field message-count in method purge-ok"))?;
-        Ok((input, Method::QueuePurgeOk { message_count }))
+        Ok((input, Method::QueuePurgeOk(QueuePurgeOk { message_count })))
     }
     fn queue_delete(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(40_u16.to_be_bytes())(input)?;
@@ -559,20 +568,23 @@ pub mod parse {
         let no_wait = bits[2];
         Ok((
             input,
-            Method::QueueDelete {
+            Method::QueueDelete(QueueDelete {
                 reserved_1,
                 queue,
                 if_unused,
                 if_empty,
                 no_wait,
-            },
+            }),
         ))
     }
     fn queue_delete_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(41_u16.to_be_bytes())(input)?;
         let (input, message_count) = domain_message_count(input)
             .map_err(fail_err("field message-count in method delete-ok"))?;
-        Ok((input, Method::QueueDeleteOk { message_count }))
+        Ok((
+            input,
+            Method::QueueDeleteOk(QueueDeleteOk { message_count }),
+        ))
     }
     fn basic(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(60_u16.to_be_bytes())(input)?;
@@ -607,16 +619,16 @@ pub mod parse {
         let global = bits[0];
         Ok((
             input,
-            Method::BasicQos {
+            Method::BasicQos(BasicQos {
                 prefetch_size,
                 prefetch_count,
                 global,
-            },
+            }),
         ))
     }
     fn basic_qos_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(11_u16.to_be_bytes())(input)?;
-        Ok((input, Method::BasicQosOk {}))
+        Ok((input, Method::BasicQosOk(BasicQosOk {})))
     }
     fn basic_consume(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(20_u16.to_be_bytes())(input)?;
@@ -635,7 +647,7 @@ pub mod parse {
             domain_table(input).map_err(fail_err("field arguments in method consume"))?;
         Ok((
             input,
-            Method::BasicConsume {
+            Method::BasicConsume(BasicConsume {
                 reserved_1,
                 queue,
                 consumer_tag,
@@ -644,14 +656,17 @@ pub mod parse {
                 exclusive,
                 no_wait,
                 arguments,
-            },
+            }),
         ))
     }
     fn basic_consume_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(21_u16.to_be_bytes())(input)?;
         let (input, consumer_tag) = domain_consumer_tag(input)
             .map_err(fail_err("field consumer-tag in method consume-ok"))?;
-        Ok((input, Method::BasicConsumeOk { consumer_tag }))
+        Ok((
+            input,
+            Method::BasicConsumeOk(BasicConsumeOk { consumer_tag }),
+        ))
     }
     fn basic_cancel(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(30_u16.to_be_bytes())(input)?;
@@ -661,17 +676,17 @@ pub mod parse {
         let no_wait = bits[0];
         Ok((
             input,
-            Method::BasicCancel {
+            Method::BasicCancel(BasicCancel {
                 consumer_tag,
                 no_wait,
-            },
+            }),
         ))
     }
     fn basic_cancel_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(31_u16.to_be_bytes())(input)?;
         let (input, consumer_tag) = domain_consumer_tag(input)
             .map_err(fail_err("field consumer-tag in method cancel-ok"))?;
-        Ok((input, Method::BasicCancelOk { consumer_tag }))
+        Ok((input, Method::BasicCancelOk(BasicCancelOk { consumer_tag })))
     }
     fn basic_publish(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(40_u16.to_be_bytes())(input)?;
@@ -686,13 +701,13 @@ pub mod parse {
         let immediate = bits[1];
         Ok((
             input,
-            Method::BasicPublish {
+            Method::BasicPublish(BasicPublish {
                 reserved_1,
                 exchange,
                 routing_key,
                 mandatory,
                 immediate,
-            },
+            }),
         ))
     }
     fn basic_return(input: &[u8]) -> IResult<'_, Method> {
@@ -707,12 +722,12 @@ pub mod parse {
             domain_shortstr(input).map_err(fail_err("field routing-key in method return"))?;
         Ok((
             input,
-            Method::BasicReturn {
+            Method::BasicReturn(BasicReturn {
                 reply_code,
                 reply_text,
                 exchange,
                 routing_key,
-            },
+            }),
         ))
     }
     fn basic_deliver(input: &[u8]) -> IResult<'_, Method> {
@@ -730,13 +745,13 @@ pub mod parse {
             domain_shortstr(input).map_err(fail_err("field routing-key in method deliver"))?;
         Ok((
             input,
-            Method::BasicDeliver {
+            Method::BasicDeliver(BasicDeliver {
                 consumer_tag,
                 delivery_tag,
                 redelivered,
                 exchange,
                 routing_key,
-            },
+            }),
         ))
     }
     fn basic_get(input: &[u8]) -> IResult<'_, Method> {
@@ -749,11 +764,11 @@ pub mod parse {
         let no_ack = bits[0];
         Ok((
             input,
-            Method::BasicGet {
+            Method::BasicGet(BasicGet {
                 reserved_1,
                 queue,
                 no_ack,
-            },
+            }),
         ))
     }
     fn basic_get_ok(input: &[u8]) -> IResult<'_, Method> {
@@ -771,20 +786,20 @@ pub mod parse {
             .map_err(fail_err("field message-count in method get-ok"))?;
         Ok((
             input,
-            Method::BasicGetOk {
+            Method::BasicGetOk(BasicGetOk {
                 delivery_tag,
                 redelivered,
                 exchange,
                 routing_key,
                 message_count,
-            },
+            }),
         ))
     }
     fn basic_get_empty(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(72_u16.to_be_bytes())(input)?;
         let (input, reserved_1) =
             domain_shortstr(input).map_err(fail_err("field reserved-1 in method get-empty"))?;
-        Ok((input, Method::BasicGetEmpty { reserved_1 }))
+        Ok((input, Method::BasicGetEmpty(BasicGetEmpty { reserved_1 })))
     }
     fn basic_ack(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(80_u16.to_be_bytes())(input)?;
@@ -794,10 +809,10 @@ pub mod parse {
         let multiple = bits[0];
         Ok((
             input,
-            Method::BasicAck {
+            Method::BasicAck(BasicAck {
                 delivery_tag,
                 multiple,
-            },
+            }),
         ))
     }
     fn basic_reject(input: &[u8]) -> IResult<'_, Method> {
@@ -808,10 +823,10 @@ pub mod parse {
         let requeue = bits[0];
         Ok((
             input,
-            Method::BasicReject {
+            Method::BasicReject(BasicReject {
                 delivery_tag,
                 requeue,
-            },
+            }),
         ))
     }
     fn basic_recover_async(input: &[u8]) -> IResult<'_, Method> {
@@ -819,17 +834,20 @@ pub mod parse {
         let (input, bits) =
             bit(input, 1).map_err(fail_err("field requeue in method recover-async"))?;
         let requeue = bits[0];
-        Ok((input, Method::BasicRecoverAsync { requeue }))
+        Ok((
+            input,
+            Method::BasicRecoverAsync(BasicRecoverAsync { requeue }),
+        ))
     }
     fn basic_recover(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(110_u16.to_be_bytes())(input)?;
         let (input, bits) = bit(input, 1).map_err(fail_err("field requeue in method recover"))?;
         let requeue = bits[0];
-        Ok((input, Method::BasicRecover { requeue }))
+        Ok((input, Method::BasicRecover(BasicRecover { requeue })))
     }
     fn basic_recover_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(111_u16.to_be_bytes())(input)?;
-        Ok((input, Method::BasicRecoverOk {}))
+        Ok((input, Method::BasicRecoverOk(BasicRecoverOk {})))
     }
     fn tx(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(90_u16.to_be_bytes())(input)?;
@@ -845,27 +863,27 @@ pub mod parse {
     }
     fn tx_select(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(10_u16.to_be_bytes())(input)?;
-        Ok((input, Method::TxSelect {}))
+        Ok((input, Method::TxSelect(TxSelect {})))
     }
     fn tx_select_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(11_u16.to_be_bytes())(input)?;
-        Ok((input, Method::TxSelectOk {}))
+        Ok((input, Method::TxSelectOk(TxSelectOk {})))
     }
     fn tx_commit(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(20_u16.to_be_bytes())(input)?;
-        Ok((input, Method::TxCommit {}))
+        Ok((input, Method::TxCommit(TxCommit {})))
     }
     fn tx_commit_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(21_u16.to_be_bytes())(input)?;
-        Ok((input, Method::TxCommitOk {}))
+        Ok((input, Method::TxCommitOk(TxCommitOk {})))
     }
     fn tx_rollback(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(30_u16.to_be_bytes())(input)?;
-        Ok((input, Method::TxRollback {}))
+        Ok((input, Method::TxRollback(TxRollback {})))
     }
     fn tx_rollback_ok(input: &[u8]) -> IResult<'_, Method> {
         let (input, _) = tag(31_u16.to_be_bytes())(input)?;
-        Ok((input, Method::TxRollbackOk {}))
+        Ok((input, Method::TxRollbackOk(TxRollbackOk {})))
     }
 }
 pub mod write {
@@ -876,13 +894,13 @@ pub mod write {
 
     pub fn write_method<W: Write>(method: Method, mut writer: W) -> Result<(), TransError> {
         match method {
-            Method::ConnectionStart {
+            Method::ConnectionStart(ConnectionStart {
                 version_major,
                 version_minor,
                 server_properties,
                 mechanisms,
                 locales,
-            } => {
+            }) => {
                 writer.write_all(&[0, 10, 0, 10])?;
                 octet(version_major, &mut writer)?;
                 octet(version_minor, &mut writer)?;
@@ -890,107 +908,107 @@ pub mod write {
                 longstr(mechanisms, &mut writer)?;
                 longstr(locales, &mut writer)?;
             }
-            Method::ConnectionStartOk {
+            Method::ConnectionStartOk(ConnectionStartOk {
                 client_properties,
                 mechanism,
                 response,
                 locale,
-            } => {
+            }) => {
                 writer.write_all(&[0, 10, 0, 11])?;
                 table(client_properties, &mut writer)?;
                 shortstr(mechanism, &mut writer)?;
                 longstr(response, &mut writer)?;
                 shortstr(locale, &mut writer)?;
             }
-            Method::ConnectionSecure { challenge } => {
+            Method::ConnectionSecure(ConnectionSecure { challenge }) => {
                 writer.write_all(&[0, 10, 0, 20])?;
                 longstr(challenge, &mut writer)?;
             }
-            Method::ConnectionSecureOk { response } => {
+            Method::ConnectionSecureOk(ConnectionSecureOk { response }) => {
                 writer.write_all(&[0, 10, 0, 21])?;
                 longstr(response, &mut writer)?;
             }
-            Method::ConnectionTune {
+            Method::ConnectionTune(ConnectionTune {
                 channel_max,
                 frame_max,
                 heartbeat,
-            } => {
+            }) => {
                 writer.write_all(&[0, 10, 0, 30])?;
                 short(channel_max, &mut writer)?;
                 long(frame_max, &mut writer)?;
                 short(heartbeat, &mut writer)?;
             }
-            Method::ConnectionTuneOk {
+            Method::ConnectionTuneOk(ConnectionTuneOk {
                 channel_max,
                 frame_max,
                 heartbeat,
-            } => {
+            }) => {
                 writer.write_all(&[0, 10, 0, 31])?;
                 short(channel_max, &mut writer)?;
                 long(frame_max, &mut writer)?;
                 short(heartbeat, &mut writer)?;
             }
-            Method::ConnectionOpen {
+            Method::ConnectionOpen(ConnectionOpen {
                 virtual_host,
                 reserved_1,
                 reserved_2,
-            } => {
+            }) => {
                 writer.write_all(&[0, 10, 0, 40])?;
                 shortstr(virtual_host, &mut writer)?;
                 shortstr(reserved_1, &mut writer)?;
                 bit(&[reserved_2], &mut writer)?;
             }
-            Method::ConnectionOpenOk { reserved_1 } => {
+            Method::ConnectionOpenOk(ConnectionOpenOk { reserved_1 }) => {
                 writer.write_all(&[0, 10, 0, 41])?;
                 shortstr(reserved_1, &mut writer)?;
             }
-            Method::ConnectionClose {
+            Method::ConnectionClose(ConnectionClose {
                 reply_code,
                 reply_text,
                 class_id,
                 method_id,
-            } => {
+            }) => {
                 writer.write_all(&[0, 10, 0, 50])?;
                 short(reply_code, &mut writer)?;
                 shortstr(reply_text, &mut writer)?;
                 short(class_id, &mut writer)?;
                 short(method_id, &mut writer)?;
             }
-            Method::ConnectionCloseOk {} => {
+            Method::ConnectionCloseOk(ConnectionCloseOk {}) => {
                 writer.write_all(&[0, 10, 0, 51])?;
             }
-            Method::ChannelOpen { reserved_1 } => {
+            Method::ChannelOpen(ChannelOpen { reserved_1 }) => {
                 writer.write_all(&[0, 20, 0, 10])?;
                 shortstr(reserved_1, &mut writer)?;
             }
-            Method::ChannelOpenOk { reserved_1 } => {
+            Method::ChannelOpenOk(ChannelOpenOk { reserved_1 }) => {
                 writer.write_all(&[0, 20, 0, 11])?;
                 longstr(reserved_1, &mut writer)?;
             }
-            Method::ChannelFlow { active } => {
+            Method::ChannelFlow(ChannelFlow { active }) => {
                 writer.write_all(&[0, 20, 0, 20])?;
                 bit(&[active], &mut writer)?;
             }
-            Method::ChannelFlowOk { active } => {
+            Method::ChannelFlowOk(ChannelFlowOk { active }) => {
                 writer.write_all(&[0, 20, 0, 21])?;
                 bit(&[active], &mut writer)?;
             }
-            Method::ChannelClose {
+            Method::ChannelClose(ChannelClose {
                 reply_code,
                 reply_text,
                 class_id,
                 method_id,
-            } => {
+            }) => {
                 writer.write_all(&[0, 20, 0, 40])?;
                 short(reply_code, &mut writer)?;
                 shortstr(reply_text, &mut writer)?;
                 short(class_id, &mut writer)?;
                 short(method_id, &mut writer)?;
             }
-            Method::ChannelCloseOk {} => {
+            Method::ChannelCloseOk(ChannelCloseOk {}) => {
                 writer.write_all(&[0, 20, 0, 41])?;
             }
-            Method::ExchangeDeclare {
+            Method::ExchangeDeclare(ExchangeDeclare {
                 reserved_1,
                 exchange,
                 r#type,
@@ -1000,7 +1018,7 @@ pub mod write {
                 reserved_3,
                 no_wait,
                 arguments,
-            } => {
+            }) => {
                 writer.write_all(&[0, 40, 0, 10])?;
                 short(reserved_1, &mut writer)?;
                 shortstr(exchange, &mut writer)?;
@@ -1011,24 +1029,24 @@ pub mod write {
                 )?;
                 table(arguments, &mut writer)?;
             }
-            Method::ExchangeDeclareOk {} => {
+            Method::ExchangeDeclareOk(ExchangeDeclareOk {}) => {
                 writer.write_all(&[0, 40, 0, 11])?;
             }
-            Method::ExchangeDelete {
+            Method::ExchangeDelete(ExchangeDelete {
                 reserved_1,
                 exchange,
                 if_unused,
                 no_wait,
-            } => {
+            }) => {
                 writer.write_all(&[0, 40, 0, 20])?;
                 short(reserved_1, &mut writer)?;
                 shortstr(exchange, &mut writer)?;
                 bit(&[if_unused, no_wait], &mut writer)?;
             }
-            Method::ExchangeDeleteOk {} => {
+            Method::ExchangeDeleteOk(ExchangeDeleteOk {}) => {
                 writer.write_all(&[0, 40, 0, 21])?;
             }
-            Method::QueueDeclare {
+            Method::QueueDeclare(QueueDeclare {
                 reserved_1,
                 queue,
                 passive,
@@ -1037,7 +1055,7 @@ pub mod write {
                 auto_delete,
                 no_wait,
                 arguments,
-            } => {
+            }) => {
                 writer.write_all(&[0, 50, 0, 10])?;
                 short(reserved_1, &mut writer)?;
                 shortstr(queue, &mut writer)?;
@@ -1047,24 +1065,24 @@ pub mod write {
                 )?;
                 table(arguments, &mut writer)?;
             }
-            Method::QueueDeclareOk {
+            Method::QueueDeclareOk(QueueDeclareOk {
                 queue,
                 message_count,
                 consumer_count,
-            } => {
+            }) => {
                 writer.write_all(&[0, 50, 0, 11])?;
                 shortstr(queue, &mut writer)?;
                 long(message_count, &mut writer)?;
                 long(consumer_count, &mut writer)?;
             }
-            Method::QueueBind {
+            Method::QueueBind(QueueBind {
                 reserved_1,
                 queue,
                 exchange,
                 routing_key,
                 no_wait,
                 arguments,
-            } => {
+            }) => {
                 writer.write_all(&[0, 50, 0, 20])?;
                 short(reserved_1, &mut writer)?;
                 shortstr(queue, &mut writer)?;
@@ -1073,16 +1091,16 @@ pub mod write {
                 bit(&[no_wait], &mut writer)?;
                 table(arguments, &mut writer)?;
             }
-            Method::QueueBindOk {} => {
+            Method::QueueBindOk(QueueBindOk {}) => {
                 writer.write_all(&[0, 50, 0, 21])?;
             }
-            Method::QueueUnbind {
+            Method::QueueUnbind(QueueUnbind {
                 reserved_1,
                 queue,
                 exchange,
                 routing_key,
                 arguments,
-            } => {
+            }) => {
                 writer.write_all(&[0, 50, 0, 50])?;
                 short(reserved_1, &mut writer)?;
                 shortstr(queue, &mut writer)?;
@@ -1090,53 +1108,53 @@ pub mod write {
                 shortstr(routing_key, &mut writer)?;
                 table(arguments, &mut writer)?;
             }
-            Method::QueueUnbindOk {} => {
+            Method::QueueUnbindOk(QueueUnbindOk {}) => {
                 writer.write_all(&[0, 50, 0, 51])?;
             }
-            Method::QueuePurge {
+            Method::QueuePurge(QueuePurge {
                 reserved_1,
                 queue,
                 no_wait,
-            } => {
+            }) => {
                 writer.write_all(&[0, 50, 0, 30])?;
                 short(reserved_1, &mut writer)?;
                 shortstr(queue, &mut writer)?;
                 bit(&[no_wait], &mut writer)?;
             }
-            Method::QueuePurgeOk { message_count } => {
+            Method::QueuePurgeOk(QueuePurgeOk { message_count }) => {
                 writer.write_all(&[0, 50, 0, 31])?;
                 long(message_count, &mut writer)?;
             }
-            Method::QueueDelete {
+            Method::QueueDelete(QueueDelete {
                 reserved_1,
                 queue,
                 if_unused,
                 if_empty,
                 no_wait,
-            } => {
+            }) => {
                 writer.write_all(&[0, 50, 0, 40])?;
                 short(reserved_1, &mut writer)?;
                 shortstr(queue, &mut writer)?;
                 bit(&[if_unused, if_empty, no_wait], &mut writer)?;
             }
-            Method::QueueDeleteOk { message_count } => {
+            Method::QueueDeleteOk(QueueDeleteOk { message_count }) => {
                 writer.write_all(&[0, 50, 0, 41])?;
                 long(message_count, &mut writer)?;
             }
-            Method::BasicQos {
+            Method::BasicQos(BasicQos {
                 prefetch_size,
                 prefetch_count,
                 global,
-            } => {
+            }) => {
                 writer.write_all(&[0, 60, 0, 10])?;
                 long(prefetch_size, &mut writer)?;
                 short(prefetch_count, &mut writer)?;
                 bit(&[global], &mut writer)?;
             }
-            Method::BasicQosOk {} => {
+            Method::BasicQosOk(BasicQosOk {}) => {
                 writer.write_all(&[0, 60, 0, 11])?;
             }
-            Method::BasicConsume {
+            Method::BasicConsume(BasicConsume {
                 reserved_1,
                 queue,
                 consumer_tag,
@@ -1145,7 +1163,7 @@ pub mod write {
                 exclusive,
                 no_wait,
                 arguments,
-            } => {
+            }) => {
                 writer.write_all(&[0, 60, 0, 20])?;
                 short(reserved_1, &mut writer)?;
                 shortstr(queue, &mut writer)?;
@@ -1153,54 +1171,54 @@ pub mod write {
                 bit(&[no_local, no_ack, exclusive, no_wait], &mut writer)?;
                 table(arguments, &mut writer)?;
             }
-            Method::BasicConsumeOk { consumer_tag } => {
+            Method::BasicConsumeOk(BasicConsumeOk { consumer_tag }) => {
                 writer.write_all(&[0, 60, 0, 21])?;
                 shortstr(consumer_tag, &mut writer)?;
             }
-            Method::BasicCancel {
+            Method::BasicCancel(BasicCancel {
                 consumer_tag,
                 no_wait,
-            } => {
+            }) => {
                 writer.write_all(&[0, 60, 0, 30])?;
                 shortstr(consumer_tag, &mut writer)?;
                 bit(&[no_wait], &mut writer)?;
             }
-            Method::BasicCancelOk { consumer_tag } => {
+            Method::BasicCancelOk(BasicCancelOk { consumer_tag }) => {
                 writer.write_all(&[0, 60, 0, 31])?;
                 shortstr(consumer_tag, &mut writer)?;
             }
-            Method::BasicPublish {
+            Method::BasicPublish(BasicPublish {
                 reserved_1,
                 exchange,
                 routing_key,
                 mandatory,
                 immediate,
-            } => {
+            }) => {
                 writer.write_all(&[0, 60, 0, 40])?;
                 short(reserved_1, &mut writer)?;
                 shortstr(exchange, &mut writer)?;
                 shortstr(routing_key, &mut writer)?;
                 bit(&[mandatory, immediate], &mut writer)?;
             }
-            Method::BasicReturn {
+            Method::BasicReturn(BasicReturn {
                 reply_code,
                 reply_text,
                 exchange,
                 routing_key,
-            } => {
+            }) => {
                 writer.write_all(&[0, 60, 0, 50])?;
                 short(reply_code, &mut writer)?;
                 shortstr(reply_text, &mut writer)?;
                 shortstr(exchange, &mut writer)?;
                 shortstr(routing_key, &mut writer)?;
             }
-            Method::BasicDeliver {
+            Method::BasicDeliver(BasicDeliver {
                 consumer_tag,
                 delivery_tag,
                 redelivered,
                 exchange,
                 routing_key,
-            } => {
+            }) => {
                 writer.write_all(&[0, 60, 0, 60])?;
                 shortstr(consumer_tag, &mut writer)?;
                 longlong(delivery_tag, &mut writer)?;
@@ -1208,23 +1226,23 @@ pub mod write {
                 shortstr(exchange, &mut writer)?;
                 shortstr(routing_key, &mut writer)?;
             }
-            Method::BasicGet {
+            Method::BasicGet(BasicGet {
                 reserved_1,
                 queue,
                 no_ack,
-            } => {
+            }) => {
                 writer.write_all(&[0, 60, 0, 70])?;
                 short(reserved_1, &mut writer)?;
                 shortstr(queue, &mut writer)?;
                 bit(&[no_ack], &mut writer)?;
             }
-            Method::BasicGetOk {
+            Method::BasicGetOk(BasicGetOk {
                 delivery_tag,
                 redelivered,
                 exchange,
                 routing_key,
                 message_count,
-            } => {
+            }) => {
                 writer.write_all(&[0, 60, 0, 71])?;
                 longlong(delivery_tag, &mut writer)?;
                 bit(&[redelivered], &mut writer)?;
@@ -1232,53 +1250,53 @@ pub mod write {
                 shortstr(routing_key, &mut writer)?;
                 long(message_count, &mut writer)?;
             }
-            Method::BasicGetEmpty { reserved_1 } => {
+            Method::BasicGetEmpty(BasicGetEmpty { reserved_1 }) => {
                 writer.write_all(&[0, 60, 0, 72])?;
                 shortstr(reserved_1, &mut writer)?;
             }
-            Method::BasicAck {
+            Method::BasicAck(BasicAck {
                 delivery_tag,
                 multiple,
-            } => {
+            }) => {
                 writer.write_all(&[0, 60, 0, 80])?;
                 longlong(delivery_tag, &mut writer)?;
                 bit(&[multiple], &mut writer)?;
             }
-            Method::BasicReject {
+            Method::BasicReject(BasicReject {
                 delivery_tag,
                 requeue,
-            } => {
+            }) => {
                 writer.write_all(&[0, 60, 0, 90])?;
                 longlong(delivery_tag, &mut writer)?;
                 bit(&[requeue], &mut writer)?;
             }
-            Method::BasicRecoverAsync { requeue } => {
+            Method::BasicRecoverAsync(BasicRecoverAsync { requeue }) => {
                 writer.write_all(&[0, 60, 0, 100])?;
                 bit(&[requeue], &mut writer)?;
             }
-            Method::BasicRecover { requeue } => {
+            Method::BasicRecover(BasicRecover { requeue }) => {
                 writer.write_all(&[0, 60, 0, 110])?;
                 bit(&[requeue], &mut writer)?;
             }
-            Method::BasicRecoverOk {} => {
+            Method::BasicRecoverOk(BasicRecoverOk {}) => {
                 writer.write_all(&[0, 60, 0, 111])?;
             }
-            Method::TxSelect {} => {
+            Method::TxSelect(TxSelect {}) => {
                 writer.write_all(&[0, 90, 0, 10])?;
             }
-            Method::TxSelectOk {} => {
+            Method::TxSelectOk(TxSelectOk {}) => {
                 writer.write_all(&[0, 90, 0, 11])?;
             }
-            Method::TxCommit {} => {
+            Method::TxCommit(TxCommit {}) => {
                 writer.write_all(&[0, 90, 0, 20])?;
             }
-            Method::TxCommitOk {} => {
+            Method::TxCommitOk(TxCommitOk {}) => {
                 writer.write_all(&[0, 90, 0, 21])?;
             }
-            Method::TxRollback {} => {
+            Method::TxRollback(TxRollback {}) => {
                 writer.write_all(&[0, 90, 0, 30])?;
             }
-            Method::TxRollbackOk {} => {
+            Method::TxRollbackOk(TxRollbackOk {}) => {
                 writer.write_all(&[0, 90, 0, 31])?;
             }
         }
@@ -1296,76 +1314,76 @@ mod random {
         fn random(rng: &mut R) -> Self {
             match rng.gen_range(0u32..6) {
                 0 => match rng.gen_range(0u32..10) {
-                    0 => Method::ConnectionStart {
+                    0 => Method::ConnectionStart(ConnectionStart {
                         version_major: RandomMethod::random(rng),
                         version_minor: RandomMethod::random(rng),
                         server_properties: RandomMethod::random(rng),
                         mechanisms: RandomMethod::random(rng),
                         locales: RandomMethod::random(rng),
-                    },
-                    1 => Method::ConnectionStartOk {
+                    }),
+                    1 => Method::ConnectionStartOk(ConnectionStartOk {
                         client_properties: RandomMethod::random(rng),
                         mechanism: RandomMethod::random(rng),
                         response: RandomMethod::random(rng),
                         locale: RandomMethod::random(rng),
-                    },
-                    2 => Method::ConnectionSecure {
+                    }),
+                    2 => Method::ConnectionSecure(ConnectionSecure {
                         challenge: RandomMethod::random(rng),
-                    },
-                    3 => Method::ConnectionSecureOk {
+                    }),
+                    3 => Method::ConnectionSecureOk(ConnectionSecureOk {
                         response: RandomMethod::random(rng),
-                    },
-                    4 => Method::ConnectionTune {
+                    }),
+                    4 => Method::ConnectionTune(ConnectionTune {
                         channel_max: RandomMethod::random(rng),
                         frame_max: RandomMethod::random(rng),
                         heartbeat: RandomMethod::random(rng),
-                    },
-                    5 => Method::ConnectionTuneOk {
+                    }),
+                    5 => Method::ConnectionTuneOk(ConnectionTuneOk {
                         channel_max: RandomMethod::random(rng),
                         frame_max: RandomMethod::random(rng),
                         heartbeat: RandomMethod::random(rng),
-                    },
-                    6 => Method::ConnectionOpen {
+                    }),
+                    6 => Method::ConnectionOpen(ConnectionOpen {
                         virtual_host: RandomMethod::random(rng),
                         reserved_1: RandomMethod::random(rng),
                         reserved_2: RandomMethod::random(rng),
-                    },
-                    7 => Method::ConnectionOpenOk {
+                    }),
+                    7 => Method::ConnectionOpenOk(ConnectionOpenOk {
                         reserved_1: RandomMethod::random(rng),
-                    },
-                    8 => Method::ConnectionClose {
+                    }),
+                    8 => Method::ConnectionClose(ConnectionClose {
                         reply_code: RandomMethod::random(rng),
                         reply_text: RandomMethod::random(rng),
                         class_id: RandomMethod::random(rng),
                         method_id: RandomMethod::random(rng),
-                    },
-                    9 => Method::ConnectionCloseOk {},
+                    }),
+                    9 => Method::ConnectionCloseOk(ConnectionCloseOk {}),
                     _ => unreachable!(),
                 },
                 1 => match rng.gen_range(0u32..6) {
-                    0 => Method::ChannelOpen {
+                    0 => Method::ChannelOpen(ChannelOpen {
                         reserved_1: RandomMethod::random(rng),
-                    },
-                    1 => Method::ChannelOpenOk {
+                    }),
+                    1 => Method::ChannelOpenOk(ChannelOpenOk {
                         reserved_1: RandomMethod::random(rng),
-                    },
-                    2 => Method::ChannelFlow {
+                    }),
+                    2 => Method::ChannelFlow(ChannelFlow {
                         active: RandomMethod::random(rng),
-                    },
-                    3 => Method::ChannelFlowOk {
+                    }),
+                    3 => Method::ChannelFlowOk(ChannelFlowOk {
                         active: RandomMethod::random(rng),
-                    },
-                    4 => Method::ChannelClose {
+                    }),
+                    4 => Method::ChannelClose(ChannelClose {
                         reply_code: RandomMethod::random(rng),
                         reply_text: RandomMethod::random(rng),
                         class_id: RandomMethod::random(rng),
                         method_id: RandomMethod::random(rng),
-                    },
-                    5 => Method::ChannelCloseOk {},
+                    }),
+                    5 => Method::ChannelCloseOk(ChannelCloseOk {}),
                     _ => unreachable!(),
                 },
                 2 => match rng.gen_range(0u32..4) {
-                    0 => Method::ExchangeDeclare {
+                    0 => Method::ExchangeDeclare(ExchangeDeclare {
                         reserved_1: RandomMethod::random(rng),
                         exchange: RandomMethod::random(rng),
                         r#type: RandomMethod::random(rng),
@@ -1375,19 +1393,19 @@ mod random {
                         reserved_3: RandomMethod::random(rng),
                         no_wait: RandomMethod::random(rng),
                         arguments: RandomMethod::random(rng),
-                    },
-                    1 => Method::ExchangeDeclareOk {},
-                    2 => Method::ExchangeDelete {
+                    }),
+                    1 => Method::ExchangeDeclareOk(ExchangeDeclareOk {}),
+                    2 => Method::ExchangeDelete(ExchangeDelete {
                         reserved_1: RandomMethod::random(rng),
                         exchange: RandomMethod::random(rng),
                         if_unused: RandomMethod::random(rng),
                         no_wait: RandomMethod::random(rng),
-                    },
-                    3 => Method::ExchangeDeleteOk {},
+                    }),
+                    3 => Method::ExchangeDeleteOk(ExchangeDeleteOk {}),
                     _ => unreachable!(),
                 },
                 3 => match rng.gen_range(0u32..10) {
-                    0 => Method::QueueDeclare {
+                    0 => Method::QueueDeclare(QueueDeclare {
                         reserved_1: RandomMethod::random(rng),
                         queue: RandomMethod::random(rng),
                         passive: RandomMethod::random(rng),
@@ -1396,57 +1414,57 @@ mod random {
                         auto_delete: RandomMethod::random(rng),
                         no_wait: RandomMethod::random(rng),
                         arguments: RandomMethod::random(rng),
-                    },
-                    1 => Method::QueueDeclareOk {
+                    }),
+                    1 => Method::QueueDeclareOk(QueueDeclareOk {
                         queue: RandomMethod::random(rng),
                         message_count: RandomMethod::random(rng),
                         consumer_count: RandomMethod::random(rng),
-                    },
-                    2 => Method::QueueBind {
+                    }),
+                    2 => Method::QueueBind(QueueBind {
                         reserved_1: RandomMethod::random(rng),
                         queue: RandomMethod::random(rng),
                         exchange: RandomMethod::random(rng),
                         routing_key: RandomMethod::random(rng),
                         no_wait: RandomMethod::random(rng),
                         arguments: RandomMethod::random(rng),
-                    },
-                    3 => Method::QueueBindOk {},
-                    4 => Method::QueueUnbind {
+                    }),
+                    3 => Method::QueueBindOk(QueueBindOk {}),
+                    4 => Method::QueueUnbind(QueueUnbind {
                         reserved_1: RandomMethod::random(rng),
                         queue: RandomMethod::random(rng),
                         exchange: RandomMethod::random(rng),
                         routing_key: RandomMethod::random(rng),
                         arguments: RandomMethod::random(rng),
-                    },
-                    5 => Method::QueueUnbindOk {},
-                    6 => Method::QueuePurge {
+                    }),
+                    5 => Method::QueueUnbindOk(QueueUnbindOk {}),
+                    6 => Method::QueuePurge(QueuePurge {
                         reserved_1: RandomMethod::random(rng),
                         queue: RandomMethod::random(rng),
                         no_wait: RandomMethod::random(rng),
-                    },
-                    7 => Method::QueuePurgeOk {
+                    }),
+                    7 => Method::QueuePurgeOk(QueuePurgeOk {
                         message_count: RandomMethod::random(rng),
-                    },
-                    8 => Method::QueueDelete {
+                    }),
+                    8 => Method::QueueDelete(QueueDelete {
                         reserved_1: RandomMethod::random(rng),
                         queue: RandomMethod::random(rng),
                         if_unused: RandomMethod::random(rng),
                         if_empty: RandomMethod::random(rng),
                         no_wait: RandomMethod::random(rng),
-                    },
-                    9 => Method::QueueDeleteOk {
+                    }),
+                    9 => Method::QueueDeleteOk(QueueDeleteOk {
                         message_count: RandomMethod::random(rng),
-                    },
+                    }),
                     _ => unreachable!(),
                 },
                 4 => match rng.gen_range(0u32..17) {
-                    0 => Method::BasicQos {
+                    0 => Method::BasicQos(BasicQos {
                         prefetch_size: RandomMethod::random(rng),
                         prefetch_count: RandomMethod::random(rng),
                         global: RandomMethod::random(rng),
-                    },
-                    1 => Method::BasicQosOk {},
-                    2 => Method::BasicConsume {
+                    }),
+                    1 => Method::BasicQosOk(BasicQosOk {}),
+                    2 => Method::BasicConsume(BasicConsume {
                         reserved_1: RandomMethod::random(rng),
                         queue: RandomMethod::random(rng),
                         consumer_tag: RandomMethod::random(rng),
@@ -1455,76 +1473,76 @@ mod random {
                         exclusive: RandomMethod::random(rng),
                         no_wait: RandomMethod::random(rng),
                         arguments: RandomMethod::random(rng),
-                    },
-                    3 => Method::BasicConsumeOk {
+                    }),
+                    3 => Method::BasicConsumeOk(BasicConsumeOk {
                         consumer_tag: RandomMethod::random(rng),
-                    },
-                    4 => Method::BasicCancel {
+                    }),
+                    4 => Method::BasicCancel(BasicCancel {
                         consumer_tag: RandomMethod::random(rng),
                         no_wait: RandomMethod::random(rng),
-                    },
-                    5 => Method::BasicCancelOk {
+                    }),
+                    5 => Method::BasicCancelOk(BasicCancelOk {
                         consumer_tag: RandomMethod::random(rng),
-                    },
-                    6 => Method::BasicPublish {
+                    }),
+                    6 => Method::BasicPublish(BasicPublish {
                         reserved_1: RandomMethod::random(rng),
                         exchange: RandomMethod::random(rng),
                         routing_key: RandomMethod::random(rng),
                         mandatory: RandomMethod::random(rng),
                         immediate: RandomMethod::random(rng),
-                    },
-                    7 => Method::BasicReturn {
+                    }),
+                    7 => Method::BasicReturn(BasicReturn {
                         reply_code: RandomMethod::random(rng),
                         reply_text: RandomMethod::random(rng),
                         exchange: RandomMethod::random(rng),
                         routing_key: RandomMethod::random(rng),
-                    },
-                    8 => Method::BasicDeliver {
+                    }),
+                    8 => Method::BasicDeliver(BasicDeliver {
                         consumer_tag: RandomMethod::random(rng),
                         delivery_tag: RandomMethod::random(rng),
                         redelivered: RandomMethod::random(rng),
                         exchange: RandomMethod::random(rng),
                         routing_key: RandomMethod::random(rng),
-                    },
-                    9 => Method::BasicGet {
+                    }),
+                    9 => Method::BasicGet(BasicGet {
                         reserved_1: RandomMethod::random(rng),
                         queue: RandomMethod::random(rng),
                         no_ack: RandomMethod::random(rng),
-                    },
-                    10 => Method::BasicGetOk {
+                    }),
+                    10 => Method::BasicGetOk(BasicGetOk {
                         delivery_tag: RandomMethod::random(rng),
                         redelivered: RandomMethod::random(rng),
                         exchange: RandomMethod::random(rng),
                         routing_key: RandomMethod::random(rng),
                         message_count: RandomMethod::random(rng),
-                    },
-                    11 => Method::BasicGetEmpty {
+                    }),
+                    11 => Method::BasicGetEmpty(BasicGetEmpty {
                         reserved_1: RandomMethod::random(rng),
-                    },
-                    12 => Method::BasicAck {
+                    }),
+                    12 => Method::BasicAck(BasicAck {
                         delivery_tag: RandomMethod::random(rng),
                         multiple: RandomMethod::random(rng),
-                    },
-                    13 => Method::BasicReject {
+                    }),
+                    13 => Method::BasicReject(BasicReject {
                         delivery_tag: RandomMethod::random(rng),
                         requeue: RandomMethod::random(rng),
-                    },
-                    14 => Method::BasicRecoverAsync {
+                    }),
+                    14 => Method::BasicRecoverAsync(BasicRecoverAsync {
                         requeue: RandomMethod::random(rng),
-                    },
-                    15 => Method::BasicRecover {
+                    }),
+                    15 => Method::BasicRecover(BasicRecover {
                         requeue: RandomMethod::random(rng),
-                    },
-                    16 => Method::BasicRecoverOk {},
+                    }),
+                    16 => Method::BasicRecoverOk(BasicRecoverOk {}),
                     _ => unreachable!(),
                 },
                 5 => match rng.gen_range(0u32..6) {
-                    0 => Method::TxSelect {},
-                    1 => Method::TxSelectOk {},
-                    2 => Method::TxCommit {},
-                    3 => Method::TxCommitOk {},
-                    4 => Method::TxRollback {},
-                    5 => Method::TxRollbackOk {},
+                    0 => Method::TxSelect(TxSelect {}),
+                    1 => Method::TxSelectOk(TxSelectOk {}),
+                    2 => Method::TxCommit(TxCommit {}),
+                    3 => Method::TxCommitOk(TxCommitOk {}),
+                    4 => Method::TxRollback(TxRollback {}),
+                    5 => Method::TxRollbackOk(TxRollbackOk {}),
                     _ => unreachable!(),
                 },
                 _ => unreachable!(),

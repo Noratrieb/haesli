@@ -1,30 +1,33 @@
+use crate::error::{ConException, ProtocolError, Result};
+use crate::frame::{ContentHeader, Frame, FrameType};
+use crate::{frame, methods, sasl};
+use amqp_core::connection::{ChannelHandle, ChannelNum, ConnectionHandle, ConnectionId};
+use amqp_core::message::{MessageId, RawMessage, RoutingInformation};
+use amqp_core::methods::{
+    BasicPublish, ChannelClose, ChannelCloseOk, ChannelOpenOk, ConnectionClose, ConnectionCloseOk,
+    ConnectionOpen, ConnectionOpenOk, ConnectionStart, ConnectionStartOk, ConnectionTune,
+    ConnectionTuneOk, FieldValue, Method, Table,
+};
+use amqp_core::GlobalData;
+use anyhow::Context;
+use bytes::Bytes;
+use smallvec::SmallVec;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::pin::Pin;
+use std::sync::Arc;
 use std::time::Duration;
-
-use anyhow::Context;
-use bytes::Bytes;
-use smallvec::SmallVec;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time;
 use tracing::{debug, error, info, warn};
-use uuid::Uuid;
-
-use amqp_core::methods::{FieldValue, Method, Table};
-use amqp_core::GlobalData;
-
-use crate::error::{ConException, ProtocolError, Result};
-use crate::frame::{ContentHeader, Frame, FrameType};
-use crate::{frame, methods, sasl};
 
 fn ensure_conn(condition: bool) -> Result<()> {
     if condition {
         Ok(())
     } else {
-        Err(ConException::Todo.into_trans())
+        Err(ConException::Todo.into())
     }
 }
 
@@ -33,37 +36,48 @@ const CHANNEL_MAX: u16 = 0;
 const FRAME_SIZE_MAX: u32 = 0;
 const HEARTBEAT_DELAY: u16 = 0;
 
-#[allow(dead_code)]
+const BASIC_CLASS_ID: u16 = 60;
+
 pub struct Channel {
-    num: u16,
-    channel_handle: amqp_core::ChannelHandle,
+    /// A handle to the global channel representation. Used to remove the channel when it's dropped
+    handle: ChannelHandle,
+    /// The current status of the channel, whether it has sent a method that expects a body
+    status: ChannelStatus,
 }
 
 pub struct Connection {
-    id: Uuid,
+    id: ConnectionId,
     stream: TcpStream,
     max_frame_size: usize,
     heartbeat_delay: u16,
     channel_max: u16,
+    /// When the next heartbeat expires
     next_timeout: Pin<Box<time::Sleep>>,
-    channels: HashMap<u16, Channel>,
-    connection_handle: amqp_core::ConnectionHandle,
+    channels: HashMap<ChannelNum, Channel>,
+    handle: ConnectionHandle,
     global_data: GlobalData,
 }
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 
-enum WaitForBodyStatus {
-    Method(Method),
-    Header(Method, ContentHeader, SmallVec<[Bytes; 1]>),
-    None,
+enum ChannelStatus {
+    Default,
+    /// ClassId // todo: newtype it
+    NeedHeader(u16, Box<Method>),
+    NeedsBody(Box<Method>, Box<ContentHeader>, SmallVec<[Bytes; 1]>),
+}
+
+impl ChannelStatus {
+    fn take(&mut self) -> Self {
+        std::mem::replace(self, Self::Default)
+    }
 }
 
 impl Connection {
     pub fn new(
-        id: Uuid,
+        id: ConnectionId,
         stream: TcpStream,
-        connection_handle: amqp_core::ConnectionHandle,
+        connection_handle: ConnectionHandle,
         global_data: GlobalData,
     ) -> Self {
         Self {
@@ -73,8 +87,8 @@ impl Connection {
             heartbeat_delay: HEARTBEAT_DELAY,
             channel_max: CHANNEL_MAX,
             next_timeout: Box::pin(time::sleep(DEFAULT_TIMEOUT)),
-            connection_handle,
-            channels: HashMap::new(),
+            handle: connection_handle,
+            channels: HashMap::with_capacity(4),
             global_data,
         }
     }
@@ -85,7 +99,7 @@ impl Connection {
             Err(err) => error!(%err, "Error during processing of connection"),
         }
 
-        let connection_handle = self.connection_handle.lock();
+        let connection_handle = self.handle.lock();
         connection_handle.close();
     }
 
@@ -100,7 +114,7 @@ impl Connection {
         self.main_loop().await
     }
 
-    async fn send_method(&mut self, channel: u16, method: Method) -> Result<()> {
+    async fn send_method(&mut self, channel: ChannelNum, method: Method) -> Result<()> {
         let mut payload = Vec::with_capacity(64);
         methods::write::write_method(method, &mut payload)?;
         frame::write_frame(
@@ -124,7 +138,7 @@ impl Connection {
     }
 
     async fn start(&mut self) -> Result<()> {
-        let start_method = Method::ConnectionStart {
+        let start_method = Method::ConnectionStart(ConnectionStart {
             version_major: 0,
             version_minor: 9,
             server_properties: server_properties(
@@ -134,50 +148,50 @@ impl Connection {
             ),
             mechanisms: "PLAIN".into(),
             locales: "en_US".into(),
-        };
+        });
 
         debug!(?start_method, "Sending Start method");
-        self.send_method(0, start_method).await?;
+        self.send_method(ChannelNum::zero(), start_method).await?;
 
         let start_ok = self.recv_method().await?;
         debug!(?start_ok, "Received Start-Ok");
 
-        if let Method::ConnectionStartOk {
+        if let Method::ConnectionStartOk(ConnectionStartOk {
             mechanism,
             locale,
             response,
             ..
-        } = start_ok
+        }) = start_ok
         {
             ensure_conn(mechanism == "PLAIN")?;
             ensure_conn(locale == "en_US")?;
             let plain_user = sasl::parse_sasl_plain_response(&response)?;
-            info!(username = %plain_user.authentication_identity, "SASL Authentication successful")
+            info!(username = %plain_user.authentication_identity, "SASL Authentication successful");
         } else {
-            return Err(ConException::Todo.into_trans());
+            return Err(ConException::Todo.into());
         }
 
         Ok(())
     }
 
     async fn tune(&mut self) -> Result<()> {
-        let tune_method = Method::ConnectionTune {
+        let tune_method = Method::ConnectionTune(ConnectionTune {
             channel_max: CHANNEL_MAX,
             frame_max: FRAME_SIZE_MAX,
             heartbeat: HEARTBEAT_DELAY,
-        };
+        });
 
         debug!("Sending Tune method");
-        self.send_method(0, tune_method).await?;
+        self.send_method(ChannelNum::zero(), tune_method).await?;
 
         let tune_ok = self.recv_method().await?;
         debug!(?tune_ok, "Received Tune-Ok method");
 
-        if let Method::ConnectionTuneOk {
+        if let Method::ConnectionTuneOk(ConnectionTuneOk {
             channel_max,
             frame_max,
             heartbeat,
-        } = tune_ok
+        }) = tune_ok
         {
             self.channel_max = channel_max;
             self.max_frame_size = usize::try_from(frame_max).unwrap();
@@ -192,15 +206,15 @@ impl Connection {
         let open = self.recv_method().await?;
         debug!(?open, "Received Open method");
 
-        if let Method::ConnectionOpen { virtual_host, .. } = open {
+        if let Method::ConnectionOpen(ConnectionOpen { virtual_host, .. }) = open {
             ensure_conn(virtual_host == "/")?;
         }
 
         self.send_method(
-            0,
-            Method::ConnectionOpenOk {
+            ChannelNum::zero(),
+            Method::ConnectionOpenOk(ConnectionOpenOk {
                 reserved_1: "".to_string(),
-            },
+            }),
         )
         .await?;
 
@@ -208,105 +222,189 @@ impl Connection {
     }
 
     async fn main_loop(&mut self) -> Result<()> {
-        // todo: find out how header/body frames can interleave between channels
-        let mut wait_for_body = WaitForBodyStatus::None;
-
         loop {
-            debug!("Waiting for next frame");
             let frame = frame::read_frame(&mut self.stream, self.max_frame_size).await?;
             self.reset_timeout();
 
             match frame.kind {
-                FrameType::Method => wait_for_body = self.dispatch_method(frame).await?,
-                FrameType::Heartbeat => {}
-                FrameType::Header => match wait_for_body {
-                    WaitForBodyStatus::None => warn!(channel = %frame.channel, "unexpected header"),
-                    WaitForBodyStatus::Method(method) => {
-                        wait_for_body =
-                            WaitForBodyStatus::Header(method, ContentHeader::new(), SmallVec::new())
-                    }
-                    WaitForBodyStatus::Header(_, _, _) => {
-                        warn!(channel = %frame.channel, "already got header")
-                    }
-                },
-                FrameType::Body => match &mut wait_for_body {
-                    WaitForBodyStatus::None => warn!(channel = %frame.channel, "unexpected body"),
-                    WaitForBodyStatus::Method(_) => {
-                        warn!(channel = %frame.channel, "unexpected body")
-                    }
-                    WaitForBodyStatus::Header(_, header, vec) => {
-                        vec.push(frame.payload);
-                        match vec
-                            .iter()
-                            .map(Bytes::len)
-                            .sum::<usize>()
-                            .cmp(&usize::try_from(header.body_size).unwrap())
-                        {
-                            Ordering::Equal => todo!("process body"),
-                            Ordering::Greater => todo!("too much data!"),
-                            Ordering::Less => {} // wait for next body
-                        }
-                    }
-                },
+                FrameType::Method => self.dispatch_method(frame).await?,
+                FrameType::Heartbeat => { /* Nothing here, just the `reset_timeout` above  */ }
+                FrameType::Header => self.dispatch_header(frame)?,
+                FrameType::Body => self.dispatch_body(frame)?,
             }
         }
     }
 
-    async fn dispatch_method(&mut self, frame: Frame) -> Result<WaitForBodyStatus> {
+    async fn dispatch_method(&mut self, frame: Frame) -> Result<()> {
         let method = methods::parse_method(&frame.payload)?;
         debug!(?method, "Received method");
 
+        // Sending a method implicitly cancels the content frames that might be ongoing
+        self.channels
+            .get_mut(&frame.channel)
+            .map(|channel| channel.status.take());
+
         match method {
-            Method::ConnectionClose {
+            Method::ConnectionClose(ConnectionClose {
                 reply_code,
                 reply_text,
                 class_id,
                 method_id,
-            } => {
+            }) => {
                 info!(%reply_code, %reply_text, %class_id, %method_id, "Closing connection");
-                self.send_method(0, Method::ConnectionCloseOk {}).await?;
+                self.send_method(
+                    ChannelNum::zero(),
+                    Method::ConnectionCloseOk(ConnectionCloseOk),
+                )
+                .await?;
                 return Err(ProtocolError::GracefulClose.into());
             }
             Method::ChannelOpen { .. } => self.channel_open(frame.channel).await?,
             Method::ChannelClose { .. } => self.channel_close(frame.channel, method).await?,
-            Method::BasicPublish { .. } => return Ok(WaitForBodyStatus::Method(method)),
+            Method::BasicPublish { .. } => match self.channels.get_mut(&frame.channel) {
+                Some(channel) => {
+                    channel.status = ChannelStatus::NeedHeader(BASIC_CLASS_ID, Box::new(method));
+                }
+                None => return Err(ConException::Todo.into()),
+            },
             _ => {
                 let channel_handle = self
                     .channels
                     .get(&frame.channel)
-                    .ok_or_else(|| ConException::Todo.into_trans())?
-                    .channel_handle
+                    .ok_or(ConException::Todo)?
+                    .handle
                     .clone();
 
-                tokio::spawn(amqp_messaging::methods::handle_method(
-                    channel_handle,
-                    method,
-                ));
-                // we don't handle this here, forward it to *somewhere*
+                // call into amqp_messaging to handle the method
+                // it returns the response method that we are supposed to send
+                // maybe this might become an `Option` in the future
+                let return_method =
+                    amqp_messaging::methods::handle_method(channel_handle, method).await?;
+                self.send_method(frame.channel, return_method).await?;
             }
         }
-
-        Ok(WaitForBodyStatus::None)
+        Ok(())
     }
 
-    async fn channel_open(&mut self, num: u16) -> Result<()> {
-        let id = Uuid::from_bytes(rand::random());
-        let channel_handle = amqp_core::Channel::new_handle(
+    fn dispatch_header(&mut self, frame: Frame) -> Result<()> {
+        self.channels
+            .get_mut(&frame.channel)
+            .ok_or_else(|| ConException::Todo.into())
+            .and_then(|channel| match channel.status.take() {
+                ChannelStatus::Default => {
+                    warn!(channel = %frame.channel, "unexpected header");
+                    Err(ConException::UnexpectedFrame.into())
+                }
+                ChannelStatus::NeedHeader(class_id, method) => {
+                    let header = ContentHeader::parse(&frame.payload)?;
+                    ensure_conn(header.class_id == class_id)?;
+
+                    channel.status = ChannelStatus::NeedsBody(method, header, SmallVec::new());
+                    Ok(())
+                }
+                ChannelStatus::NeedsBody(_, _, _) => {
+                    warn!(channel = %frame.channel, "already got header");
+                    Err(ConException::UnexpectedFrame.into())
+                }
+            })
+    }
+
+    fn dispatch_body(&mut self, frame: Frame) -> Result<()> {
+        let channel = self
+            .channels
+            .get_mut(&frame.channel)
+            .ok_or(ConException::Todo)?;
+
+        match channel.status.take() {
+            ChannelStatus::Default => {
+                warn!(channel = %frame.channel, "unexpected body");
+                Err(ConException::UnexpectedFrame.into())
+            }
+            ChannelStatus::NeedHeader(_, _) => {
+                warn!(channel = %frame.channel, "unexpected body");
+                Err(ConException::UnexpectedFrame.into())
+            }
+            ChannelStatus::NeedsBody(method, header, mut vec) => {
+                vec.push(frame.payload);
+                match vec
+                    .iter()
+                    .map(Bytes::len)
+                    .sum::<usize>()
+                    .cmp(&usize::try_from(header.body_size).unwrap())
+                {
+                    Ordering::Equal => {
+                        self.process_method_with_body(*method, *header, vec, frame.channel)
+                    }
+                    Ordering::Greater => Err(ConException::Todo.into()),
+                    Ordering::Less => Ok(()), // wait for next body
+                }
+            }
+        }
+    }
+
+    fn process_method_with_body(
+        &mut self,
+        method: Method,
+        header: ContentHeader,
+        payloads: SmallVec<[Bytes; 1]>,
+        channel: ChannelNum,
+    ) -> Result<()> {
+        // The only method with content that is sent to the server is Basic.Publish.
+        ensure_conn(header.class_id == BASIC_CLASS_ID)?;
+
+        if let Method::BasicPublish(BasicPublish {
+            exchange,
+            routing_key,
+            mandatory,
+            immediate,
+            ..
+        }) = method
+        {
+            let message = RawMessage {
+                id: MessageId::random(),
+                properties: header.property_fields,
+                routing: RoutingInformation {
+                    exchange,
+                    routing_key,
+                    mandatory,
+                    immediate,
+                },
+                content: payloads,
+            };
+            let message = Arc::new(message);
+
+            let channel = self.channels.get(&channel).ok_or(ConException::Todo)?;
+
+            // Spawn the handler for the publish. The connection task goes back to handling
+            // just the connection.
+            tokio::spawn(amqp_messaging::methods::handle_basic_publish(
+                channel.handle.clone(),
+                message,
+            ));
+            Ok(())
+        } else {
+            Err(ConException::Todo.into())
+        }
+    }
+
+    async fn channel_open(&mut self, channel_num: ChannelNum) -> Result<()> {
+        let id = rand::random();
+        let channel_handle = amqp_core::connection::Channel::new_handle(
             id,
-            num,
-            self.connection_handle.clone(),
+            channel_num.num(),
+            self.handle.clone(),
             self.global_data.clone(),
         );
 
         let channel = Channel {
-            num,
-            channel_handle: channel_handle.clone(),
+            handle: channel_handle.clone(),
+            status: ChannelStatus::Default,
         };
 
-        let prev = self.channels.insert(num, channel);
+        let prev = self.channels.insert(channel_num, channel);
         if let Some(prev) = prev {
-            self.channels.insert(num, prev); // restore previous state
-            return Err(ConException::ChannelError.into_trans());
+            self.channels.insert(channel_num, prev); // restore previous state
+            return Err(ConException::ChannelError.into());
         }
 
         {
@@ -318,36 +416,37 @@ impl Connection {
                 .unwrap()
                 .lock()
                 .channels
-                .insert(num, channel_handle);
+                .insert(channel_num.num(), channel_handle);
         }
 
-        info!(%num, "Opened new channel");
+        info!(%channel_num, "Opened new channel");
 
         self.send_method(
-            num,
-            Method::ChannelOpenOk {
+            channel_num,
+            Method::ChannelOpenOk(ChannelOpenOk {
                 reserved_1: Vec::new(),
-            },
+            }),
         )
         .await?;
 
         Ok(())
     }
 
-    async fn channel_close(&mut self, num: u16, method: Method) -> Result<()> {
-        if let Method::ChannelClose {
+    async fn channel_close(&mut self, channel_id: ChannelNum, method: Method) -> Result<()> {
+        if let Method::ChannelClose(ChannelClose {
             reply_code: code,
             reply_text: reason,
             ..
-        } = method
+        }) = method
         {
             info!(%code, %reason, "Closing channel");
 
-            if let Some(channel) = self.channels.remove(&num) {
+            if let Some(channel) = self.channels.remove(&channel_id) {
                 drop(channel);
-                self.send_method(num, Method::ChannelCloseOk).await?;
+                self.send_method(channel_id, Method::ChannelCloseOk(ChannelCloseOk))
+                    .await?;
             } else {
-                return Err(ConException::Todo.into_trans());
+                return Err(ConException::Todo.into());
             }
         } else {
             unreachable!()
@@ -357,7 +456,7 @@ impl Connection {
 
     fn reset_timeout(&mut self) {
         if self.heartbeat_delay != 0 {
-            let next = Duration::from_secs(u64::from(self.heartbeat_delay));
+            let next = Duration::from_secs(u64::from(self.heartbeat_delay / 2));
             self.next_timeout = Box::pin(time::sleep(next));
         }
     }
@@ -396,13 +495,13 @@ impl Connection {
 
 impl Drop for Connection {
     fn drop(&mut self) {
-        self.connection_handle.lock().close();
+        self.handle.lock().close();
     }
 }
 
 impl Drop for Channel {
     fn drop(&mut self) {
-        self.channel_handle.lock().close();
+        self.handle.lock().close();
     }
 }
 

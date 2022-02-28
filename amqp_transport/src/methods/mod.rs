@@ -1,10 +1,10 @@
-use crate::error::{ConException, TransError};
+use crate::error::TransError;
+use amqp_core::error::ConException;
 use amqp_core::methods::{FieldValue, Method, Table};
 use rand::Rng;
-use std::collections::HashMap;
 
 mod generated;
-mod parse_helper;
+pub mod parse_helper;
 #[cfg(test)]
 mod tests;
 mod write_helper;
@@ -18,16 +18,10 @@ pub fn parse_method(payload: &[u8]) -> Result<Method, TransError> {
     match nom_result {
         Ok(([], method)) => Ok(method),
         Ok((_, _)) => {
-            Err(
-                ConException::SyntaxError(vec!["could not consume all input".to_string()])
-                    .into_trans(),
-            )
+            Err(ConException::SyntaxError(vec!["could not consume all input".to_string()]).into())
         }
         Err(nom::Err::Incomplete(_)) => {
-            Err(
-                ConException::SyntaxError(vec!["there was not enough data".to_string()])
-                    .into_trans(),
-            )
+            Err(ConException::SyntaxError(vec!["there was not enough data".to_string()]).into())
         }
         Err(nom::Err::Failure(err) | nom::Err::Error(err)) => Err(err),
     }
@@ -70,7 +64,9 @@ rand_random_method!(bool, u8, i8, u16, i16, u32, i32, u64, i64, f32, f64);
 impl<R: Rng> RandomMethod<R> for Table {
     fn random(rng: &mut R) -> Self {
         let len = rng.gen_range(0..3);
-        HashMap::from_iter((0..len).map(|_| (String::random(rng), FieldValue::random(rng))))
+        (0..len)
+            .map(|_| (String::random(rng), FieldValue::random(rng)))
+            .collect()
     }
 }
 
