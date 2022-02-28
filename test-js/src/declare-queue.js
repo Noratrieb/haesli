@@ -6,7 +6,7 @@ const connection = await connectAmqp();
 
 const channel = await connection.createChannel();
 
-const reply = await channel.assertQueue(queueName, { durable: true });
+const reply = await channel.assertQueue(queueName, { durable: false });
 
 assert(reply.messageCount === 0, 'Message found in queue');
 assert(reply.consumerCount === 0, 'Consumer listening on queue');

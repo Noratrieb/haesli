@@ -102,7 +102,7 @@ impl Connection {
                 /* do nothing, remove below */
             }
             Err(TransError::Protocol(ProtocolError::ConException(ex))) => {
-                warn!(%ex, "Connection exception occured. This indicates a faulty client.");
+                warn!(%ex, "Connection exception occurred. This indicates a faulty client.");
                 if let Err(err) = self
                     .send_method(
                         ChannelNum::zero(),
@@ -262,6 +262,7 @@ impl Connection {
             match result {
                 Ok(()) => {}
                 Err(TransError::Protocol(ProtocolError::ChannelException(ex))) => {
+                    warn!(%ex, "Channel exception occurred");
                     self.send_method(
                         channel,
                         Method::ChannelClose(ChannelClose {
