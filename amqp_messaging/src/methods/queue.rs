@@ -1,5 +1,5 @@
 use amqp_core::connection::ChannelHandle;
-use amqp_core::error::{ConException, ProtocolError};
+use amqp_core::error::ProtocolError;
 use amqp_core::methods::{Method, QueueBind, QueueDeclare, QueueDeclareOk};
 use amqp_core::queue::{QueueDeletion, QueueId, QueueName, RawQueue};
 use amqp_core::{amqp_todo, GlobalData};

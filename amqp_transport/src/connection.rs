@@ -1,4 +1,4 @@
-use crate::error::{ConException, ProtocolError, Result};
+use crate::error::{ConException, ProtocolError, Result, TransError};
 use crate::frame::{ContentHeader, Frame, FrameType};
 use crate::{frame, methods, sasl};
 use amqp_core::connection::{ChannelHandle, ChannelNum, ConnectionHandle, ConnectionId};
@@ -21,7 +21,7 @@ use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 
 fn ensure_conn(condition: bool) -> Result<()> {
     if condition {
@@ -94,8 +94,39 @@ impl Connection {
     }
 
     pub async fn start_connection_processing(mut self) {
-        match self.process_connection().await {
+        let process_result = self.process_connection().await;
+
+        match process_result {
             Ok(()) => {}
+            Err(TransError::Protocol(ProtocolError::GracefullyClosed)) => {
+                /* do nothing, remove below */
+            }
+            Err(TransError::Protocol(ProtocolError::ConException(ex))) => {
+                warn!(%ex, "Connection exception occured. This indicates a faulty client.");
+                if let Err(err) = self
+                    .send_method(
+                        ChannelNum::zero(),
+                        Method::ConnectionClose(ConnectionClose {
+                            reply_code: ex.reply_code(),
+                            reply_text: ex.reply_text(),
+                            class_id: 0, // todo: do this
+                            method_id: 0,
+                        }),
+                    )
+                    .await
+                {
+                    error!(%ex, %err, "Failed to close connection after ConnectionException");
+                }
+                match self.recv_method().await {
+                    Ok(Method::ConnectionCloseOk(_)) => {}
+                    Ok(method) => {
+                        error!(%ex, ?method, "Received wrong method after ConnectionException")
+                    }
+                    Err(err) => {
+                        error!(%ex, %err, "Failed to receive Connection.CloseOk method after ConnectionException")
+                    }
+                }
+            }
             Err(err) => error!(%err, "Error during processing of connection"),
         }
 
@@ -115,6 +146,8 @@ impl Connection {
     }
 
     async fn send_method(&mut self, channel: ChannelNum, method: Method) -> Result<()> {
+        trace!(%channel, ?method, "Sending method");
+
         let mut payload = Vec::with_capacity(64);
         methods::write::write_method(method, &mut payload)?;
         frame::write_frame(
@@ -224,15 +257,39 @@ impl Connection {
     async fn main_loop(&mut self) -> Result<()> {
         loop {
             let frame = frame::read_frame(&mut self.stream, self.max_frame_size).await?;
-            self.reset_timeout();
-
-            match frame.kind {
-                FrameType::Method => self.dispatch_method(frame).await?,
-                FrameType::Heartbeat => { /* Nothing here, just the `reset_timeout` above  */ }
-                FrameType::Header => self.dispatch_header(frame)?,
-                FrameType::Body => self.dispatch_body(frame)?,
+            let channel = frame.channel;
+            let result = self.handle_frame(frame).await;
+            match result {
+                Ok(()) => {}
+                Err(TransError::Protocol(ProtocolError::ChannelException(ex))) => {
+                    self.send_method(
+                        channel,
+                        Method::ChannelClose(ChannelClose {
+                            reply_code: ex.reply_code(),
+                            reply_text: ex.reply_text(),
+                            class_id: 0, // todo: do this
+                            method_id: 0,
+                        }),
+                    )
+                    .await?;
+                    drop(self.channels.remove(&channel));
+                }
+                Err(other_err) => return Err(other_err),
             }
         }
+    }
+
+    async fn handle_frame(&mut self, frame: Frame) -> Result<()> {
+        self.reset_timeout();
+
+        match frame.kind {
+            FrameType::Method => self.dispatch_method(frame).await?,
+            FrameType::Heartbeat => { /* Nothing here, just the `reset_timeout` above  */ }
+            FrameType::Header => self.dispatch_header(frame)?,
+            FrameType::Body => self.dispatch_body(frame)?,
+        }
+
+        Ok(())
     }
 
     async fn dispatch_method(&mut self, frame: Frame) -> Result<()> {
@@ -257,7 +314,7 @@ impl Connection {
                     Method::ConnectionCloseOk(ConnectionCloseOk),
                 )
                 .await?;
-                return Err(ProtocolError::GracefulClose.into());
+                return Err(ProtocolError::GracefullyClosed.into());
             }
             Method::ChannelOpen { .. } => self.channel_open(frame.channel).await?,
             Method::ChannelClose { .. } => self.channel_close(frame.channel, method).await?,

@@ -1,3 +1,5 @@
+use crate::methods::{ReplyCode, ReplyText};
+
 #[derive(Debug, thiserror::Error)]
 pub enum ProtocolError {
     #[error("fatal error")]
@@ -9,7 +11,7 @@ pub enum ProtocolError {
     #[error("Connection must be closed")]
     CloseNow,
     #[error("Graceful connection closing requested")]
-    GracefulClose,
+    GracefullyClosed,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -31,5 +33,31 @@ pub enum ConException {
     Todo,
 }
 
+impl ConException {
+    pub fn reply_code(&self) -> ReplyCode {
+        match self {
+            ConException::FrameError => 501,
+            ConException::CommandInvalid => 503,
+            ConException::SyntaxError(_) => 503,
+            ConException::ChannelError => 504,
+            ConException::UnexpectedFrame => 505,
+            ConException::NotImplemented(_) => 540,
+            ConException::Todo => 0,
+        }
+    }
+    pub fn reply_text(&self) -> ReplyText {
+        "cant be bothered yet".to_string() // todo
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum ChannelException {}
+
+impl ChannelException {
+    pub fn reply_code(&self) -> ReplyCode {
+        todo!()
+    }
+    pub fn reply_text(&self) -> ReplyText {
+        todo!()
+    }
+}
