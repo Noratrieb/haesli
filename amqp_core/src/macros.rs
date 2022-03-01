@@ -1,6 +1,7 @@
 #[macro_export]
 macro_rules! newtype_id {
-    ($vis:vis $name:ident) => {
+    ($(#[$meta:meta])* $vis:vis $name:ident) => {
+        $(#[$meta])*
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
         $vis struct $name(::uuid::Uuid);
 

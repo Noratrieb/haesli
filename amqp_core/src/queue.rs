@@ -1,6 +1,8 @@
+use crate::consumer::Consumer;
 use crate::message::Message;
 use crate::{newtype, newtype_id, ChannelId};
 use parking_lot::Mutex;
+use std::borrow::Borrow;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 
@@ -14,6 +16,12 @@ newtype!(
     pub QueueName: Arc<str>
 );
 
+impl Borrow<str> for QueueName {
+    fn borrow(&self) -> &str {
+        std::borrow::Borrow::borrow(&self.0)
+    }
+}
+
 #[derive(Debug)]
 pub struct RawQueue {
     pub id: QueueId,
@@ -25,6 +33,7 @@ pub struct RawQueue {
     /// The queue can always be manually deleted.
     /// If auto-delete is enabled, it keeps track of the consumer count.
     pub deletion: QueueDeletion,
+    pub consumers: Mutex<Vec<Consumer>>,
 }
 
 #[derive(Debug)]

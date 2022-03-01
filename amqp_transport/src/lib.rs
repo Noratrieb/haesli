@@ -29,15 +29,28 @@ pub async fn do_thing_i_guess(global_data: GlobalData) -> Result<()> {
         info!(local_addr = ?stream.local_addr(), %id, "Accepted new connection");
         let span = info_span!("client-connection", %id);
 
-        let connection_handle =
-            amqp_core::connection::Connection::new_handle(id, peer_addr, global_data.clone());
+        let (method_send, method_recv) = tokio::sync::mpsc::channel(10);
+
+        let connection_handle = amqp_core::connection::Connection::new_handle(
+            id,
+            peer_addr,
+            global_data.clone(),
+            method_send.clone(),
+        );
 
         let mut global_data_guard = global_data.lock();
         global_data_guard
             .connections
             .insert(id, connection_handle.clone());
 
-        let connection = Connection::new(id, stream, connection_handle, global_data.clone());
+        let connection = Connection::new(
+            id,
+            stream,
+            connection_handle,
+            global_data.clone(),
+            method_send,
+            method_recv,
+        );
 
         tokio::spawn(connection.start_connection_processing().instrument(span));
     }

@@ -1,9 +1,13 @@
-use crate::{newtype_id, GlobalData, Handle, Queue};
+use crate::methods::Method;
+use crate::{methods, newtype_id, GlobalData, Handle, Queue};
+use bytes::Bytes;
 use parking_lot::Mutex;
+use smallvec::SmallVec;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::net::SocketAddr;
 use std::sync::Arc;
+use tokio::sync::mpsc;
 
 newtype_id!(pub ConnectionId);
 newtype_id!(pub ChannelId);
@@ -48,7 +52,17 @@ pub struct Connection {
     pub global_data: GlobalData,
     pub channels: HashMap<ChannelNum, ChannelHandle>,
     pub exclusive_queues: Vec<Queue>,
+    _method_queue: MethodSender,
 }
+
+#[derive(Debug)]
+pub enum QueuedMethod {
+    Normal(Method),
+    WithContent(Method, ContentHeader, SmallVec<[Bytes; 1]>),
+}
+
+pub type MethodSender = mpsc::Sender<(ChannelNum, QueuedMethod)>;
+pub type MethodReceiver = mpsc::Receiver<(ChannelNum, QueuedMethod)>;
 
 impl Connection {
     #[must_use]
@@ -56,6 +70,7 @@ impl Connection {
         id: ConnectionId,
         peer_addr: SocketAddr,
         global_data: GlobalData,
+        method_queue: MethodSender,
     ) -> ConnectionHandle {
         Arc::new(Mutex::new(Self {
             id,
@@ -63,6 +78,7 @@ impl Connection {
             global_data,
             channels: HashMap::new(),
             exclusive_queues: vec![],
+            _method_queue: method_queue,
         }))
     }
 
@@ -77,24 +93,27 @@ pub type ChannelHandle = Handle<Channel>;
 #[derive(Debug)]
 pub struct Channel {
     pub id: ChannelId,
-    pub num: u16,
+    pub num: ChannelNum,
     pub connection: ConnectionHandle,
     pub global_data: GlobalData,
+    method_queue: MethodSender,
 }
 
 impl Channel {
     #[must_use]
     pub fn new_handle(
         id: ChannelId,
-        num: u16,
+        num: ChannelNum,
         connection: ConnectionHandle,
         global_data: GlobalData,
+        method_queue: MethodSender,
     ) -> ChannelHandle {
         Arc::new(Mutex::new(Self {
             id,
             num,
             connection,
             global_data,
+            method_queue,
         }))
     }
 
@@ -102,4 +121,19 @@ impl Channel {
         let mut global_data = self.global_data.lock();
         global_data.channels.remove(&self.id);
     }
+
+    pub fn queue_method(&self, method: QueuedMethod) {
+        // todo: this is a horrible hack around the lock chaos
+        self.method_queue
+            .try_send((self.num, method))
+            .expect("could not send method to channel, RIP");
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ContentHeader {
+    pub class_id: u16,
+    pub weight: u16,
+    pub body_size: u64,
+    pub property_fields: methods::Table,
 }

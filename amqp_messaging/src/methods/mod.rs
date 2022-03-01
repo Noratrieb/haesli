@@ -1,24 +1,22 @@
 mod consume;
+mod publish;
 mod queue;
 
+use crate::Result;
 use amqp_core::amqp_todo;
 use amqp_core::connection::ChannelHandle;
-use amqp_core::error::ProtocolError;
 use amqp_core::message::Message;
 use amqp_core::methods::Method;
-use tracing::info;
+use tracing::{error, info};
 
-pub async fn handle_basic_publish(_channel_handle: ChannelHandle, message: Message) {
-    info!(
-        ?message,
-        "Someone has summoned the almighty Basic.Publish handler"
-    );
+pub async fn handle_basic_publish(channel_handle: ChannelHandle, message: Message) {
+    match publish::publish(channel_handle, message).await {
+        Ok(()) => {}
+        Err(err) => error!(%err, "publish error occurred"),
+    }
 }
 
-pub async fn handle_method(
-    channel_handle: ChannelHandle,
-    method: Method,
-) -> Result<Method, ProtocolError> {
+pub async fn handle_method(channel_handle: ChannelHandle, method: Method) -> Result<Method> {
     info!(?method, "Handling method");
 
     let response = match method {
@@ -26,9 +24,7 @@ pub async fn handle_method(
         Method::ExchangeDeclareOk(_) => amqp_todo!(),
         Method::ExchangeDelete(_) => amqp_todo!(),
         Method::ExchangeDeleteOk(_) => amqp_todo!(),
-        Method::QueueDeclare(queue_declare) => {
-            queue::declare(channel_handle, queue_declare).await?
-        }
+        Method::QueueDeclare(queue_declare) => queue::declare(channel_handle, queue_declare)?,
         Method::QueueDeclareOk { .. } => amqp_todo!(),
         Method::QueueBind(queue_bind) => queue::bind(channel_handle, queue_bind).await?,
         Method::QueueBindOk(_) => amqp_todo!(),
@@ -40,7 +36,7 @@ pub async fn handle_method(
         Method::QueueDeleteOk { .. } => amqp_todo!(),
         Method::BasicQos { .. } => amqp_todo!(),
         Method::BasicQosOk(_) => amqp_todo!(),
-        Method::BasicConsume(consume) => consume::consume(channel_handle, consume).await?,
+        Method::BasicConsume(consume) => consume::consume(channel_handle, consume)?,
         Method::BasicConsumeOk { .. } => amqp_todo!(),
         Method::BasicCancel { .. } => amqp_todo!(),
         Method::BasicCancelOk { .. } => amqp_todo!(),

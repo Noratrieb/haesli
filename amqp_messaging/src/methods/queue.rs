@@ -1,16 +1,16 @@
 use amqp_core::connection::ChannelHandle;
-use amqp_core::error::ProtocolError;
 use amqp_core::methods::{Method, QueueBind, QueueDeclare, QueueDeclareOk};
 use amqp_core::queue::{QueueDeletion, QueueId, QueueName, RawQueue};
 use amqp_core::{amqp_todo, GlobalData};
 use parking_lot::Mutex;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
+use crate::Result;
 
-pub async fn declare(
+pub fn declare(
     channel_handle: ChannelHandle,
     queue_declare: QueueDeclare,
-) -> Result<Method, ProtocolError> {
+) -> Result<Method> {
     let QueueDeclare {
         queue: queue_name,
         passive,
@@ -28,7 +28,9 @@ pub async fn declare(
         amqp_todo!();
     }
 
-    if passive || no_wait || durable {
+    // todo: durable is technically spec-compliant, the spec doesn't really require it, but it's a todo
+    // not checked here because it's the default for amqplib which is annoying
+    if passive || no_wait {
         amqp_todo!();
     }
 
@@ -48,6 +50,7 @@ pub async fn declare(
             } else {
                 QueueDeletion::Manual
             },
+            consumers: Mutex::default(),
         });
 
         {
@@ -58,7 +61,7 @@ pub async fn declare(
         global_data
     };
 
-    bind_queue(global_data, (), queue_name.clone().into_inner()).await?;
+    bind_queue(global_data, (), queue_name.clone().into_inner())?;
 
     Ok(Method::QueueDeclareOk(QueueDeclareOk {
         queue: queue_name.to_string(),
@@ -70,15 +73,15 @@ pub async fn declare(
 pub async fn bind(
     _channel_handle: ChannelHandle,
     _queue_bind: QueueBind,
-) -> Result<Method, ProtocolError> {
+) -> Result<Method> {
     amqp_todo!();
 }
 
-async fn bind_queue(
+fn bind_queue(
     global_data: GlobalData,
     _exchange: (),
     routing_key: Arc<str>,
-) -> Result<(), ProtocolError> {
+) -> Result<()> {
     let mut global_data = global_data.lock();
 
     // todo: don't

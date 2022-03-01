@@ -92,7 +92,7 @@ async fn get_data(global_data: GlobalData) -> impl IntoResponse {
                         let chan = chan.lock();
                         Channel {
                             id: chan.id.to_string(),
-                            number: chan.num,
+                            number: chan.num.num(),
                         }
                     })
                     .collect(),

@@ -1,6 +1,5 @@
 use crate::error::{ConException, ProtocolError, Result};
-use amqp_core::connection::ChannelNum;
-use amqp_core::methods;
+use amqp_core::connection::{ChannelNum, ContentHeader};
 use anyhow::Context;
 use bytes::Bytes;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -33,18 +32,10 @@ pub enum FrameType {
     Heartbeat = 8,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct ContentHeader {
-    pub class_id: u16,
-    pub weight: u16,
-    pub body_size: u64,
-    pub property_fields: methods::Table,
-}
-
 mod content_header_parse {
     use crate::error::TransError;
-    use crate::frame::ContentHeader;
     use crate::methods::parse_helper::{octet, shortstr, table, timestamp};
+    use amqp_core::connection::ContentHeader;
     use amqp_core::methods;
     use amqp_core::methods::FieldValue::{FieldTable, ShortShortUInt, ShortString, Timestamp};
     use nom::number::complete::{u16, u64};
@@ -95,7 +86,7 @@ mod content_header_parse {
         Ok((input, map))
     }
 
-    pub fn header(input: &[u8]) -> IResult<'_, Box<ContentHeader>> {
+    pub fn header(input: &[u8]) -> IResult<'_, ContentHeader> {
         let (input, class_id) = u16(Big)(input)?;
         let (input, weight) = u16(Big)(input)?;
         let (input, body_size) = u64(Big)(input)?;
@@ -108,31 +99,26 @@ mod content_header_parse {
 
         Ok((
             input,
-            Box::new(ContentHeader {
+            ContentHeader {
                 class_id,
                 weight,
                 body_size,
                 property_fields,
-            }),
+            },
         ))
     }
 }
 
-impl ContentHeader {
-    pub fn parse(input: &[u8]) -> Result<Box<Self>> {
-        match content_header_parse::header(input) {
-            Ok(([], header)) => Ok(header),
-            Ok((_, _)) => {
-                Err(
-                    ConException::SyntaxError(vec!["could not consume all input".to_string()])
-                        .into(),
-                )
-            }
-            Err(nom::Err::Incomplete(_)) => {
-                Err(ConException::SyntaxError(vec!["there was not enough data".to_string()]).into())
-            }
-            Err(nom::Err::Failure(err) | nom::Err::Error(err)) => Err(err),
+pub fn parse_content_header(input: &[u8]) -> Result<ContentHeader> {
+    match content_header_parse::header(input) {
+        Ok(([], header)) => Ok(header),
+        Ok((_, _)) => {
+            Err(ConException::SyntaxError(vec!["could not consume all input".to_string()]).into())
         }
+        Err(nom::Err::Incomplete(_)) => {
+            Err(ConException::SyntaxError(vec!["there was not enough data".to_string()]).into())
+        }
+        Err(nom::Err::Failure(err) | nom::Err::Error(err)) => Err(err),
     }
 }
 

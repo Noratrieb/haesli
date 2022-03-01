@@ -1,6 +1,7 @@
 #![warn(rust_2018_idioms)]
 
 pub mod connection;
+pub mod consumer;
 pub mod error;
 mod macros;
 pub mod message;
@@ -13,6 +14,7 @@ use connection::{ChannelId, ConnectionId};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
+use uuid::Uuid;
 
 type Handle<T> = Arc<Mutex<T>>;
 
@@ -47,4 +49,8 @@ pub struct GlobalDataInner {
     pub queues: HashMap<QueueName, Queue>,
     /// Todo: This is just for testing and will be removed later!
     pub default_exchange: HashMap<String, Queue>,
+}
+
+pub fn random_uuid() -> Uuid {
+    Uuid::from_bytes(rand::random())
 }

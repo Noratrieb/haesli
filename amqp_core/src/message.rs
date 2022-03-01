@@ -1,6 +1,4 @@
-#![allow(dead_code)]
-
-use crate::methods;
+use crate::connection::ContentHeader;
 use crate::newtype_id;
 use bytes::Bytes;
 use smallvec::SmallVec;
@@ -13,7 +11,7 @@ newtype_id!(pub MessageId);
 #[derive(Debug)]
 pub struct RawMessage {
     pub id: MessageId,
-    pub properties: methods::Table,
+    pub header: ContentHeader,
     pub routing: RoutingInformation,
     pub content: SmallVec<[Bytes; 1]>,
 }

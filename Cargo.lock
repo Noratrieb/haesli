@@ -33,6 +33,7 @@ dependencies = [
  "rand",
  "smallvec",
  "thiserror",
+ "tokio",
  "uuid",
 ]
 

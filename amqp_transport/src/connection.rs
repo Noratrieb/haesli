@@ -1,14 +1,17 @@
 use crate::error::{ConException, ProtocolError, Result, TransError};
-use crate::frame::{ContentHeader, Frame, FrameType};
+use crate::frame::{parse_content_header, Frame, FrameType};
 use crate::{frame, methods, sasl};
-use amqp_core::connection::{ChannelHandle, ChannelNum, ConnectionHandle, ConnectionId};
+use amqp_core::connection::{
+    ChannelHandle, ChannelNum, ConnectionHandle, ConnectionId, ContentHeader, MethodReceiver,
+    MethodSender, QueuedMethod,
+};
 use amqp_core::message::{MessageId, RawMessage, RoutingInformation};
 use amqp_core::methods::{
     BasicPublish, ChannelClose, ChannelCloseOk, ChannelOpenOk, ConnectionClose, ConnectionCloseOk,
     ConnectionOpen, ConnectionOpenOk, ConnectionStart, ConnectionStartOk, ConnectionTune,
     ConnectionTuneOk, FieldValue, Method, Table,
 };
-use amqp_core::GlobalData;
+use amqp_core::{amqp_todo, GlobalData};
 use anyhow::Context;
 use bytes::Bytes;
 use smallvec::SmallVec;
@@ -20,7 +23,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use tokio::time;
+use tokio::{select, time};
 use tracing::{debug, error, info, trace, warn};
 
 fn ensure_conn(condition: bool) -> Result<()> {
@@ -56,6 +59,9 @@ pub struct Connection {
     channels: HashMap<ChannelNum, Channel>,
     handle: ConnectionHandle,
     global_data: GlobalData,
+
+    method_queue_send: MethodSender,
+    method_queue_recv: MethodReceiver,
 }
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
@@ -64,7 +70,7 @@ enum ChannelStatus {
     Default,
     /// ClassId // todo: newtype it
     NeedHeader(u16, Box<Method>),
-    NeedsBody(Box<Method>, Box<ContentHeader>, SmallVec<[Bytes; 1]>),
+    NeedsBody(Box<Method>, ContentHeader, SmallVec<[Bytes; 1]>),
 }
 
 impl ChannelStatus {
@@ -79,6 +85,8 @@ impl Connection {
         stream: TcpStream,
         connection_handle: ConnectionHandle,
         global_data: GlobalData,
+        method_queue_send: MethodSender,
+        method_queue_recv: MethodReceiver,
     ) -> Self {
         Self {
             id,
@@ -90,6 +98,8 @@ impl Connection {
             handle: connection_handle,
             channels: HashMap::with_capacity(4),
             global_data,
+            method_queue_send,
+            method_queue_recv: method_queue_recv,
         }
     }
 
@@ -143,6 +153,17 @@ impl Connection {
         info!("Connection is ready for usage!");
 
         self.main_loop().await
+    }
+
+    async fn send_method_content(
+        &mut self,
+        channel: ChannelNum,
+        method: Method,
+        _header: ContentHeader,
+        _body: SmallVec<[Bytes; 1]>,
+    ) -> Result<()> {
+        self.send_method(channel, method).await?;
+        amqp_todo!()
     }
 
     async fn send_method(&mut self, channel: ChannelNum, method: Method) -> Result<()> {
@@ -256,41 +277,54 @@ impl Connection {
 
     async fn main_loop(&mut self) -> Result<()> {
         loop {
-            let frame = frame::read_frame(&mut self.stream, self.max_frame_size).await?;
-            let channel = frame.channel;
-            let result = self.handle_frame(frame).await;
-            match result {
-                Ok(()) => {}
-                Err(TransError::Protocol(ProtocolError::ChannelException(ex))) => {
-                    warn!(%ex, "Channel exception occurred");
-                    self.send_method(
-                        channel,
-                        Method::ChannelClose(ChannelClose {
-                            reply_code: ex.reply_code(),
-                            reply_text: ex.reply_text(),
-                            class_id: 0, // todo: do this
-                            method_id: 0,
-                        }),
-                    )
-                    .await?;
-                    drop(self.channels.remove(&channel));
+            select! {
+                frame = frame::read_frame(&mut self.stream, self.max_frame_size) => {
+                    let frame = frame?;
+                    self.handle_frame(frame).await?;
                 }
-                Err(other_err) => return Err(other_err),
+                queued_method = self.method_queue_recv.recv() => {
+                    match queued_method {
+                        Some((channel, QueuedMethod::Normal(method))) => self.send_method(channel, method).await?,
+                        Some((channel, QueuedMethod::WithContent(method, header, body))) => self.send_method_content(channel, method, header, body).await?,
+                        None => {}
+                    }
+                }
             }
         }
     }
 
     async fn handle_frame(&mut self, frame: Frame) -> Result<()> {
+        let channel = frame.channel;
         self.reset_timeout();
 
-        match frame.kind {
-            FrameType::Method => self.dispatch_method(frame).await?,
-            FrameType::Heartbeat => { /* Nothing here, just the `reset_timeout` above  */ }
-            FrameType::Header => self.dispatch_header(frame)?,
-            FrameType::Body => self.dispatch_body(frame)?,
-        }
+        let result = match frame.kind {
+            FrameType::Method => self.dispatch_method(frame).await,
+            FrameType::Heartbeat => {
+                Ok(()) /* Nothing here, just the `reset_timeout` above  */
+            }
+            FrameType::Header => self.dispatch_header(frame),
+            FrameType::Body => self.dispatch_body(frame),
+        };
 
-        Ok(())
+        match result {
+            Ok(()) => Ok(()),
+            Err(TransError::Protocol(ProtocolError::ChannelException(ex))) => {
+                warn!(%ex, "Channel exception occurred");
+                self.send_method(
+                    channel,
+                    Method::ChannelClose(ChannelClose {
+                        reply_code: ex.reply_code(),
+                        reply_text: ex.reply_text(),
+                        class_id: 0, // todo: do this
+                        method_id: 0,
+                    }),
+                )
+                .await?;
+                drop(self.channels.remove(&channel));
+                Ok(())
+            }
+            Err(other_err) => Err(other_err),
+        }
     }
 
     async fn dispatch_method(&mut self, frame: Frame) -> Result<()> {
@@ -354,7 +388,7 @@ impl Connection {
                     Err(ConException::UnexpectedFrame.into())
                 }
                 ChannelStatus::NeedHeader(class_id, method) => {
-                    let header = ContentHeader::parse(&frame.payload)?;
+                    let header = parse_content_header(&frame.payload)?;
                     ensure_conn(header.class_id == class_id)?;
 
                     channel.status = ChannelStatus::NeedsBody(method, header, SmallVec::new());
@@ -391,7 +425,7 @@ impl Connection {
                     .cmp(&usize::try_from(header.body_size).unwrap())
                 {
                     Ordering::Equal => {
-                        self.process_method_with_body(*method, *header, vec, frame.channel)
+                        self.process_method_with_body(*method, header, vec, frame.channel)
                     }
                     Ordering::Greater => Err(ConException::Todo.into()),
                     Ordering::Less => Ok(()), // wait for next body
@@ -420,7 +454,7 @@ impl Connection {
         {
             let message = RawMessage {
                 id: MessageId::random(),
-                properties: header.property_fields,
+                header,
                 routing: RoutingInformation {
                     exchange,
                     routing_key,
@@ -449,9 +483,10 @@ impl Connection {
         let id = rand::random();
         let channel_handle = amqp_core::connection::Channel::new_handle(
             id,
-            channel_num.num(),
+            channel_num,
             self.handle.clone(),
             self.global_data.clone(),
+            self.method_queue_send.clone(),
         );
 
         let channel = Channel {
