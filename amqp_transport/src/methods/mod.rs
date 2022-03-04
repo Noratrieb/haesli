@@ -9,7 +9,7 @@ mod generated;
 pub mod parse_helper;
 #[cfg(test)]
 mod tests;
-mod write_helper;
+pub mod write_helper;
 
 pub use generated::*;
 

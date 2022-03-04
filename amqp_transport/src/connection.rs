@@ -148,10 +148,23 @@ impl TransportConnection {
         &mut self,
         channel: ChannelNum,
         method: &Method,
-        _header: ContentHeader,
+        header: ContentHeader,
         _body: SmallVec<[Bytes; 1]>,
     ) -> Result<()> {
         self.send_method(channel, method).await?;
+
+        let mut header_buf = Vec::new();
+        frame::write_content_header(&mut header_buf, header)?;
+        frame::write_frame(
+            &Frame {
+                kind: FrameType::Method,
+                channel,
+                payload: header_buf.into(),
+            },
+            &mut self.stream,
+        )
+        .await?;
+
         amqp_todo!()
     }
 

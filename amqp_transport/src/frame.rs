@@ -1,5 +1,8 @@
 use crate::error::{ConException, ProtocolError, Result};
-use amqp_core::connection::{ChannelNum, ContentHeader};
+use amqp_core::{
+    amqp_todo,
+    connection::{ChannelNum, ContentHeader},
+};
 use anyhow::Context;
 use bytes::Bytes;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -126,6 +129,89 @@ pub fn parse_content_header(input: &[u8]) -> Result<ContentHeader> {
         }
         Err(nom::Err::Failure(err) | nom::Err::Error(err)) => Err(err),
     }
+}
+
+mod content_header_write {
+    use crate::{
+        methods::write_helper::{octet, shortstr, table, timestamp},
+        Result,
+    };
+    use amqp_core::{
+        connection::ContentHeader,
+        methods::FieldValue::{FieldTable, ShortShortUInt, ShortString, Timestamp},
+    };
+
+    pub fn write_content_header(buf: &mut Vec<u8>, header: ContentHeader) -> Result<()> {
+        let mut flags = 0_u16;
+        buf.extend_from_slice(&flags.to_be_bytes()); // placeholder
+
+        if let Some(ShortString(value)) = header.property_fields.get("content-type") {
+            flags |= 1 << 15;
+            shortstr(value, buf)?;
+        }
+        if let Some(ShortString(value)) = header.property_fields.get("content-encoding") {
+            flags |= 1 << 14;
+            shortstr(value, buf)?;
+        }
+        if let Some(FieldTable(value)) = header.property_fields.get("headers") {
+            flags |= 1 << 13;
+            table(value, buf)?;
+        }
+        if let Some(ShortShortUInt(value)) = header.property_fields.get("delivery-mode") {
+            flags |= 1 << 12;
+            octet(value, buf)?;
+        }
+        if let Some(ShortShortUInt(value)) = header.property_fields.get("priority") {
+            flags |= 1 << 11;
+            octet(value, buf)?;
+        }
+        if let Some(ShortString(value)) = header.property_fields.get("correlation-id") {
+            flags |= 1 << 10;
+            shortstr(value, buf)?;
+        }
+        if let Some(ShortString(value)) = header.property_fields.get("reply-to") {
+            flags |= 1 << 9;
+            shortstr(value, buf)?;
+        }
+        if let Some(ShortString(value)) = header.property_fields.get("expiration") {
+            flags |= 1 << 8;
+            shortstr(value, buf)?;
+        }
+        if let Some(ShortString(value)) = header.property_fields.get("message-id") {
+            flags |= 1 << 7;
+            shortstr(value, buf)?;
+        }
+        if let Some(Timestamp(value)) = header.property_fields.get("timestamp") {
+            flags |= 1 << 6;
+            timestamp(value, buf)?;
+        }
+        if let Some(ShortString(value)) = header.property_fields.get("type") {
+            flags |= 1 << 5;
+            shortstr(value, buf)?;
+        }
+        if let Some(ShortString(value)) = header.property_fields.get("user-id") {
+            flags |= 1 << 4;
+            shortstr(value, buf)?;
+        }
+        if let Some(ShortString(value)) = header.property_fields.get("app-id") {
+            flags |= 1 << 3;
+            shortstr(value, buf)?;
+        }
+        if let Some(ShortString(value)) = header.property_fields.get("reserved") {
+            flags |= 1 << 2;
+            shortstr(value, buf)?;
+        }
+
+        let [a, b] = flags.to_be_bytes();
+        buf[0] = a;
+        buf[1] = b;
+
+        Ok(())
+    }
+}
+
+pub fn write_content_header(buf: &mut Vec<u8>, content_header: ContentHeader) -> Result<()> {
+    write_content_header(buf, content_header)
 }
 
 pub async fn write_frame<W>(frame: &Frame, mut w: W) -> Result<()>
