@@ -33,13 +33,19 @@ pub enum FrameType {
 }
 
 mod content_header_parse {
-    use crate::error::TransError;
-    use crate::methods::parse_helper::{octet, shortstr, table, timestamp};
-    use amqp_core::connection::ContentHeader;
-    use amqp_core::methods;
-    use amqp_core::methods::FieldValue::{FieldTable, ShortShortUInt, ShortString, Timestamp};
-    use nom::number::complete::{u16, u64};
-    use nom::number::Endianness::Big;
+    use crate::{
+        error::TransError,
+        methods::parse_helper::{octet, shortstr, table, timestamp},
+    };
+    use amqp_core::{
+        connection::ContentHeader,
+        methods,
+        methods::FieldValue::{FieldTable, ShortShortUInt, ShortString, Timestamp},
+    };
+    use nom::number::{
+        complete::{u16, u64},
+        Endianness::Big,
+    };
 
     type IResult<'a, T> = nom::IResult<&'a [u8], T, TransError>;
 

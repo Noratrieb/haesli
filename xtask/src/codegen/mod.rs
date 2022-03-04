@@ -6,13 +6,15 @@ mod write;
 
 use anyhow::{bail, Context};
 use heck::ToUpperCamelCase;
-use std::fs;
-use std::fs::File;
-use std::io::Write;
-use std::iter::Peekable;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::str::FromStr;
+use std::{
+    fs,
+    fs::File,
+    io::Write,
+    iter::Peekable,
+    path::{Path, PathBuf},
+    process::Command,
+    str::FromStr,
+};
 use strong_xml::XmlRead;
 
 #[derive(Debug, XmlRead)]

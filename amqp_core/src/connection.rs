@@ -1,12 +1,12 @@
-use crate::methods::Method;
-use crate::{methods, newtype_id, GlobalData, Handle, Queue};
+use crate::{methods, methods::Method, newtype_id, GlobalData, Queue};
 use bytes::Bytes;
-use parking_lot::Mutex;
 use smallvec::SmallVec;
-use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
-use std::net::SocketAddr;
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    fmt::{Display, Formatter},
+    net::SocketAddr,
+    sync::Arc,
+};
 use tokio::sync::mpsc;
 
 newtype_id!(pub ConnectionId);
@@ -43,16 +43,14 @@ impl Display for ChannelNum {
     }
 }
 
-pub type ConnectionHandle = Handle<Connection>;
-
 #[derive(Debug)]
 pub struct Connection {
     pub id: ConnectionId,
     pub peer_addr: SocketAddr,
     pub global_data: GlobalData,
-    pub channels: HashMap<ChannelNum, ChannelHandle>,
+    pub channels: HashMap<ChannelNum, Channel>,
     pub exclusive_queues: Vec<Queue>,
-    _method_queue: MethodSender,
+    _events: ConEventSender,
 }
 
 #[derive(Debug)]
@@ -61,25 +59,25 @@ pub enum QueuedMethod {
     WithContent(Method, ContentHeader, SmallVec<[Bytes; 1]>),
 }
 
-pub type MethodSender = mpsc::Sender<(ChannelNum, QueuedMethod)>;
-pub type MethodReceiver = mpsc::Receiver<(ChannelNum, QueuedMethod)>;
+pub type ConEventSender = mpsc::Sender<(ChannelNum, QueuedMethod)>;
+pub type ConEventReceiver = mpsc::Receiver<(ChannelNum, QueuedMethod)>;
 
 impl Connection {
     #[must_use]
-    pub fn new_handle(
+    pub fn new(
         id: ConnectionId,
         peer_addr: SocketAddr,
         global_data: GlobalData,
-        method_queue: MethodSender,
-    ) -> ConnectionHandle {
-        Arc::new(Mutex::new(Self {
+        method_queue: ConEventSender,
+    ) -> Arc<Connection> {
+        Arc::new(Self {
             id,
             peer_addr,
             global_data,
             channels: HashMap::new(),
             exclusive_queues: vec![],
-            _method_queue: method_queue,
-        }))
+            _events: method_queue,
+        })
     }
 
     pub fn close(&self) {
@@ -88,33 +86,31 @@ impl Connection {
     }
 }
 
-pub type ChannelHandle = Handle<Channel>;
-
 #[derive(Debug)]
 pub struct Channel {
     pub id: ChannelId,
     pub num: ChannelNum,
-    pub connection: ConnectionHandle,
+    pub connection: Connection,
     pub global_data: GlobalData,
-    method_queue: MethodSender,
+    method_queue: ConEventSender,
 }
 
 impl Channel {
     #[must_use]
-    pub fn new_handle(
+    pub fn new(
         id: ChannelId,
         num: ChannelNum,
-        connection: ConnectionHandle,
+        connection: Connection,
         global_data: GlobalData,
-        method_queue: MethodSender,
-    ) -> ChannelHandle {
-        Arc::new(Mutex::new(Self {
+        method_queue: ConEventSender,
+    ) -> Arc<Channel> {
+        Arc::new(Self {
             id,
             num,
             connection,
             global_data,
             method_queue,
-        }))
+        })
     }
 
     pub fn close(&self) {
@@ -130,6 +126,7 @@ impl Channel {
     }
 }
 
+/// A content frame header.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ContentHeader {
     pub class_id: u16,

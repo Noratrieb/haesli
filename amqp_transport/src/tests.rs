@@ -1,7 +1,8 @@
-use crate::frame::FrameType;
-use crate::{frame, methods};
-use amqp_core::connection::ChannelNum;
-use amqp_core::methods::{ConnectionStart, ConnectionStartOk, FieldValue, Method};
+use crate::{frame, frame::FrameType, methods};
+use amqp_core::{
+    connection::ChannelNum,
+    methods::{ConnectionStart, ConnectionStartOk, FieldValue, Method},
+};
 use std::collections::HashMap;
 
 #[tokio::test]

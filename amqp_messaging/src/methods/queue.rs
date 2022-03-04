@@ -1,16 +1,15 @@
-use amqp_core::connection::ChannelHandle;
-use amqp_core::methods::{Method, QueueBind, QueueDeclare, QueueDeclareOk};
-use amqp_core::queue::{QueueDeletion, QueueId, QueueName, RawQueue};
-use amqp_core::{amqp_todo, GlobalData};
-use parking_lot::Mutex;
-use std::sync::atomic::AtomicUsize;
-use std::sync::Arc;
 use crate::Result;
+use amqp_core::{
+    amqp_todo,
+    connection::Channel,
+    methods::{Method, QueueBind, QueueDeclare, QueueDeclareOk},
+    queue::{QueueDeletion, QueueId, QueueName, RawQueue},
+    GlobalData,
+};
+use parking_lot::Mutex;
+use std::sync::{atomic::AtomicUsize, Arc};
 
-pub fn declare(
-    channel_handle: ChannelHandle,
-    queue_declare: QueueDeclare,
-) -> Result<Method> {
+pub fn declare(channel_handle: Channel, queue_declare: QueueDeclare) -> Result<Method> {
     let QueueDeclare {
         queue: queue_name,
         passive,
@@ -70,18 +69,11 @@ pub fn declare(
     }))
 }
 
-pub async fn bind(
-    _channel_handle: ChannelHandle,
-    _queue_bind: QueueBind,
-) -> Result<Method> {
+pub async fn bind(_channel_handle: Channel, _queue_bind: QueueBind) -> Result<Method> {
     amqp_todo!();
 }
 
-fn bind_queue(
-    global_data: GlobalData,
-    _exchange: (),
-    routing_key: Arc<str>,
-) -> Result<()> {
+fn bind_queue(global_data: GlobalData, _exchange: (), routing_key: Arc<str>) -> Result<()> {
     let mut global_data = global_data.lock();
 
     // todo: don't

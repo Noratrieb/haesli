@@ -1,10 +1,9 @@
-use crate::consumer::Consumer;
-use crate::message::Message;
-use crate::{newtype, newtype_id, ChannelId};
+use crate::{consumer::Consumer, message::Message, newtype, newtype_id, ChannelId};
 use parking_lot::Mutex;
-use std::borrow::Borrow;
-use std::sync::atomic::AtomicUsize;
-use std::sync::Arc;
+use std::{
+    borrow::Borrow,
+    sync::{atomic::AtomicUsize, Arc},
+};
 
 pub type Queue = Arc<RawQueue>;
 

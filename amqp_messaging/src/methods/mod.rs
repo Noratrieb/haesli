@@ -3,20 +3,18 @@ mod publish;
 mod queue;
 
 use crate::Result;
-use amqp_core::amqp_todo;
-use amqp_core::connection::ChannelHandle;
-use amqp_core::message::Message;
-use amqp_core::methods::Method;
+use amqp_core::{amqp_todo, connection::Channel, message::Message, methods::Method};
+use std::sync::Arc;
 use tracing::{error, info};
 
-pub async fn handle_basic_publish(channel_handle: ChannelHandle, message: Message) {
+pub async fn handle_basic_publish(channel_handle: Arc<Channel>, message: Message) {
     match publish::publish(channel_handle, message).await {
         Ok(()) => {}
         Err(err) => error!(%err, "publish error occurred"),
     }
 }
 
-pub async fn handle_method(channel_handle: ChannelHandle, method: Method) -> Result<Method> {
+pub async fn handle_method(channel_handle: Arc<Channel>, method: Method) -> Result<Method> {
     info!(?method, "Handling method");
 
     let response = match method {

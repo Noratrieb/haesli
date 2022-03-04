@@ -1,5 +1,4 @@
-use crate::connection::ContentHeader;
-use crate::newtype_id;
+use crate::{connection::ContentHeader, newtype_id};
 use bytes::Bytes;
 use smallvec::SmallVec;
 use std::sync::Arc;

@@ -1,17 +1,22 @@
-use crate::error::TransError;
-use crate::methods::generated::parse::IResult;
-use amqp_core::error::{ConException, ProtocolError};
-use amqp_core::methods::{
-    Bit, FieldValue, Long, Longlong, Longstr, Octet, Short, Shortstr, Table, TableFieldName,
-    Timestamp,
+use crate::{error::TransError, methods::generated::parse::IResult};
+use amqp_core::{
+    error::{ConException, ProtocolError},
+    methods::{
+        Bit, FieldValue, Long, Longlong, Longstr, Octet, Short, Shortstr, Table, TableFieldName,
+        Timestamp,
+    },
 };
-use nom::branch::alt;
-use nom::bytes::complete::{tag, take};
-use nom::error::ErrorKind;
-use nom::multi::{count, many0};
-use nom::number::complete::{f32, f64, i16, i32, i64, i8, u16, u32, u64, u8};
-use nom::number::Endianness::Big;
-use nom::Err;
+use nom::{
+    branch::alt,
+    bytes::complete::{tag, take},
+    error::ErrorKind,
+    multi::{count, many0},
+    number::{
+        complete::{f32, f64, i16, i32, i64, i8, u16, u32, u64, u8},
+        Endianness::Big,
+    },
+    Err,
+};
 
 impl<T> nom::error::ParseError<T> for TransError {
     fn from_error_kind(_input: T, _kind: ErrorKind) -> Self {

@@ -1,13 +1,15 @@
 use crate::Result;
-use amqp_core::amqp_todo;
-use amqp_core::connection::ChannelHandle;
-use amqp_core::consumer::{Consumer, ConsumerId};
-use amqp_core::error::{ChannelException};
-use amqp_core::methods::{BasicConsume, BasicConsumeOk, Method};
+use amqp_core::{
+    amqp_todo,
+    connection::Channel,
+    consumer::{Consumer, ConsumerId},
+    error::ChannelException,
+    methods::{BasicConsume, BasicConsumeOk, Method},
+};
 use std::sync::Arc;
 use tracing::info;
 
-pub fn consume(channel_handle: ChannelHandle, basic_consume: BasicConsume) -> Result<Method> {
+pub fn consume(channel_handle: Channel, basic_consume: BasicConsume) -> Result<Method> {
     let BasicConsume {
         queue: queue_name,
         consumer_tag,

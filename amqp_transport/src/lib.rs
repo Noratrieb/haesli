@@ -10,7 +10,7 @@ mod tests;
 
 // TODO: handle big types
 
-use crate::connection::Connection;
+use crate::connection::TransportConnection;
 use amqp_core::GlobalData;
 use anyhow::Result;
 use tokio::net;
@@ -31,7 +31,7 @@ pub async fn do_thing_i_guess(global_data: GlobalData) -> Result<()> {
 
         let (method_send, method_recv) = tokio::sync::mpsc::channel(10);
 
-        let connection_handle = amqp_core::connection::Connection::new_handle(
+        let connection_handle = amqp_core::connection::ConnectionInner::new_handle(
             id,
             peer_addr,
             global_data.clone(),
@@ -43,7 +43,7 @@ pub async fn do_thing_i_guess(global_data: GlobalData) -> Result<()> {
             .connections
             .insert(id, connection_handle.clone());
 
-        let connection = Connection::new(
+        let connection = TransportConnection::new(
             id,
             stream,
             connection_handle,

@@ -1,5 +1,4 @@
-use crate::error::TransError;
-use crate::methods::FieldValue;
+use crate::{error::TransError, methods::FieldValue};
 use amqp_core::methods::{Bit, Long, Longlong, Longstr, Octet, Short, Shortstr, Table, Timestamp};
 use anyhow::Context;
 use std::io::Write;

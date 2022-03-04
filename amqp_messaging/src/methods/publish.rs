@@ -1,12 +1,14 @@
 use crate::Result;
-use amqp_core::amqp_todo;
-use amqp_core::connection::{ChannelHandle, QueuedMethod};
-use amqp_core::error::ChannelException;
-use amqp_core::message::Message;
-use amqp_core::methods::{BasicPublish, Method};
+use amqp_core::{
+    amqp_todo,
+    connection::{Channel, QueuedMethod},
+    error::ChannelException,
+    message::Message,
+    methods::{BasicPublish, Method},
+};
 use tracing::info;
 
-pub async fn publish(channel_handle: ChannelHandle, message: Message) -> Result<()> {
+pub async fn publish(channel_handle: Arc<Channel>, message: Message) -> Result<()> {
     info!(?message, "Publishing message");
 
     let global_data = channel_handle.lock().global_data.clone();

@@ -1,10 +1,12 @@
 #![warn(rust_2018_idioms)]
 
 use amqp_core::GlobalData;
-use axum::body::{boxed, Full};
-use axum::response::{Html, IntoResponse, Response};
-use axum::routing::get;
-use axum::{Json, Router};
+use axum::{
+    body::{boxed, Full},
+    response::{Html, IntoResponse, Response},
+    routing::get,
+    Json, Router,
+};
 use serde::Serialize;
 use tracing::info;
 

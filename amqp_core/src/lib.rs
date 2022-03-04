@@ -8,15 +8,14 @@ pub mod message;
 pub mod methods;
 pub mod queue;
 
-use crate::connection::{ChannelHandle, ConnectionHandle};
-use crate::queue::{Queue, QueueName};
+use crate::{
+    connection::{Channel, Connection},
+    queue::{Queue, QueueName},
+};
 use connection::{ChannelId, ConnectionId};
 use parking_lot::Mutex;
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use uuid::Uuid;
-
-type Handle<T> = Arc<Mutex<T>>;
 
 #[derive(Debug, Clone)]
 pub struct GlobalData {
@@ -44,8 +43,8 @@ impl GlobalData {
 
 #[derive(Debug)]
 pub struct GlobalDataInner {
-    pub connections: HashMap<ConnectionId, ConnectionHandle>,
-    pub channels: HashMap<ChannelId, ChannelHandle>,
+    pub connections: HashMap<ConnectionId, Connection>,
+    pub channels: HashMap<ChannelId, Channel>,
     pub queues: HashMap<QueueName, Queue>,
     /// Todo: This is just for testing and will be removed later!
     pub default_exchange: HashMap<String, Queue>,

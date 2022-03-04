@@ -1,4 +1,4 @@
-use crate::{newtype_id, ChannelHandle};
+use crate::{newtype_id, Channel};
 
 newtype_id!(
     pub ConsumerId
@@ -8,5 +8,5 @@ newtype_id!(
 pub struct Consumer {
     pub id: ConsumerId,
     pub tag: String,
-    pub channel: ChannelHandle,
+    pub channel: Channel,
 }

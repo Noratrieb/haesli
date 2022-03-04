@@ -1,6 +1,8 @@
 use crate::error::TransError;
-use amqp_core::error::ConException;
-use amqp_core::methods::{FieldValue, Method, Table};
+use amqp_core::{
+    error::ConException,
+    methods::{FieldValue, Method, Table},
+};
 use rand::Rng;
 
 mod generated;
