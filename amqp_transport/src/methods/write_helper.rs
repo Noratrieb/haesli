@@ -3,27 +3,27 @@ use amqp_core::methods::{Bit, Long, Longlong, Longstr, Octet, Short, Shortstr, T
 use anyhow::Context;
 use std::io::Write;
 
-pub fn octet<W: Write>(value: Octet, writer: &mut W) -> Result<(), TransError> {
-    writer.write_all(&[value])?;
+pub fn octet<W: Write>(value: &Octet, writer: &mut W) -> Result<(), TransError> {
+    writer.write_all(&[*value])?;
     Ok(())
 }
 
-pub fn short<W: Write>(value: Short, writer: &mut W) -> Result<(), TransError> {
+pub fn short<W: Write>(value: &Short, writer: &mut W) -> Result<(), TransError> {
     writer.write_all(&value.to_be_bytes())?;
     Ok(())
 }
 
-pub fn long<W: Write>(value: Long, writer: &mut W) -> Result<(), TransError> {
+pub fn long<W: Write>(value: &Long, writer: &mut W) -> Result<(), TransError> {
     writer.write_all(&value.to_be_bytes())?;
     Ok(())
 }
 
-pub fn longlong<W: Write>(value: Longlong, writer: &mut W) -> Result<(), TransError> {
+pub fn longlong<W: Write>(value: &Longlong, writer: &mut W) -> Result<(), TransError> {
     writer.write_all(&value.to_be_bytes())?;
     Ok(())
 }
 
-pub fn bit<W: Write>(value: &[Bit], writer: &mut W) -> Result<(), TransError> {
+pub fn bit<W: Write>(value: &[&Bit], writer: &mut W) -> Result<(), TransError> {
     // accumulate bits into bytes, starting from the least significant bit in each byte
 
     // how many bits have already been packed into `current_buf`
@@ -37,7 +37,7 @@ pub fn bit<W: Write>(value: &[Bit], writer: &mut W) -> Result<(), TransError> {
             already_filled = 0;
         }
 
-        let new_bit = (u8::from(bit)) << already_filled;
+        let new_bit = (u8::from(*bit)) << already_filled;
         current_buf |= new_bit;
         already_filled += 1;
     }
@@ -49,7 +49,7 @@ pub fn bit<W: Write>(value: &[Bit], writer: &mut W) -> Result<(), TransError> {
     Ok(())
 }
 
-pub fn shortstr<W: Write>(value: Shortstr, writer: &mut W) -> Result<(), TransError> {
+pub fn shortstr<W: Write>(value: &Shortstr, writer: &mut W) -> Result<(), TransError> {
     let len = u8::try_from(value.len()).context("shortstr too long")?;
     writer.write_all(&[len])?;
     writer.write_all(value.as_bytes())?;
@@ -57,7 +57,7 @@ pub fn shortstr<W: Write>(value: Shortstr, writer: &mut W) -> Result<(), TransEr
     Ok(())
 }
 
-pub fn longstr<W: Write>(value: Longstr, writer: &mut W) -> Result<(), TransError> {
+pub fn longstr<W: Write>(value: &Longstr, writer: &mut W) -> Result<(), TransError> {
     let len = u32::try_from(value.len()).context("longstr too long")?;
     writer.write_all(&len.to_be_bytes())?;
     writer.write_all(value.as_slice())?;
@@ -67,12 +67,12 @@ pub fn longstr<W: Write>(value: Longstr, writer: &mut W) -> Result<(), TransErro
 
 // this appears to be unused right now, but it could be used in `Basic` things?
 #[allow(dead_code)]
-pub fn timestamp<W: Write>(value: Timestamp, writer: &mut W) -> Result<(), TransError> {
+pub fn timestamp<W: Write>(value: &Timestamp, writer: &mut W) -> Result<(), TransError> {
     writer.write_all(&value.to_be_bytes())?;
     Ok(())
 }
 
-pub fn table<W: Write>(table: Table, writer: &mut W) -> Result<(), TransError> {
+pub fn table<W: Write>(table: &Table, writer: &mut W) -> Result<(), TransError> {
     let mut table_buf = Vec::new();
 
     for (field_name, value) in table {
@@ -87,17 +87,17 @@ pub fn table<W: Write>(table: Table, writer: &mut W) -> Result<(), TransError> {
     Ok(())
 }
 
-fn field_value<W: Write>(value: FieldValue, writer: &mut W) -> Result<(), TransError> {
+fn field_value<W: Write>(value: &FieldValue, writer: &mut W) -> Result<(), TransError> {
     match value {
         FieldValue::Boolean(bool) => {
-            writer.write_all(&[b't', u8::from(bool)])?;
+            writer.write_all(&[b't', u8::from(*bool)])?;
         }
         FieldValue::ShortShortInt(int) => {
             writer.write_all(b"b")?;
             writer.write_all(&int.to_be_bytes())?;
         }
         FieldValue::ShortShortUInt(int) => {
-            writer.write_all(&[b'B', int])?;
+            writer.write_all(&[b'B', *int])?;
         }
         FieldValue::ShortInt(int) => {
             writer.write_all(b"U")?;
@@ -132,7 +132,7 @@ fn field_value<W: Write>(value: FieldValue, writer: &mut W) -> Result<(), TransE
             writer.write_all(&float.to_be_bytes())?;
         }
         FieldValue::DecimalValue(scale, long) => {
-            writer.write_all(&[b'D', scale])?;
+            writer.write_all(&[b'D', *scale])?;
             writer.write_all(&long.to_be_bytes())?;
         }
         FieldValue::ShortString(str) => {
@@ -174,7 +174,7 @@ mod tests {
         let bits = [true, false, true];
 
         let mut buffer = [0u8; 1];
-        super::bit(&bits, &mut buffer.as_mut_slice()).unwrap();
+        super::bit(&bits.map(|b| &b), &mut buffer.as_mut_slice()).unwrap();
 
         assert_eq!(buffer, [0b00000101])
     }
@@ -188,7 +188,7 @@ mod tests {
         ];
 
         let mut buffer = [0u8; 2];
-        super::bit(&bits, &mut buffer.as_mut_slice()).unwrap();
+        super::bit(&bits.map(|b| &b), &mut buffer.as_mut_slice()).unwrap();
 
         assert_eq!(buffer, [0b00001111, 0b00001101]);
     }

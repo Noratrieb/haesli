@@ -890,7 +890,7 @@ pub mod write {
     use amqp_core::methods::*;
     use std::io::Write;
 
-    pub fn write_method<W: Write>(method: Method, mut writer: W) -> Result<(), TransError> {
+    pub fn write_method<W: Write>(method: &Method, mut writer: W) -> Result<(), TransError> {
         match method {
             Method::ConnectionStart(ConnectionStart {
                 version_major,

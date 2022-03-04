@@ -67,11 +67,8 @@ fn random_ser_de() {
 #[test]
 fn nested_table() {
     let table = HashMap::from([(
-        "A".to_string(),
-        FieldValue::FieldTable(HashMap::from([(
-            "B".to_string(),
-            FieldValue::Boolean(true),
-        )])),
+        "A".to_owned(),
+        FieldValue::FieldTable(HashMap::from([("B".to_owned(), FieldValue::Boolean(true))])),
     )]);
     eprintln!("{table:?}");
 

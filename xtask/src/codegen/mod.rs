@@ -305,7 +305,7 @@ pub struct {class_name}{method_name}"
         use heck::ToSnakeCase;
 
         if ident == "type" {
-            "r#type".to_string()
+            "r#type".to_owned()
         } else {
             ident.to_snake_case()
         }
@@ -336,7 +336,7 @@ pub struct {class_name}{method_name}"
     fn invariants<'a>(&self, asserts: impl Iterator<Item = &'a Assert>) -> String {
         asserts
             .map(|assert| match &*assert.check {
-                "notnull" => "must not be null".to_string(),
+                "notnull" => "must not be null".to_owned(),
                 "length" => format!("must be shorter than {}", assert.value.as_ref().unwrap()),
                 "regexp" => format!("must match `{}`", assert.value.as_ref().unwrap()),
                 "le" => {
@@ -354,7 +354,7 @@ pub struct {class_name}{method_name}"
 
     fn doc_comment(&mut self, docs: &[Doc], indent: usize) {
         for doc in docs {
-            if doc.kind == Some("grammar".to_string()) {
+            if doc.kind == Some("grammar".to_owned()) {
                 continue;
             }
             for line in doc.text.lines() {

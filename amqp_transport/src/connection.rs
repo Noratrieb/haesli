@@ -8,17 +8,17 @@ use amqp_core::{
     amqp_todo,
     connection::{
         Channel, ChannelInner, ChannelNum, ConEventReceiver, ConEventSender, Connection,
-        ConnectionId, ContentHeader, QueuedMethod,
+        ConnectionEvent, ConnectionId, ContentHeader,
     },
     message::{MessageId, RawMessage, RoutingInformation},
     methods::{
         BasicPublish, ChannelClose, ChannelCloseOk, ChannelOpenOk, ConnectionClose,
         ConnectionCloseOk, ConnectionOpen, ConnectionOpenOk, ConnectionStart, ConnectionStartOk,
-        ConnectionTune, ConnectionTuneOk, FieldValue, Method, Table,
+        ConnectionTune, ConnectionTuneOk, FieldValue, Method, ReplyCode, ReplyText, Table,
     },
     GlobalData,
 };
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use bytes::Bytes;
 use smallvec::SmallVec;
 use std::{
@@ -64,9 +64,10 @@ pub struct TransportConnection {
     channels: HashMap<ChannelNum, TransportChannel>,
     global_con: Connection,
     global_data: GlobalData,
-
-    method_queue_send: ConEventSender,
-    method_queue_recv: ConEventReceiver,
+    /// Only here to forward to other futures so they can send events
+    event_sender: ConEventSender,
+    /// To receive events from other futures
+    event_receiver: ConEventReceiver,
 }
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
@@ -102,8 +103,8 @@ impl TransportConnection {
             global_con,
             channels: HashMap::with_capacity(4),
             global_data,
-            method_queue_send,
-            method_queue_recv,
+            event_sender: method_queue_send,
+            event_receiver: method_queue_recv,
         }
     }
 
@@ -117,27 +118,12 @@ impl TransportConnection {
             }
             Err(TransError::Protocol(ProtocolError::ConException(ex))) => {
                 warn!(%ex, "Connection exception occurred. This indicates a faulty client.");
-                if let Err(err) = self
-                    .send_method(
-                        ChannelNum::zero(),
-                        Method::ConnectionClose(ConnectionClose {
-                            reply_code: ex.reply_code(),
-                            reply_text: ex.reply_text(),
-                            class_id: 0, // todo: do this
-                            method_id: 0,
-                        }),
-                    )
-                    .await
-                {
-                    error!(%ex, %err, "Failed to close connection after ConnectionException");
-                }
-                match self.recv_method().await {
-                    Ok(Method::ConnectionCloseOk(_)) => {}
-                    Ok(method) => {
-                        error!(%ex, ?method, "Received wrong method after ConnectionException")
-                    }
+                let close_result = self.close(ex.reply_code(), ex.reply_text()).await;
+
+                match close_result {
+                    Ok(()) => {}
                     Err(err) => {
-                        error!(%ex, %err, "Failed to receive Connection.CloseOk method after ConnectionException")
+                        error!(%ex, %err, "Failed to close connection after ConnectionException");
                     }
                 }
             }
@@ -161,7 +147,7 @@ impl TransportConnection {
     async fn send_method_content(
         &mut self,
         channel: ChannelNum,
-        method: Method,
+        method: &Method,
         _header: ContentHeader,
         _body: SmallVec<[Bytes; 1]>,
     ) -> Result<()> {
@@ -169,7 +155,7 @@ impl TransportConnection {
         amqp_todo!()
     }
 
-    async fn send_method(&mut self, channel: ChannelNum, method: Method) -> Result<()> {
+    async fn send_method(&mut self, channel: ChannelNum, method: &Method) -> Result<()> {
         trace!(%channel, ?method, "Sending method");
 
         let mut payload = Vec::with_capacity(64);
@@ -208,7 +194,7 @@ impl TransportConnection {
         });
 
         debug!(?start_method, "Sending Start method");
-        self.send_method(ChannelNum::zero(), start_method).await?;
+        self.send_method(ChannelNum::zero(), &start_method).await?;
 
         let start_ok = self.recv_method().await?;
         debug!(?start_ok, "Received Start-Ok");
@@ -239,7 +225,7 @@ impl TransportConnection {
         });
 
         debug!("Sending Tune method");
-        self.send_method(ChannelNum::zero(), tune_method).await?;
+        self.send_method(ChannelNum::zero(), &tune_method).await?;
 
         let tune_ok = self.recv_method().await?;
         debug!(?tune_ok, "Received Tune-Ok method");
@@ -269,8 +255,8 @@ impl TransportConnection {
 
         self.send_method(
             ChannelNum::zero(),
-            Method::ConnectionOpenOk(ConnectionOpenOk {
-                reserved_1: "".to_string(),
+            &Method::ConnectionOpenOk(ConnectionOpenOk {
+                reserved_1: "".to_owned(),
             }),
         )
         .await?;
@@ -285,10 +271,11 @@ impl TransportConnection {
                     let frame = frame?;
                     self.handle_frame(frame).await?;
                 }
-                queued_method = self.method_queue_recv.recv() => {
+                queued_method = self.event_receiver.recv() => {
                     match queued_method {
-                        Some((channel, QueuedMethod::Normal(method))) => self.send_method(channel, method).await?,
-                        Some((channel, QueuedMethod::WithContent(method, header, body))) => self.send_method_content(channel, method, header, body).await?,
+                        Some(ConnectionEvent::Method(channel, method)) => self.send_method(channel, &method).await?,
+                        Some(ConnectionEvent::MethodContent(channel, method, header, body)) => self.send_method_content(channel, &method, header, body).await?,
+                        Some(ConnectionEvent::Shutdown) => return self.close(0, "".to_owned()).await,
                         None => {}
                     }
                 }
@@ -315,7 +302,7 @@ impl TransportConnection {
                 warn!(%ex, "Channel exception occurred");
                 self.send_method(
                     channel,
-                    Method::ChannelClose(ChannelClose {
+                    &Method::ChannelClose(ChannelClose {
                         reply_code: ex.reply_code(),
                         reply_text: ex.reply_text(),
                         class_id: 0, // todo: do this
@@ -349,7 +336,7 @@ impl TransportConnection {
                 info!(%reply_code, %reply_text, %class_id, %method_id, "Closing connection");
                 self.send_method(
                     ChannelNum::zero(),
-                    Method::ConnectionCloseOk(ConnectionCloseOk),
+                    &Method::ConnectionCloseOk(ConnectionCloseOk),
                 )
                 .await?;
                 return Err(ProtocolError::GracefullyClosed.into());
@@ -375,7 +362,7 @@ impl TransportConnection {
                 // maybe this might become an `Option` in the future
                 let return_method =
                     amqp_messaging::methods::handle_method(channel_handle, method).await?;
-                self.send_method(frame.channel, return_method).await?;
+                self.send_method(frame.channel, &return_method).await?;
             }
         }
         Ok(())
@@ -489,7 +476,7 @@ impl TransportConnection {
             channel_num,
             self.global_con.clone(),
             self.global_data.clone(),
-            self.method_queue_send.clone(),
+            self.event_sender.clone(),
         );
 
         let channel = TransportChannel {
@@ -519,7 +506,7 @@ impl TransportConnection {
 
         self.send_method(
             channel_num,
-            Method::ChannelOpenOk(ChannelOpenOk {
+            &Method::ChannelOpenOk(ChannelOpenOk {
                 reserved_1: Vec::new(),
             }),
         )
@@ -539,7 +526,7 @@ impl TransportConnection {
 
             if let Some(channel) = self.channels.remove(&channel_id) {
                 drop(channel);
-                self.send_method(channel_id, Method::ChannelCloseOk(ChannelCloseOk))
+                self.send_method(channel_id, &Method::ChannelCloseOk(ChannelCloseOk))
                     .await?;
             } else {
                 return Err(ConException::Todo.into());
@@ -598,6 +585,33 @@ impl TransportConnection {
             Err(ProtocolError::ProtocolNegotiationFailed.into())
         }
     }
+
+    async fn close(&mut self, reply_code: ReplyCode, reply_text: ReplyText) -> Result<()> {
+        self.send_method(
+            ChannelNum::zero(),
+            &Method::ConnectionClose(ConnectionClose {
+                reply_code,
+                reply_text,
+                class_id: 0, // todo: do this
+                method_id: 0,
+            }),
+        )
+        .await?;
+
+        match self.recv_method().await {
+            Ok(Method::ConnectionCloseOk(_)) => Ok(()),
+            Ok(method) => {
+                return Err(TransError::Other(anyhow!(
+                    "Received wrong method after closing, method: {method:?}"
+                )));
+            }
+            Err(err) => {
+                return Err(TransError::Other(anyhow!(
+                    "Failed to receive Connection.CloseOk method after closing, err: {err}"
+                )));
+            }
+        }
+    }
 }
 
 impl Drop for TransportConnection {
@@ -619,12 +633,12 @@ fn server_properties(host: SocketAddr) -> Table {
 
     let host_str = host.ip().to_string();
     HashMap::from([
-        ("host".to_string(), ls(&host_str)),
-        ("product".to_string(), ls("no name yet")),
-        ("version".to_string(), ls("0.1.0")),
-        ("platform".to_string(), ls("microsoft linux")),
-        ("copyright".to_string(), ls("MIT")),
-        ("information".to_string(), ls("hello reader")),
-        ("uwu".to_string(), ls("owo")),
+        ("host".to_owned(), ls(&host_str)),
+        ("product".to_owned(), ls("no name yet")),
+        ("version".to_owned(), ls("0.1.0")),
+        ("platform".to_owned(), ls("microsoft linux")),
+        ("copyright".to_owned(), ls("MIT")),
+        ("information".to_owned(), ls("hello reader")),
+        ("uwu".to_owned(), ls("owo")),
     ])
 }

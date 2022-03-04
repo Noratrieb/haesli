@@ -11,7 +11,7 @@ use crate::error::TransError;
 use crate::methods::write_helper::*;
 use std::io::Write;
 
-pub fn write_method<W: Write>(method: Method, mut writer: W) -> Result<(), TransError> {{
+pub fn write_method<W: Write>(method: &Method, mut writer: W) -> Result<(), TransError> {{
     match method {{"
         )
         .ok();

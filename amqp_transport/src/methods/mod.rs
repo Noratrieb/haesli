@@ -20,10 +20,10 @@ pub fn parse_method(payload: &[u8]) -> Result<Method, TransError> {
     match nom_result {
         Ok(([], method)) => Ok(method),
         Ok((_, _)) => {
-            Err(ConException::SyntaxError(vec!["could not consume all input".to_string()]).into())
+            Err(ConException::SyntaxError(vec!["could not consume all input".to_owned()]).into())
         }
         Err(nom::Err::Incomplete(_)) => {
-            Err(ConException::SyntaxError(vec!["there was not enough data".to_string()]).into())
+            Err(ConException::SyntaxError(vec!["there was not enough data".to_owned()]).into())
         }
         Err(nom::Err::Failure(err) | nom::Err::Error(err)) => Err(err),
     }

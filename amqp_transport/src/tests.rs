@@ -12,7 +12,7 @@ async fn write_start_ok_frame() {
         version_major: 0,
         version_minor: 9,
         server_properties: HashMap::from([(
-            "product".to_string(),
+            "product".to_owned(),
             FieldValue::LongString("no name yet".into()),
         )]),
         mechanisms: "PLAIN".into(),
@@ -145,41 +145,38 @@ fn read_start_ok_payload() {
         Method::ConnectionStartOk(ConnectionStartOk {
             client_properties: HashMap::from([
                 (
-                    "product".to_string(),
+                    "product".to_owned(),
                     FieldValue::LongString("Pika Python Client Library".into())
                 ),
                 (
-                    "platform".to_string(),
+                    "platform".to_owned(),
                     FieldValue::LongString("Python 3.8.10".into())
                 ),
                 (
-                    "capabilities".to_string(),
+                    "capabilities".to_owned(),
                     FieldValue::FieldTable(HashMap::from([
                         (
-                            "authentication_failure_close".to_string(),
+                            "authentication_failure_close".to_owned(),
                             FieldValue::Boolean(true)
                         ),
-                        ("basic.nack".to_string(), FieldValue::Boolean(true)),
-                        ("connection.blocked".to_string(), FieldValue::Boolean(true)),
+                        ("basic.nack".to_owned(), FieldValue::Boolean(true)),
+                        ("connection.blocked".to_owned(), FieldValue::Boolean(true)),
                         (
-                            "consumer_cancel_notify".to_string(),
+                            "consumer_cancel_notify".to_owned(),
                             FieldValue::Boolean(true)
                         ),
-                        ("publisher_confirms".to_string(), FieldValue::Boolean(true)),
+                        ("publisher_confirms".to_owned(), FieldValue::Boolean(true)),
                     ]))
                 ),
                 (
-                    "information".to_string(),
+                    "information".to_owned(),
                     FieldValue::LongString("See http://pika.rtfd.org".into())
                 ),
-                (
-                    "version".to_string(),
-                    FieldValue::LongString("1.1.0".into())
-                )
+                ("version".to_owned(), FieldValue::LongString("1.1.0".into()))
             ]),
-            mechanism: "PLAIN".to_string(),
+            mechanism: "PLAIN".to_owned(),
             response: "\x00admin\x00".into(),
-            locale: "en_US".to_string()
+            locale: "en_US".to_owned()
         })
     );
 }

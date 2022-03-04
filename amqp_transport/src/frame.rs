@@ -119,10 +119,10 @@ pub fn parse_content_header(input: &[u8]) -> Result<ContentHeader> {
     match content_header_parse::header(input) {
         Ok(([], header)) => Ok(header),
         Ok((_, _)) => {
-            Err(ConException::SyntaxError(vec!["could not consume all input".to_string()]).into())
+            Err(ConException::SyntaxError(vec!["could not consume all input".to_owned()]).into())
         }
         Err(nom::Err::Incomplete(_)) => {
-            Err(ConException::SyntaxError(vec!["there was not enough data".to_string()]).into())
+            Err(ConException::SyntaxError(vec!["there was not enough data".to_owned()]).into())
         }
         Err(nom::Err::Failure(err) | nom::Err::Error(err)) => Err(err),
     }

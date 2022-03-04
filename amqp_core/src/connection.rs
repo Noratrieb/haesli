@@ -53,17 +53,18 @@ pub struct ConnectionInner {
     pub global_data: GlobalData,
     pub channels: Mutex<HashMap<ChannelNum, Channel>>,
     pub exclusive_queues: Vec<Queue>,
-    _events: ConEventSender,
+    pub event_sender: ConEventSender,
 }
 
 #[derive(Debug)]
-pub enum QueuedMethod {
-    Normal(Method),
-    WithContent(Method, ContentHeader, SmallVec<[Bytes; 1]>),
+pub enum ConnectionEvent {
+    Shutdown,
+    Method(ChannelNum, Box<Method>),
+    MethodContent(ChannelNum, Box<Method>, ContentHeader, SmallVec<[Bytes; 1]>),
 }
 
-pub type ConEventSender = mpsc::Sender<(ChannelNum, QueuedMethod)>;
-pub type ConEventReceiver = mpsc::Receiver<(ChannelNum, QueuedMethod)>;
+pub type ConEventSender = mpsc::Sender<ConnectionEvent>;
+pub type ConEventReceiver = mpsc::Receiver<ConnectionEvent>;
 
 impl ConnectionInner {
     #[must_use]
@@ -71,7 +72,7 @@ impl ConnectionInner {
         id: ConnectionId,
         peer_addr: SocketAddr,
         global_data: GlobalData,
-        method_queue: ConEventSender,
+        event_sender: ConEventSender,
     ) -> Connection {
         Arc::new(Self {
             id,
@@ -79,7 +80,7 @@ impl ConnectionInner {
             global_data,
             channels: Mutex::new(HashMap::new()),
             exclusive_queues: vec![],
-            _events: method_queue,
+            event_sender,
         })
     }
 
@@ -97,7 +98,7 @@ pub struct ChannelInner {
     pub num: ChannelNum,
     pub connection: Connection,
     pub global_data: GlobalData,
-    method_queue: ConEventSender,
+    pub event_sender: ConEventSender,
 }
 
 impl ChannelInner {
@@ -114,20 +115,13 @@ impl ChannelInner {
             num,
             connection,
             global_data,
-            method_queue,
+            event_sender: method_queue,
         })
     }
 
     pub fn close(&self) {
         let mut global_data = self.global_data.lock();
         global_data.channels.remove(&self.id);
-    }
-
-    pub fn queue_method(&self, method: QueuedMethod) {
-        // todo: this is a horrible hack around the lock chaos
-        self.method_queue
-            .try_send((self.num, method))
-            .expect("could not send method to channel, RIP");
     }
 }
 
