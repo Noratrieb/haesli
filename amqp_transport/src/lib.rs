@@ -3,7 +3,7 @@
 mod connection;
 mod error;
 mod frame;
-pub mod methods;
+mod methods;
 mod sasl;
 #[cfg(test)]
 mod tests;
@@ -31,7 +31,7 @@ pub async fn do_thing_i_guess(global_data: GlobalData) -> Result<()> {
 
         let (method_send, method_recv) = tokio::sync::mpsc::channel(10);
 
-        let connection_handle = amqp_core::connection::ConnectionInner::new_handle(
+        let connection_handle = amqp_core::connection::ConnectionInner::new(
             id,
             peer_addr,
             global_data.clone(),

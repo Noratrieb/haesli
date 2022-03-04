@@ -8,10 +8,10 @@ use amqp_core::{
 };
 use tracing::info;
 
-pub async fn publish(channel_handle: Arc<Channel>, message: Message) -> Result<()> {
+pub async fn publish(channel_handle: Channel, message: Message) -> Result<()> {
     info!(?message, "Publishing message");
 
-    let global_data = channel_handle.lock().global_data.clone();
+    let global_data = channel_handle.global_data.clone();
 
     let routing = &message.routing;
 
@@ -39,14 +39,11 @@ pub async fn publish(channel_handle: Arc<Channel>, message: Message) -> Result<(
                 immediate: false,
             });
 
-            consumer
-                .channel
-                .lock()
-                .queue_method(QueuedMethod::WithContent(
-                    method,
-                    message.header.clone(),
-                    message.content.clone(),
-                ));
+            consumer.channel.queue_method(QueuedMethod::WithContent(
+                method,
+                message.header.clone(),
+                message.content.clone(),
+            ));
         }
     }
 

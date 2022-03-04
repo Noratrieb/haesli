@@ -9,7 +9,7 @@ use amqp_core::{
 use std::sync::Arc;
 use tracing::info;
 
-pub fn consume(channel_handle: Channel, basic_consume: BasicConsume) -> Result<Method> {
+pub fn consume(channel: Channel, basic_consume: BasicConsume) -> Result<Method> {
     let BasicConsume {
         queue: queue_name,
         consumer_tag,
@@ -24,10 +24,7 @@ pub fn consume(channel_handle: Channel, basic_consume: BasicConsume) -> Result<M
         amqp_todo!();
     }
 
-    let global_data = {
-        let channel = channel_handle.lock();
-        channel.global_data.clone()
-    };
+    let global_data = channel.global_data.clone();
 
     let consumer_tag = if consumer_tag.is_empty() {
         amqp_core::random_uuid().to_string()
@@ -40,7 +37,7 @@ pub fn consume(channel_handle: Channel, basic_consume: BasicConsume) -> Result<M
     let consumer = Consumer {
         id: ConsumerId::random(),
         tag: consumer_tag.clone(),
-        channel: Arc::clone(&channel_handle),
+        channel: Arc::clone(&channel),
     };
 
     let queue = global_data

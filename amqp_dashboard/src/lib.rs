@@ -82,23 +82,18 @@ async fn get_data(global_data: GlobalData) -> impl IntoResponse {
     let connections = global_data
         .connections
         .values()
-        .map(|conn| {
-            let conn = conn.lock();
-            Connection {
-                id: conn.id.to_string(),
-                peer_addr: conn.peer_addr.to_string(),
-                channels: conn
-                    .channels
-                    .values()
-                    .map(|chan| {
-                        let chan = chan.lock();
-                        Channel {
-                            id: chan.id.to_string(),
-                            number: chan.num.num(),
-                        }
-                    })
-                    .collect(),
-            }
+        .map(|conn| Connection {
+            id: conn.id.to_string(),
+            peer_addr: conn.peer_addr.to_string(),
+            channels: conn
+                .channels
+                .lock()
+                .values()
+                .map(|chan| Channel {
+                    id: chan.id.to_string(),
+                    number: chan.num.num(),
+                })
+                .collect(),
         })
         .collect();
 

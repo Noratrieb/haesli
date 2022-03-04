@@ -1,5 +1,6 @@
 use crate::{methods, methods::Method, newtype_id, GlobalData, Queue};
 use bytes::Bytes;
+use parking_lot::Mutex;
 use smallvec::SmallVec;
 use std::{
     collections::HashMap,
@@ -43,12 +44,14 @@ impl Display for ChannelNum {
     }
 }
 
+pub type Connection = Arc<ConnectionInner>;
+
 #[derive(Debug)]
-pub struct Connection {
+pub struct ConnectionInner {
     pub id: ConnectionId,
     pub peer_addr: SocketAddr,
     pub global_data: GlobalData,
-    pub channels: HashMap<ChannelNum, Channel>,
+    pub channels: Mutex<HashMap<ChannelNum, Channel>>,
     pub exclusive_queues: Vec<Queue>,
     _events: ConEventSender,
 }
@@ -62,19 +65,19 @@ pub enum QueuedMethod {
 pub type ConEventSender = mpsc::Sender<(ChannelNum, QueuedMethod)>;
 pub type ConEventReceiver = mpsc::Receiver<(ChannelNum, QueuedMethod)>;
 
-impl Connection {
+impl ConnectionInner {
     #[must_use]
     pub fn new(
         id: ConnectionId,
         peer_addr: SocketAddr,
         global_data: GlobalData,
         method_queue: ConEventSender,
-    ) -> Arc<Connection> {
+    ) -> Connection {
         Arc::new(Self {
             id,
             peer_addr,
             global_data,
-            channels: HashMap::new(),
+            channels: Mutex::new(HashMap::new()),
             exclusive_queues: vec![],
             _events: method_queue,
         })
@@ -86,8 +89,10 @@ impl Connection {
     }
 }
 
+pub type Channel = Arc<ChannelInner>;
+
 #[derive(Debug)]
-pub struct Channel {
+pub struct ChannelInner {
     pub id: ChannelId,
     pub num: ChannelNum,
     pub connection: Connection,
@@ -95,7 +100,7 @@ pub struct Channel {
     method_queue: ConEventSender,
 }
 
-impl Channel {
+impl ChannelInner {
     #[must_use]
     pub fn new(
         id: ChannelId,
@@ -103,7 +108,7 @@ impl Channel {
         connection: Connection,
         global_data: GlobalData,
         method_queue: ConEventSender,
-    ) -> Arc<Channel> {
+    ) -> Channel {
         Arc::new(Self {
             id,
             num,

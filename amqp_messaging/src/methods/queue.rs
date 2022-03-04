@@ -9,7 +9,7 @@ use amqp_core::{
 use parking_lot::Mutex;
 use std::sync::{atomic::AtomicUsize, Arc};
 
-pub fn declare(channel_handle: Channel, queue_declare: QueueDeclare) -> Result<Method> {
+pub fn declare(channel: Channel, queue_declare: QueueDeclare) -> Result<Method> {
     let QueueDeclare {
         queue: queue_name,
         passive,
@@ -34,7 +34,6 @@ pub fn declare(channel_handle: Channel, queue_declare: QueueDeclare) -> Result<M
     }
 
     let global_data = {
-        let channel = channel_handle.lock();
         let global_data = channel.global_data.clone();
 
         let id = QueueId::random();

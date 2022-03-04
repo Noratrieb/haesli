@@ -7,8 +7,8 @@ use crate::{
 use amqp_core::{
     amqp_todo,
     connection::{
-        Channel, ChannelNum, ConEventReceiver, ConEventSender, Connection, ConnectionId,
-        ContentHeader, QueuedMethod,
+        Channel, ChannelInner, ChannelNum, ConEventReceiver, ConEventSender, Connection,
+        ConnectionId, ContentHeader, QueuedMethod,
     },
     message::{MessageId, RawMessage, RoutingInformation},
     methods::{
@@ -44,11 +44,11 @@ const CHANNEL_MAX: u16 = 0;
 const FRAME_SIZE_MAX: u32 = 0;
 const HEARTBEAT_DELAY: u16 = 0;
 
-const BASIC_CLASS_ID: ChannelNum = ChannelNum::new(60);
+const BASIC_CLASS_ID: u16 = 60;
 
 pub struct TransportChannel {
     /// A handle to the global channel representation. Used to remove the channel when it's dropped
-    global_chan: Arc<Channel>,
+    global_chan: Channel,
     /// The current status of the channel, whether it has sent a method that expects a body
     status: ChannelStatus,
 }
@@ -62,7 +62,7 @@ pub struct TransportConnection {
     /// When the next heartbeat expires
     next_timeout: Pin<Box<time::Sleep>>,
     channels: HashMap<ChannelNum, TransportChannel>,
-    global_con: Arc<Connection>,
+    global_con: Connection,
     global_data: GlobalData,
 
     method_queue_send: ConEventSender,
@@ -73,7 +73,7 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 
 enum ChannelStatus {
     Default,
-    NeedHeader(ChannelNum, Box<Method>),
+    NeedHeader(u16, Box<Method>),
     NeedsBody(Box<Method>, ContentHeader, SmallVec<[Bytes; 1]>),
 }
 
@@ -87,7 +87,7 @@ impl TransportConnection {
     pub fn new(
         id: ConnectionId,
         stream: TcpStream,
-        connection_handle: Arc<GConnection>,
+        global_con: Connection,
         global_data: GlobalData,
         method_queue_send: ConEventSender,
         method_queue_recv: ConEventReceiver,
@@ -99,7 +99,7 @@ impl TransportConnection {
             heartbeat_delay: HEARTBEAT_DELAY,
             channel_max: CHANNEL_MAX,
             next_timeout: Box::pin(time::sleep(DEFAULT_TIMEOUT)),
-            global_con: connection_handle,
+            global_con,
             channels: HashMap::with_capacity(4),
             global_data,
             method_queue_send,
@@ -144,8 +144,7 @@ impl TransportConnection {
             Err(err) => error!(%err, "Error during processing of connection"),
         }
 
-        let connection_handle = self.global_con.lock();
-        connection_handle.close();
+        // global connection is closed on drop
     }
 
     pub async fn process_connection(&mut self) -> Result<()> {
@@ -485,7 +484,7 @@ impl TransportConnection {
 
     async fn channel_open(&mut self, channel_num: ChannelNum) -> Result<()> {
         let id = rand::random();
-        let channel_handle = amqp_core::connection::c::new_handle(
+        let channel_handle = ChannelInner::new(
             id,
             channel_num,
             self.global_con.clone(),
@@ -511,8 +510,8 @@ impl TransportConnection {
                 .connections
                 .get_mut(&self.id)
                 .unwrap()
-                .lock()
                 .channels
+                .lock()
                 .insert(channel_num, channel_handle);
         }
 
@@ -603,13 +602,13 @@ impl TransportConnection {
 
 impl Drop for TransportConnection {
     fn drop(&mut self) {
-        self.global_con.lock().close();
+        self.global_con.close();
     }
 }
 
 impl Drop for TransportChannel {
     fn drop(&mut self) {
-        self.global_chan.lock().close();
+        self.global_chan.close();
     }
 }
 
