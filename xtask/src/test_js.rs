@@ -1,25 +1,35 @@
 use crate::project_root;
 use anyhow::{ensure, Context, Result};
-use std::{path::Path, process::Command};
+use std::{path::Path, process::Command, thread::sleep, time::Duration};
 
 pub fn main() -> Result<()> {
     let project_root = project_root();
     let test_js_root = project_root.join("test-js");
 
-    let mut amqp_server = Command::new("cargo")
-        .arg("run")
+    println!("$ cargo build");
+    let status = Command::new("cargo")
+        .arg("build")
+        .status()
+        .context("cargo build")?;
+    ensure!(status.success(), "cargo build failed");
+
+    let mut amqp_server = Command::new("target/debug/amqp")
         .env("RUST_LOG", "trace")
         .spawn()
-        .context("`cargo run` amqp")?;
+        .context("target/debug/amqp run")?;
+
+    // give it time for startup
+    sleep(Duration::from_secs(1));
 
     let test_result = run_js(&test_js_root);
 
-    amqp_server.kill()?;
+    amqp_server.kill().context("killing amqp server")?;
 
     test_result
 }
 
 fn run_js(test_js_root: &Path) -> Result<()> {
+    println!("$ yarn");
     let status = Command::new("yarn")
         .current_dir(&test_js_root)
         .status()
