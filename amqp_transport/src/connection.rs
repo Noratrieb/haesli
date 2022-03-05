@@ -154,7 +154,6 @@ impl TransportConnection {
 
         let mut header_buf = Vec::new();
         frame::write_content_header(&mut header_buf, &header)?;
-        warn!(?header, ?header_buf, "Sending content header");
         frame::write_frame(&mut self.stream, FrameType::Header, channel, &header_buf).await?;
 
         self.send_bodies(channel, body).await
