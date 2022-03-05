@@ -144,8 +144,9 @@ mod content_header_write {
             Table,
         },
     };
+    use std::io::Write;
 
-    pub fn write_content_header(buf: &mut Vec<u8>, header: &ContentHeader) -> Result<()> {
+    pub fn write_content_header<W: Write>(buf: &mut W, header: &ContentHeader) -> Result<()> {
         short(&header.class_id, buf)?;
         short(&header.weight, buf)?;
         longlong(&header.body_size, buf)?;
@@ -153,8 +154,12 @@ mod content_header_write {
         write_content_header_props(buf, &header.property_fields)
     }
 
-    pub fn write_content_header_props(buf: &mut Vec<u8>, header: &Table) -> Result<()> {
+    pub fn write_content_header_props<W: Write>(writer: &mut W, header: &Table) -> Result<()> {
         let mut flags = 0_u16;
+        // todo: don't allocate for no reason here
+        let mut temp_buf = Vec::new();
+        let buf = &mut temp_buf;
+
         buf.extend_from_slice(&flags.to_be_bytes()); // placeholder
 
         if let Some(ShortString(value)) = header.get("content-type") {
@@ -217,6 +222,8 @@ mod content_header_write {
         let [a, b] = flags.to_be_bytes();
         buf[0] = a;
         buf[1] = b;
+
+        writer.write_all(&temp_buf)?;
 
         Ok(())
     }

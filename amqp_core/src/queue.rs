@@ -1,7 +1,12 @@
-use crate::{consumer::Consumer, message::Message, newtype, newtype_id, ChannelId};
+use crate::{
+    consumer::{Consumer, ConsumerId},
+    message::Message,
+    newtype, newtype_id, ChannelId,
+};
 use parking_lot::Mutex;
 use std::{
     borrow::Borrow,
+    collections::HashMap,
     sync::{atomic::AtomicUsize, Arc},
 };
 
@@ -32,7 +37,7 @@ pub struct RawQueue {
     /// The queue can always be manually deleted.
     /// If auto-delete is enabled, it keeps track of the consumer count.
     pub deletion: QueueDeletion,
-    pub consumers: Mutex<Vec<Consumer>>,
+    pub consumers: Mutex<HashMap<ConsumerId, Consumer>>,
 }
 
 #[derive(Debug)]

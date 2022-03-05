@@ -2,7 +2,7 @@ use crate::Result;
 use amqp_core::{
     amqp_todo,
     connection::{Channel, ConnectionEvent},
-    error::ChannelException,
+    error::{ChannelException, ConException, ProtocolError},
     message::Message,
     methods::{BasicDeliver, Method},
 };
@@ -30,7 +30,7 @@ pub async fn publish(channel_handle: Channel, message: Message) -> Result<()> {
         // todo: we just send it to the consumer directly and ignore it if the consumer doesn't exist
         // consuming is hard, but this should work *for now*
         let consumers = queue.consumers.lock();
-        if let Some(consumer) = consumers.first() {
+        if let Some(consumer) = consumers.values().next() {
             let method = Box::new(Method::BasicDeliver(BasicDeliver {
                 consumer_tag: consumer.tag.clone(),
                 delivery_tag: 0,
@@ -48,7 +48,7 @@ pub async fn publish(channel_handle: Channel, message: Message) -> Result<()> {
                     message.header.clone(),
                     message.content.clone(),
                 ))
-                .unwrap();
+                .map_err(|_| ConException::InternalError)?;
         }
     }
 

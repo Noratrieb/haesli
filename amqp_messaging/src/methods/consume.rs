@@ -34,18 +34,21 @@ pub fn consume(channel: Channel, basic_consume: BasicConsume) -> Result<Method> 
 
     let mut global_data = global_data.lock();
 
-    let consumer = Consumer {
-        id: ConsumerId::random(),
-        tag: consumer_tag.clone(),
-        channel: Arc::clone(&channel),
-    };
-
     let queue = global_data
         .queues
         .get_mut(queue_name.as_str())
         .ok_or(ChannelException::NotFound)?;
 
-    queue.consumers.lock().push(consumer);
+    let consumer = Consumer {
+        id: ConsumerId::random(),
+        tag: consumer_tag.clone(),
+        channel: Arc::clone(&channel),
+        queue: Arc::clone(queue),
+    };
+
+    queue.consumers.lock().insert(consumer.id, consumer.clone());
+
+    channel.connection.consuming.lock().push(consumer);
 
     info!(%queue_name, %consumer_tag, "Consumer started consuming");
 

@@ -26,12 +26,19 @@ function maybeDone() {
     for (const success of successes) {
       console.log(`✔️ Test ${success} successful`);
     }
-    for (const { name, stderr } of failures) {
+    for (const { name, stdout, stderr } of failures) {
       console.log(
-        `------------------- stderr test ${name} -------------------`
+        `------------------- start stdout test ${name} -------------------`
+      );
+      console.log(stdout);
+      console.log(
+        `-------------------- end stdout test ${name} --------------------`
+      );
+      console.log(
+        `------------------- start stderr test ${name} -------------------`
       );
       console.log(stderr);
-      console.log(`------------------- stderr test ${name} -------------------
+      console.log(`-------------------- end stderr test ${name} --------------------
 ❌ Test ${name} failed`);
     }
 
@@ -42,11 +49,11 @@ function maybeDone() {
 }
 
 function runTest(path, name) {
-  childProcess.exec(`node ${path}`, {}, (error, _, stderr) => {
+  childProcess.exec(`node ${path}`, {}, (error, stdout, stderr) => {
     if (!error) {
       successes.push(name);
     } else {
-      failures.push({ name, stderr });
+      failures.push({ name, stdout, stderr });
     }
     done += 1;
     maybeDone();

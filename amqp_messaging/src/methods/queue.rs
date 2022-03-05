@@ -53,7 +53,11 @@ pub fn declare(channel: Channel, queue_declare: QueueDeclare) -> Result<Method> 
 
         {
             let mut global_data_lock = global_data.lock();
-            global_data_lock.queues.insert(queue_name.clone(), queue);
+
+            global_data_lock
+                .queues
+                .entry(queue_name.clone())
+                .or_insert(queue);
         }
 
         global_data

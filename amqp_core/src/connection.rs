@@ -1,4 +1,4 @@
-use crate::{methods, methods::Method, newtype_id, GlobalData, Queue};
+use crate::{consumer::Consumer, methods, methods::Method, newtype_id, GlobalData, Queue};
 use bytes::Bytes;
 use parking_lot::Mutex;
 use smallvec::SmallVec;
@@ -54,6 +54,7 @@ pub struct ConnectionInner {
     pub channels: Mutex<HashMap<ChannelNum, Channel>>,
     pub exclusive_queues: Vec<Queue>,
     pub event_sender: ConEventSender,
+    pub consuming: Mutex<Vec<Consumer>>,
 }
 
 #[derive(Debug)]
@@ -78,15 +79,22 @@ impl ConnectionInner {
             id,
             peer_addr,
             global_data,
-            channels: Mutex::new(HashMap::new()),
+            channels: Mutex::default(),
             exclusive_queues: vec![],
             event_sender,
+            consuming: Mutex::default(),
         })
     }
 
     pub fn close(&self) {
+        // todo: make a better system that prevents all leaks
+
         let mut global_data = self.global_data.lock();
         global_data.connections.remove(&self.id);
+        self.consuming
+            .lock()
+            .iter()
+            .for_each(|consumer| drop(consumer.queue.consumers.lock().remove(&consumer.id)));
     }
 }
 

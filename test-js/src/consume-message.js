@@ -21,3 +21,8 @@ await channel.sendToQueue('consume-queue-1415', Buffer.from('STOP'));
 console.log('Sent STOP message to queue');
 
 await consumePromise;
+
+console.log('Received STOP!');
+
+await channel.close();
+await connection.close();
