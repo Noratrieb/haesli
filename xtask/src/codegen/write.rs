@@ -49,7 +49,7 @@ pub fn write_method<W: Write>(method: &Method, mut writer: W) -> Result<(), Tran
                         write!(self.output, "            bit(&[").ok();
                         for field in fields_with_bit {
                             let field_name = self.snake_case(&field.name);
-                            write!(self.output, "{field_name}, ").ok();
+                            write!(self.output, "*{field_name}, ").ok();
                         }
                         writeln!(self.output, "], &mut writer)?;").ok();
                     } else {

@@ -954,7 +954,7 @@ pub mod write {
                 writer.write_all(&[0, 10, 0, 40])?;
                 shortstr(virtual_host, &mut writer)?;
                 shortstr(reserved_1, &mut writer)?;
-                bit(&[reserved_2], &mut writer)?;
+                bit(&[*reserved_2], &mut writer)?;
             }
             Method::ConnectionOpenOk(ConnectionOpenOk { reserved_1 }) => {
                 writer.write_all(&[0, 10, 0, 41])?;
@@ -985,11 +985,11 @@ pub mod write {
             }
             Method::ChannelFlow(ChannelFlow { active }) => {
                 writer.write_all(&[0, 20, 0, 20])?;
-                bit(&[active], &mut writer)?;
+                bit(&[*active], &mut writer)?;
             }
             Method::ChannelFlowOk(ChannelFlowOk { active }) => {
                 writer.write_all(&[0, 20, 0, 21])?;
-                bit(&[active], &mut writer)?;
+                bit(&[*active], &mut writer)?;
             }
             Method::ChannelClose(ChannelClose {
                 reply_code,
@@ -1022,7 +1022,7 @@ pub mod write {
                 shortstr(exchange, &mut writer)?;
                 shortstr(r#type, &mut writer)?;
                 bit(
-                    &[passive, durable, reserved_2, reserved_3, no_wait],
+                    &[*passive, *durable, *reserved_2, *reserved_3, *no_wait],
                     &mut writer,
                 )?;
                 table(arguments, &mut writer)?;
@@ -1039,7 +1039,7 @@ pub mod write {
                 writer.write_all(&[0, 40, 0, 20])?;
                 short(reserved_1, &mut writer)?;
                 shortstr(exchange, &mut writer)?;
-                bit(&[if_unused, no_wait], &mut writer)?;
+                bit(&[*if_unused, *no_wait], &mut writer)?;
             }
             Method::ExchangeDeleteOk(ExchangeDeleteOk {}) => {
                 writer.write_all(&[0, 40, 0, 21])?;
@@ -1058,7 +1058,7 @@ pub mod write {
                 short(reserved_1, &mut writer)?;
                 shortstr(queue, &mut writer)?;
                 bit(
-                    &[passive, durable, exclusive, auto_delete, no_wait],
+                    &[*passive, *durable, *exclusive, *auto_delete, *no_wait],
                     &mut writer,
                 )?;
                 table(arguments, &mut writer)?;
@@ -1086,7 +1086,7 @@ pub mod write {
                 shortstr(queue, &mut writer)?;
                 shortstr(exchange, &mut writer)?;
                 shortstr(routing_key, &mut writer)?;
-                bit(&[no_wait], &mut writer)?;
+                bit(&[*no_wait], &mut writer)?;
                 table(arguments, &mut writer)?;
             }
             Method::QueueBindOk(QueueBindOk {}) => {
@@ -1117,7 +1117,7 @@ pub mod write {
                 writer.write_all(&[0, 50, 0, 30])?;
                 short(reserved_1, &mut writer)?;
                 shortstr(queue, &mut writer)?;
-                bit(&[no_wait], &mut writer)?;
+                bit(&[*no_wait], &mut writer)?;
             }
             Method::QueuePurgeOk(QueuePurgeOk { message_count }) => {
                 writer.write_all(&[0, 50, 0, 31])?;
@@ -1133,7 +1133,7 @@ pub mod write {
                 writer.write_all(&[0, 50, 0, 40])?;
                 short(reserved_1, &mut writer)?;
                 shortstr(queue, &mut writer)?;
-                bit(&[if_unused, if_empty, no_wait], &mut writer)?;
+                bit(&[*if_unused, *if_empty, *no_wait], &mut writer)?;
             }
             Method::QueueDeleteOk(QueueDeleteOk { message_count }) => {
                 writer.write_all(&[0, 50, 0, 41])?;
@@ -1147,7 +1147,7 @@ pub mod write {
                 writer.write_all(&[0, 60, 0, 10])?;
                 long(prefetch_size, &mut writer)?;
                 short(prefetch_count, &mut writer)?;
-                bit(&[global], &mut writer)?;
+                bit(&[*global], &mut writer)?;
             }
             Method::BasicQosOk(BasicQosOk {}) => {
                 writer.write_all(&[0, 60, 0, 11])?;
@@ -1166,7 +1166,7 @@ pub mod write {
                 short(reserved_1, &mut writer)?;
                 shortstr(queue, &mut writer)?;
                 shortstr(consumer_tag, &mut writer)?;
-                bit(&[no_local, no_ack, exclusive, no_wait], &mut writer)?;
+                bit(&[*no_local, *no_ack, *exclusive, *no_wait], &mut writer)?;
                 table(arguments, &mut writer)?;
             }
             Method::BasicConsumeOk(BasicConsumeOk { consumer_tag }) => {
@@ -1179,7 +1179,7 @@ pub mod write {
             }) => {
                 writer.write_all(&[0, 60, 0, 30])?;
                 shortstr(consumer_tag, &mut writer)?;
-                bit(&[no_wait], &mut writer)?;
+                bit(&[*no_wait], &mut writer)?;
             }
             Method::BasicCancelOk(BasicCancelOk { consumer_tag }) => {
                 writer.write_all(&[0, 60, 0, 31])?;
@@ -1196,7 +1196,7 @@ pub mod write {
                 short(reserved_1, &mut writer)?;
                 shortstr(exchange, &mut writer)?;
                 shortstr(routing_key, &mut writer)?;
-                bit(&[mandatory, immediate], &mut writer)?;
+                bit(&[*mandatory, *immediate], &mut writer)?;
             }
             Method::BasicReturn(BasicReturn {
                 reply_code,
@@ -1220,7 +1220,7 @@ pub mod write {
                 writer.write_all(&[0, 60, 0, 60])?;
                 shortstr(consumer_tag, &mut writer)?;
                 longlong(delivery_tag, &mut writer)?;
-                bit(&[redelivered], &mut writer)?;
+                bit(&[*redelivered], &mut writer)?;
                 shortstr(exchange, &mut writer)?;
                 shortstr(routing_key, &mut writer)?;
             }
@@ -1232,7 +1232,7 @@ pub mod write {
                 writer.write_all(&[0, 60, 0, 70])?;
                 short(reserved_1, &mut writer)?;
                 shortstr(queue, &mut writer)?;
-                bit(&[no_ack], &mut writer)?;
+                bit(&[*no_ack], &mut writer)?;
             }
             Method::BasicGetOk(BasicGetOk {
                 delivery_tag,
@@ -1243,7 +1243,7 @@ pub mod write {
             }) => {
                 writer.write_all(&[0, 60, 0, 71])?;
                 longlong(delivery_tag, &mut writer)?;
-                bit(&[redelivered], &mut writer)?;
+                bit(&[*redelivered], &mut writer)?;
                 shortstr(exchange, &mut writer)?;
                 shortstr(routing_key, &mut writer)?;
                 long(message_count, &mut writer)?;
@@ -1258,7 +1258,7 @@ pub mod write {
             }) => {
                 writer.write_all(&[0, 60, 0, 80])?;
                 longlong(delivery_tag, &mut writer)?;
-                bit(&[multiple], &mut writer)?;
+                bit(&[*multiple], &mut writer)?;
             }
             Method::BasicReject(BasicReject {
                 delivery_tag,
@@ -1266,15 +1266,15 @@ pub mod write {
             }) => {
                 writer.write_all(&[0, 60, 0, 90])?;
                 longlong(delivery_tag, &mut writer)?;
-                bit(&[requeue], &mut writer)?;
+                bit(&[*requeue], &mut writer)?;
             }
             Method::BasicRecoverAsync(BasicRecoverAsync { requeue }) => {
                 writer.write_all(&[0, 60, 0, 100])?;
-                bit(&[requeue], &mut writer)?;
+                bit(&[*requeue], &mut writer)?;
             }
             Method::BasicRecover(BasicRecover { requeue }) => {
                 writer.write_all(&[0, 60, 0, 110])?;
-                bit(&[requeue], &mut writer)?;
+                bit(&[*requeue], &mut writer)?;
             }
             Method::BasicRecoverOk(BasicRecoverOk {}) => {
                 writer.write_all(&[0, 60, 0, 111])?;

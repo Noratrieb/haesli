@@ -19,17 +19,13 @@ async fn write_start_ok_frame() {
         locales: "en_US".into(),
     });
 
-    methods::write::write_method(method, &mut payload).unwrap();
-
-    let frame = frame::Frame {
-        kind: FrameType::Method,
-        channel: ChannelNum::zero(),
-        payload: payload.into(),
-    };
+    methods::write::write_method(&method, &mut payload).unwrap();
 
     let mut output = Vec::new();
 
-    frame::write_frame(&frame, &mut output).await.unwrap();
+    frame::write_frame(&mut output, FrameType::Method, ChannelNum::zero(), &payload)
+        .await
+        .unwrap();
 
     #[rustfmt::skip]
     let expected = [

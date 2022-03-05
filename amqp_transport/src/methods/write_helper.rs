@@ -23,7 +23,7 @@ pub fn longlong<W: Write>(value: &Longlong, writer: &mut W) -> Result<(), TransE
     Ok(())
 }
 
-pub fn bit<W: Write>(value: &[&Bit], writer: &mut W) -> Result<(), TransError> {
+pub fn bit<W: Write>(value: &[Bit], writer: &mut W) -> Result<(), TransError> {
     // accumulate bits into bytes, starting from the least significant bit in each byte
 
     // how many bits have already been packed into `current_buf`
@@ -37,7 +37,7 @@ pub fn bit<W: Write>(value: &[&Bit], writer: &mut W) -> Result<(), TransError> {
             already_filled = 0;
         }
 
-        let new_bit = (u8::from(*bit)) << already_filled;
+        let new_bit = (u8::from(bit)) << already_filled;
         current_buf |= new_bit;
         already_filled += 1;
     }
@@ -174,7 +174,7 @@ mod tests {
         let bits = [true, false, true];
 
         let mut buffer = [0u8; 1];
-        super::bit(&bits.map(|b| &b), &mut buffer.as_mut_slice()).unwrap();
+        super::bit(&bits, &mut buffer.as_mut_slice()).unwrap();
 
         assert_eq!(buffer, [0b00000101])
     }
@@ -188,7 +188,7 @@ mod tests {
         ];
 
         let mut buffer = [0u8; 2];
-        super::bit(&bits.map(|b| &b), &mut buffer.as_mut_slice()).unwrap();
+        super::bit(&bits, &mut buffer.as_mut_slice()).unwrap();
 
         assert_eq!(buffer, [0b00001111, 0b00001101]);
     }

@@ -1,5 +1,5 @@
 // create random methods to test the ser/de code together. if they diverge, we have a bug
-// this is not perfect, if they both have the same bug it won't be found, but tha's an ok tradeoff
+// this is not perfect, if they both have the same bug it won't be found, but that's an ok tradeoff
 
 use crate::methods::{FieldValue, Method, RandomMethod};
 use rand::SeedableRng;
@@ -32,14 +32,14 @@ fn pack_many_bits() {
 
 #[test]
 fn random_ser_de() {
-    const ITERATIONS: usize = 1000;
+    const ITERATIONS: usize = 10000;
     let mut rng = rand::rngs::StdRng::from_seed([0; 32]);
 
     for _ in 0..ITERATIONS {
         let method = Method::random(&mut rng);
         let mut bytes = Vec::new();
 
-        if let Err(err) = super::write::write_method(method.clone(), &mut bytes) {
+        if let Err(err) = super::write::write_method(&method, &mut bytes) {
             eprintln!("{method:#?}");
             eprintln!("{err:?}");
             panic!("Failed to serialize");
@@ -73,7 +73,7 @@ fn nested_table() {
     eprintln!("{table:?}");
 
     let mut bytes = Vec::new();
-    crate::methods::write_helper::table(table.clone(), &mut bytes).unwrap();
+    crate::methods::write_helper::table(&table, &mut bytes).unwrap();
     eprintln!("{bytes:?}");
 
     let (rest, parsed_table) = crate::methods::parse_helper::table(&bytes).unwrap();
