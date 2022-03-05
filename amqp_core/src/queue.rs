@@ -7,10 +7,18 @@ use parking_lot::Mutex;
 use std::{
     borrow::Borrow,
     collections::HashMap,
+    fmt::{Debug, Display, Formatter},
     sync::{atomic::AtomicUsize, Arc},
 };
+use tokio::sync::mpsc;
 
-pub type Queue = Arc<RawQueue>;
+pub type Queue = Arc<QueueInner>;
+
+#[derive(Debug)]
+pub enum QueueEvent {}
+
+pub type QueueEventSender = mpsc::Sender<QueueEvent>;
+pub type QueueEventReceiver = mpsc::Receiver<QueueEvent>;
 
 newtype_id!(pub QueueId);
 
@@ -26,8 +34,14 @@ impl Borrow<str> for QueueName {
     }
 }
 
+impl Display for QueueName {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self.0, f)
+    }
+}
+
 #[derive(Debug)]
-pub struct RawQueue {
+pub struct QueueInner {
     pub id: QueueId,
     pub name: QueueName,
     pub messages: Mutex<Vec<Message>>, // use a concurrent linked list???
@@ -38,6 +52,7 @@ pub struct RawQueue {
     /// If auto-delete is enabled, it keeps track of the consumer count.
     pub deletion: QueueDeletion,
     pub consumers: Mutex<HashMap<ConsumerId, Consumer>>,
+    pub event_send: QueueEventSender,
 }
 
 #[derive(Debug)]

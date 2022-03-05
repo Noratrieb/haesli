@@ -2,7 +2,7 @@ use crate::Result;
 use amqp_core::{
     amqp_todo,
     connection::{Channel, ConnectionEvent},
-    error::{ChannelException, ConException, ProtocolError},
+    error::{ChannelException, ConException},
     message::Message,
     methods::{BasicDeliver, Method},
 };

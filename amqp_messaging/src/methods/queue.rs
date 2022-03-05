@@ -1,13 +1,15 @@
-use crate::Result;
+use crate::{queue::QueueTask, Result};
 use amqp_core::{
     amqp_todo,
     connection::Channel,
     methods::{Method, QueueBind, QueueDeclare, QueueDeclareOk},
-    queue::{QueueDeletion, QueueId, QueueName, RawQueue},
+    queue::{QueueDeletion, QueueId, QueueInner, QueueName},
     GlobalData,
 };
 use parking_lot::Mutex;
 use std::sync::{atomic::AtomicUsize, Arc};
+use tokio::sync::mpsc;
+use tracing::{info_span, Instrument};
 
 pub fn declare(channel: Channel, queue_declare: QueueDeclare) -> Result<Method> {
     let QueueDeclare {
@@ -33,37 +35,41 @@ pub fn declare(channel: Channel, queue_declare: QueueDeclare) -> Result<Method> 
         amqp_todo!();
     }
 
-    let global_data = {
-        let global_data = channel.global_data.clone();
+    let global_data = channel.global_data.clone();
 
-        let id = QueueId::random();
-        let queue = Arc::new(RawQueue {
-            id,
-            name: queue_name.clone(),
-            messages: Mutex::default(),
-            durable,
-            exclusive: exclusive.then(|| channel.id),
-            deletion: if auto_delete {
-                QueueDeletion::Auto(AtomicUsize::default())
-            } else {
-                QueueDeletion::Manual
-            },
-            consumers: Mutex::default(),
-        });
+    let (event_send, event_recv) = mpsc::channel(10);
 
-        {
-            let mut global_data_lock = global_data.lock();
+    let id = QueueId::random();
+    let queue = Arc::new(QueueInner {
+        id,
+        name: queue_name.clone(),
+        messages: Mutex::default(),
+        durable,
+        exclusive: exclusive.then(|| channel.id),
+        deletion: if auto_delete {
+            QueueDeletion::Auto(AtomicUsize::default())
+        } else {
+            QueueDeletion::Manual
+        },
+        consumers: Mutex::default(),
+        event_send,
+    });
 
-            global_data_lock
-                .queues
-                .entry(queue_name.clone())
-                .or_insert(queue);
-        }
+    {
+        let mut global_data_lock = global_data.lock();
 
-        global_data
-    };
+        global_data_lock
+            .queues
+            .entry(queue_name.clone())
+            .or_insert_with(|| queue.clone());
+    }
 
-    bind_queue(global_data, (), queue_name.clone().into_inner())?;
+    bind_queue(global_data.clone(), (), queue_name.clone().into_inner())?;
+
+    let queue_task = QueueTask::new(global_data, event_recv, queue);
+
+    let queue_worker_span = info_span!(parent: None, "queue-worker", %queue_name);
+    tokio::spawn(queue_task.start().instrument(queue_worker_span));
 
     Ok(Method::QueueDeclareOk(QueueDeclareOk {
         queue: queue_name.to_string(),

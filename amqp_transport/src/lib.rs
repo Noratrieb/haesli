@@ -13,7 +13,7 @@ mod tests;
 use crate::connection::TransportConnection;
 use amqp_core::GlobalData;
 use tokio::net;
-use tracing::{info, info_span, Instrument};
+use tracing::{info, trace_span, Instrument};
 
 pub async fn do_thing_i_guess(global_data: GlobalData) -> anyhow::Result<()> {
     info!("Binding TCP listener...");
@@ -26,7 +26,7 @@ pub async fn do_thing_i_guess(global_data: GlobalData) -> anyhow::Result<()> {
         let id = rand::random();
 
         info!(local_addr = ?stream.local_addr(), %id, "Accepted new connection");
-        let span = info_span!("client-connection", %id);
+        let span = trace_span!("client-connection", %id);
 
         let (method_send, method_recv) = tokio::sync::mpsc::channel(10);
 

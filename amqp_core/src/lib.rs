@@ -14,12 +14,22 @@ use crate::{
 };
 use connection::{ChannelId, ConnectionId};
 use parking_lot::Mutex;
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Formatter},
+    sync::Arc,
+};
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct GlobalData {
     inner: Arc<Mutex<GlobalDataInner>>,
+}
+
+impl Debug for GlobalData {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("[global data]")
+    }
 }
 
 impl Default for GlobalData {
