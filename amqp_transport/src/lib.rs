@@ -12,11 +12,10 @@ mod tests;
 
 use crate::connection::TransportConnection;
 use amqp_core::GlobalData;
-use anyhow::Result;
 use tokio::net;
 use tracing::{info, info_span, Instrument};
 
-pub async fn do_thing_i_guess(global_data: GlobalData) -> Result<()> {
+pub async fn do_thing_i_guess(global_data: GlobalData) -> anyhow::Result<()> {
     info!("Binding TCP listener...");
     let listener = net::TcpListener::bind(("127.0.0.1", 5672)).await?;
     info!(addr = ?listener.local_addr()?, "Successfully bound TCP listener");

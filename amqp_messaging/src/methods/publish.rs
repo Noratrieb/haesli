@@ -4,12 +4,12 @@ use amqp_core::{
     connection::{Channel, ConnectionEvent},
     error::ChannelException,
     message::Message,
-    methods::{BasicPublish, Method},
+    methods::{BasicDeliver, Method},
 };
-use tracing::info;
+use tracing::debug;
 
 pub async fn publish(channel_handle: Channel, message: Message) -> Result<()> {
-    info!(?message, "Publishing message");
+    debug!(?message, "Publishing message");
 
     let global_data = channel_handle.global_data.clone();
 
@@ -31,12 +31,12 @@ pub async fn publish(channel_handle: Channel, message: Message) -> Result<()> {
         // consuming is hard, but this should work *for now*
         let consumers = queue.consumers.lock();
         if let Some(consumer) = consumers.first() {
-            let method = Box::new(Method::BasicPublish(BasicPublish {
-                reserved_1: 0,
+            let method = Box::new(Method::BasicDeliver(BasicDeliver {
+                consumer_tag: consumer.tag.clone(),
+                delivery_tag: 0,
+                redelivered: false,
                 exchange: routing.exchange.clone(),
                 routing_key: routing.routing_key.clone(),
-                mandatory: false,
-                immediate: false,
             }));
 
             consumer

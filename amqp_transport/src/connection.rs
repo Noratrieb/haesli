@@ -1,11 +1,10 @@
 use crate::{
     error::{ConException, ProtocolError, Result, TransError},
     frame,
-    frame::{parse_content_header, Frame, FrameType},
+    frame::{parse_content_header, Frame, FrameType, MaxFrameSize},
     methods, sasl,
 };
 use amqp_core::{
-    amqp_todo,
     connection::{
         Channel, ChannelInner, ChannelNum, ConEventReceiver, ConEventSender, Connection,
         ConnectionEvent, ConnectionId, ContentHeader,
@@ -14,7 +13,7 @@ use amqp_core::{
     methods::{
         BasicPublish, ChannelClose, ChannelCloseOk, ChannelOpenOk, ConnectionClose,
         ConnectionCloseOk, ConnectionOpen, ConnectionOpenOk, ConnectionStart, ConnectionStartOk,
-        ConnectionTune, ConnectionTuneOk, FieldValue, Method, ReplyCode, ReplyText, Table,
+        ConnectionTune, ConnectionTuneOk, FieldValue, Longstr, Method, ReplyCode, ReplyText, Table,
     },
     GlobalData,
 };
@@ -39,7 +38,7 @@ fn ensure_conn(condition: bool) -> Result<()> {
     }
 }
 
-const FRAME_SIZE_MIN_MAX: usize = 4096;
+const FRAME_SIZE_MIN_MAX: MaxFrameSize = MaxFrameSize::new(4096);
 const CHANNEL_MAX: u16 = 0;
 const FRAME_SIZE_MAX: u32 = 0;
 const HEARTBEAT_DELAY: u16 = 0;
@@ -56,7 +55,7 @@ pub struct TransportChannel {
 pub struct TransportConnection {
     id: ConnectionId,
     stream: TcpStream,
-    max_frame_size: usize,
+    max_frame_size: MaxFrameSize,
     heartbeat_delay: u16,
     channel_max: u16,
     /// When the next heartbeat expires
@@ -149,23 +148,55 @@ impl TransportConnection {
         channel: ChannelNum,
         method: &Method,
         header: ContentHeader,
-        _body: SmallVec<[Bytes; 1]>,
+        body: &SmallVec<[Bytes; 1]>,
     ) -> Result<()> {
         self.send_method(channel, method).await?;
 
         let mut header_buf = Vec::new();
-        frame::write_content_header(&mut header_buf, header)?;
-        frame::write_frame(
-            &Frame {
-                kind: FrameType::Method,
-                channel,
-                payload: header_buf.into(),
-            },
-            &mut self.stream,
-        )
-        .await?;
+        frame::write_content_header(&mut header_buf, &header)?;
+        warn!(?header, ?header_buf, "Sending content header");
+        frame::write_frame(&mut self.stream, FrameType::Header, channel, &header_buf).await?;
 
-        amqp_todo!()
+        self.send_bodies(channel, body).await
+    }
+
+    async fn send_bodies(
+        &mut self,
+        channel: ChannelNum,
+        body: &SmallVec<[Bytes; 1]>,
+    ) -> Result<()> {
+        // this is inefficient if it's a huge message sent by a client with big frames to one with
+        // small frames
+        // we assume that this won't happen that that the first branch will be taken in most cases,
+        // elimination the overhead. What we win from keeping each frame as it is that we don't have
+        // to allocate again for each message
+
+        let max_size = self.max_frame_size.as_usize();
+
+        for payload in body {
+            if max_size > payload.len() {
+                trace!("Sending single method body frame");
+                // single frame
+                frame::write_frame(&mut self.stream, FrameType::Body, channel, payload).await?;
+            } else {
+                trace!(max = ?self.max_frame_size, "Chunking up method body frames");
+                // chunk it up into multiple sub-frames
+                let mut start = 0;
+                let mut end = max_size;
+
+                while end < payload.len() {
+                    let sub_payload = &payload[start..end];
+
+                    frame::write_frame(&mut self.stream, FrameType::Body, channel, sub_payload)
+                        .await?;
+
+                    start = end;
+                    end = (end + max_size).max(payload.len());
+                }
+            }
+        }
+
+        Ok(())
     }
 
     async fn send_method(&mut self, channel: ChannelNum, method: &Method) -> Result<()> {
@@ -173,15 +204,7 @@ impl TransportConnection {
 
         let mut payload = Vec::with_capacity(64);
         methods::write::write_method(method, &mut payload)?;
-        frame::write_frame(
-            &Frame {
-                kind: FrameType::Method,
-                channel,
-                payload: payload.into(),
-            },
-            &mut self.stream,
-        )
-        .await
+        frame::write_frame(&mut self.stream, FrameType::Method, channel, &payload).await
     }
 
     async fn recv_method(&mut self) -> Result<Method> {
@@ -250,7 +273,7 @@ impl TransportConnection {
         }) = tune_ok
         {
             self.channel_max = channel_max;
-            self.max_frame_size = usize::try_from(frame_max).unwrap();
+            self.max_frame_size = MaxFrameSize::new(usize::try_from(frame_max).unwrap());
             self.heartbeat_delay = heartbeat;
             self.reset_timeout();
         }
@@ -286,8 +309,14 @@ impl TransportConnection {
                 }
                 queued_method = self.event_receiver.recv() => {
                     match queued_method {
-                        Some(ConnectionEvent::Method(channel, method)) => self.send_method(channel, &method).await?,
-                        Some(ConnectionEvent::MethodContent(channel, method, header, body)) => self.send_method_content(channel, &method, header, body).await?,
+                        Some(ConnectionEvent::Method(channel, method)) => {
+                            trace!(?channel, ?method, "Received method from event queue");
+                            self.send_method(channel, &method).await?
+                        }
+                        Some(ConnectionEvent::MethodContent(channel, method, header, body)) => {
+                            trace!(?channel, ?method, ?header, ?body, "Received method with body from event queue");
+                            self.send_method_content(channel, &method, header, &body).await?
+                        }
                         Some(ConnectionEvent::Shutdown) => return self.close(0, "".to_owned()).await,
                         None => {}
                     }
@@ -640,13 +669,13 @@ impl Drop for TransportChannel {
 }
 
 fn server_properties(host: SocketAddr) -> Table {
-    fn ls(str: &str) -> FieldValue {
+    fn ls(str: impl Into<Longstr>) -> FieldValue {
         FieldValue::LongString(str.into())
     }
 
     let host_str = host.ip().to_string();
     HashMap::from([
-        ("host".to_owned(), ls(&host_str)),
+        ("host".to_owned(), ls(host_str)),
         ("product".to_owned(), ls("no name yet")),
         ("version".to_owned(), ls("0.1.0")),
         ("platform".to_owned(), ls("microsoft linux")),
