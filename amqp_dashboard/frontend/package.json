@@ -6,7 +6,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "fmt": "prettier -w .",
+    "check-fmt": "prettier -c ."
   },
   "dependencies": {
     "@testing-library/jest-dom": "^5.14.1",

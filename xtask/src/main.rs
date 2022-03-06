@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+mod check_fmt;
 mod codegen;
 mod fmt;
 mod test_js;
@@ -21,6 +22,8 @@ enum Commands {
     TestJs,
     /// Format all code
     Fmt,
+    /// Check the formatting
+    CheckFmt,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -30,6 +33,7 @@ fn main() -> anyhow::Result<()> {
         Commands::Generate => codegen::main(),
         Commands::TestJs => test_js::main(),
         Commands::Fmt => fmt::main(),
+        Commands::CheckFmt => check_fmt::main(),
     }
 }
 
