@@ -3,9 +3,8 @@ use anyhow::ensure;
 use std::process::Command;
 
 pub fn main() -> anyhow::Result<()> {
-    println!("$ cargo +nightly fmt");
+    println!("$ cargo fmt");
     let status = Command::new("cargo")
-        .arg("+nightly")
         .arg("fmt")
         .current_dir(project_root())
         .status()?;

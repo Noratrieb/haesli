@@ -3,16 +3,15 @@ use anyhow::ensure;
 use std::process::Command;
 
 pub fn main() -> anyhow::Result<()> {
-    println!("$ cargo +nightly fmt --check");
+    println!("$ cargo fmt --check");
     let status = Command::new("cargo")
-        .arg("+nightly")
         .arg("fmt")
         .arg("--check")
         .current_dir(project_root())
         .status()?;
     ensure!(
         status.success(),
-        "`cargo +nightly fmt --check` did not exit successfully"
+        "`cargo fmt --check` did not exit successfully"
     );
 
     println!("$ yarn");
