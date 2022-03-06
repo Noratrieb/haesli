@@ -14,10 +14,6 @@ use serde::Serialize;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info};
 
-// const INDEX_HTML: &str = include_str!("../assets/index.html");
-// const SCRIPT_JS: &str = include_str!("../assets/script.js");
-// const STYLE_CSS: &str = include_str!("../assets/style.css");
-
 const DATA_ZIP: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/frontend.zip"));
 
 pub async fn dashboard(global_data: GlobalData) {
@@ -32,9 +28,6 @@ pub async fn dashboard(global_data: GlobalData) {
         });
 
     let app = Router::new()
-        //.route("/", get(get_index_html))
-        //.route("/script.js", get(get_script_js))
-        //.route("/style.css", get(get_style_css))
         .route("/api/data", get(move || get_data(global_data)).layer(cors))
         .fallback(static_file_service);
 
