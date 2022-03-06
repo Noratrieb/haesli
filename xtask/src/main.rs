@@ -1,4 +1,8 @@
-use std::path::PathBuf;
+use anyhow::{ensure, Context, Result};
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 mod check_fmt;
 mod codegen;
@@ -42,4 +46,15 @@ pub fn project_root() -> PathBuf {
         .parent()
         .expect("project root path")
         .to_path_buf()
+}
+
+pub fn yarn_install(path: &Path) -> Result<()> {
+    let status = Command::new("yarn")
+        .arg("install")
+        .current_dir(path)
+        .status()
+        .context("run yarn install failed")?;
+
+    ensure!(status.success(), "Failed to build frontend");
+    Ok(())
 }

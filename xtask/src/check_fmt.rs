@@ -1,4 +1,4 @@
-use crate::project_root;
+use crate::{project_root, yarn_install};
 use anyhow::ensure;
 use std::process::Command;
 
@@ -14,21 +14,29 @@ pub fn main() -> anyhow::Result<()> {
         "`cargo fmt --check` did not exit successfully"
     );
 
-    println!("$ yarn");
+    let test_js = project_root().join("test-js");
+    yarn_install(&test_js)?;
+    println!("$ yarn check-fmt");
     let status = Command::new("yarn")
         .arg("check-fmt")
-        .current_dir(project_root().join("test-js"))
+        .current_dir(test_js)
         .status()?;
-    ensure!(status.success(), "`yarn fmt` did not exist successfully");
+    ensure!(
+        status.success(),
+        "`yarn check-fmt` did not exist successfully"
+    );
 
-    println!("$ yarn");
+    let frontend = project_root().join("amqp_dashboard/frontend");
+    yarn_install(&frontend)?;
+    println!("$ yarn check-fmt");
     let status = Command::new("yarn")
         .arg("check-fmt")
-        .current_dir(project_root().join("amqp_dashboard/frontend"))
+        .current_dir(frontend)
         .status()?;
-    ensure!(status.success(), "`yarn fmt` did not exist successfully");
-
-    ensure!(status.success(), "`prettier .` did not exist successfully");
+    ensure!(
+        status.success(),
+        "`yarn check-fmt` did not exist successfully"
+    );
 
     Ok(())
 }

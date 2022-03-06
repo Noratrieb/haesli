@@ -1,4 +1,4 @@
-use crate::project_root;
+use crate::{project_root, yarn_install};
 use anyhow::{ensure, Context, Result};
 use std::{path::Path, process::Command, thread::sleep, time::Duration};
 
@@ -29,12 +29,8 @@ pub fn main() -> Result<()> {
 }
 
 fn run_js(test_js_root: &Path) -> Result<()> {
-    println!("$ yarn");
-    let status = Command::new("yarn")
-        .current_dir(&test_js_root)
-        .status()
-        .context("yarn install tests")?;
-    ensure!(status.success(), "yarn install failed");
+    yarn_install(test_js_root)?;
+
     println!("$ yarn test");
     let status = Command::new("yarn")
         .arg("test")
