@@ -3,11 +3,13 @@
 use amqp_core::GlobalData;
 use axum::{
     body::{boxed, Full},
+    http::Method,
     response::{Html, IntoResponse, Response},
     routing::get,
     Json, Router,
 };
 use serde::Serialize;
+use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
 const INDEX_HTML: &str = include_str!("../assets/index.html");
@@ -15,13 +17,17 @@ const SCRIPT_JS: &str = include_str!("../assets/script.js");
 const STYLE_CSS: &str = include_str!("../assets/style.css");
 
 pub async fn dashboard(global_data: GlobalData) {
+    let cors = CorsLayer::new()
+        .allow_methods(vec![Method::GET])
+        .allow_origin(Any);
+
     let app = Router::new()
         .route("/", get(get_index_html))
         .route("/script.js", get(get_script_js))
         .route("/style.css", get(get_style_css))
-        .route("/api/data", get(move || get_data(global_data)));
+        .route("/api/data", get(move || get_data(global_data)).layer(cors));
 
-    let socket_addr = "0.0.0.0:3000".parse().unwrap();
+    let socket_addr = "0.0.0.0:8080".parse().unwrap();
 
     info!(%socket_addr, "Starting up dashboard on address");
 
@@ -57,6 +63,7 @@ struct Data {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct Connection {
     id: String,
     peer_addr: String,
