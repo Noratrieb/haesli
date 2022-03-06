@@ -14,13 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Build
-      run: cargo build --verbose
-    - name: Run clippy -D clippy::all
-      run: cargo clippy --verbose -- -D clippy::all
     - name: Check format
-      run: cargo xtask check-fmt
-    - name: Run tests
+      run: cargo build --verbose
+    - name: Check clippy
+      run: cargo clippy --verbose -- -D clippy::all
+    - name: Run unit tests
       run: cargo test --verbose --all
     - name: Run client integration tests
       run: cargo xtask test-js
