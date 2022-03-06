@@ -7,9 +7,17 @@ edition = "2021"
 
 [dependencies]
 amqp_core = { path = "../amqp_core" }
-axum = "0.4.5"
+anyhow = "1.0.55"
+axum = "0.4.8"
+mime_guess = "2.0.4"
 serde = { version = "1.0.136", features = ["derive"] }
 tokio = { version = "1.17.0", features = ["full"] }
 tower = "0.4.12"
 tower-http = { version = "0.2.3", features = ["cors"] }
 tracing = "0.1.31"
+zip = "0.5.13"
+
+[build-dependencies]
+anyhow = "1.0.55"
+walkdir = "2.3.2"
+zip = "0.5.13"

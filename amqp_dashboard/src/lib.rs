@@ -1,31 +1,42 @@
 #![warn(rust_2018_idioms)]
 
+mod archive;
+
+use crate::archive::StaticFileService;
 use amqp_core::GlobalData;
 use axum::{
-    body::{boxed, Full},
-    http::Method,
-    response::{Html, IntoResponse, Response},
-    routing::get,
+    http::{Method, StatusCode},
+    response::IntoResponse,
+    routing::{get, get_service},
     Json, Router,
 };
 use serde::Serialize;
 use tower_http::cors::{Any, CorsLayer};
-use tracing::info;
+use tracing::{error, info};
 
-const INDEX_HTML: &str = include_str!("../assets/index.html");
-const SCRIPT_JS: &str = include_str!("../assets/script.js");
-const STYLE_CSS: &str = include_str!("../assets/style.css");
+// const INDEX_HTML: &str = include_str!("../assets/index.html");
+// const SCRIPT_JS: &str = include_str!("../assets/script.js");
+// const STYLE_CSS: &str = include_str!("../assets/style.css");
+
+const DATA_ZIP: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/frontend.zip"));
 
 pub async fn dashboard(global_data: GlobalData) {
     let cors = CorsLayer::new()
         .allow_methods(vec![Method::GET])
         .allow_origin(Any);
 
+    let static_file_service =
+        get_service(StaticFileService::new(DATA_ZIP)).handle_error(|error| async move {
+            error!(?error, "Error in static file service");
+            StatusCode::INTERNAL_SERVER_ERROR
+        });
+
     let app = Router::new()
-        .route("/", get(get_index_html))
-        .route("/script.js", get(get_script_js))
-        .route("/style.css", get(get_style_css))
-        .route("/api/data", get(move || get_data(global_data)).layer(cors));
+        //.route("/", get(get_index_html))
+        //.route("/script.js", get(get_script_js))
+        //.route("/style.css", get(get_style_css))
+        .route("/api/data", get(move || get_data(global_data)).layer(cors))
+        .fallback(static_file_service);
 
     let socket_addr = "0.0.0.0:8080".parse().unwrap();
 
@@ -37,24 +48,24 @@ pub async fn dashboard(global_data: GlobalData) {
         .unwrap();
 }
 
-async fn get_index_html() -> impl IntoResponse {
-    info!("Requesting index.html");
-    Html(INDEX_HTML)
-}
-
-async fn get_script_js() -> Response {
-    Response::builder()
-        .header("content-type", "application/javascript")
-        .body(boxed(Full::from(SCRIPT_JS)))
-        .unwrap()
-}
-
-async fn get_style_css() -> Response {
-    Response::builder()
-        .header("content-type", "text/css")
-        .body(boxed(Full::from(STYLE_CSS)))
-        .unwrap()
-}
+//async fn get_index_html() -> impl IntoResponse {
+//    info!("Requesting index.html");
+//    Html(INDEX_HTML)
+//}
+//
+//async fn get_script_js() -> Response {
+//    Response::builder()
+//        .header("content-type", "application/javascript")
+//        .body(boxed(Full::from(SCRIPT_JS)))
+//        .unwrap()
+//}
+//
+//async fn get_style_css() -> Response {
+//    Response::builder()
+//        .header("content-type", "text/css")
+//        .body(boxed(Full::from(STYLE_CSS)))
+//        .unwrap()
+//}
 
 #[derive(Serialize)]
 struct Data {
