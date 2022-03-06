@@ -41,25 +41,6 @@ pub async fn dashboard(global_data: GlobalData) {
         .unwrap();
 }
 
-//async fn get_index_html() -> impl IntoResponse {
-//    info!("Requesting index.html");
-//    Html(INDEX_HTML)
-//}
-//
-//async fn get_script_js() -> Response {
-//    Response::builder()
-//        .header("content-type", "application/javascript")
-//        .body(boxed(Full::from(SCRIPT_JS)))
-//        .unwrap()
-//}
-//
-//async fn get_style_css() -> Response {
-//    Response::builder()
-//        .header("content-type", "text/css")
-//        .body(boxed(Full::from(STYLE_CSS)))
-//        .unwrap()
-//}
-
 #[derive(Serialize)]
 struct Data {
     connections: Vec<Connection>,
