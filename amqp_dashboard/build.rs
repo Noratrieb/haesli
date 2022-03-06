@@ -27,6 +27,14 @@ fn main() -> Result<()> {
 
 fn build_frontend(path: &Path) -> Result<()> {
     let status = Command::new("yarn")
+        .arg("install")
+        .current_dir(path)
+        .status()
+        .context("run yarn install failed")?;
+
+    ensure!(status.success(), "Failed to install frontend dependencies");
+
+    let status = Command::new("yarn")
         .arg("build")
         .current_dir(path)
         .status()
