@@ -94,7 +94,9 @@ impl QueueTask {
     }
 
     #[tracing::instrument(skip(self), fields(name = self.show_name()), level = "trace")]
-    async fn queue_message(&mut self, _message: Message) {}
+    async fn queue_message(&mut self, message: Message) {
+        self.queue.messages.append(message);
+    }
 
     async fn cleanup(&mut self) {
         // do stuff or something like that id whatever

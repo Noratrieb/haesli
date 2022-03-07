@@ -4,13 +4,10 @@ mod queue;
 
 use crate::Result;
 use amqp_core::{amqp_todo, connection::Channel, message::Message, methods::Method};
-use tracing::{error, info};
+use tracing::info;
 
-pub fn handle_basic_publish(channel_handle: Channel, message: Message) {
-    match publish::publish(channel_handle, message) {
-        Ok(()) => {}
-        Err(err) => error!(%err, "publish error occurred"),
-    }
+pub fn handle_basic_publish(channel_handle: Channel, message: Message) -> Result<()> {
+    publish::publish(channel_handle, message)
 }
 
 pub async fn handle_method(channel_handle: Channel, method: Method) -> Result<Method> {

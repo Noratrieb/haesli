@@ -76,6 +76,7 @@ struct Queue {
     id: String,
     name: String,
     durable: bool,
+    messages: usize,
 }
 
 async fn get_data(global_data: GlobalData) -> impl IntoResponse {
@@ -106,6 +107,7 @@ async fn get_data(global_data: GlobalData) -> impl IntoResponse {
             id: queue.id.to_string(),
             name: queue.name.to_string(),
             durable: queue.durable,
+            messages: queue.messages.len(),
         })
         .collect();
 

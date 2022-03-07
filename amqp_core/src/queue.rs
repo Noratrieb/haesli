@@ -47,7 +47,7 @@ impl Display for QueueName {
 pub struct QueueInner {
     pub id: QueueId,
     pub name: QueueName,
-    pub messages: Mutex<Vec<Message>>, // use a concurrent linked list???
+    pub messages: amqp_datastructure::MessageQueue<Message>,
     pub durable: bool,
     pub exclusive: Option<ChannelId>,
     /// Whether the queue will automatically be deleted when no consumers uses it anymore.

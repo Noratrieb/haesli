@@ -42,7 +42,7 @@ pub fn declare(channel: Channel, queue_declare: QueueDeclare) -> Result<Method> 
     let queue = Arc::new(QueueInner {
         id,
         name: queue_name.clone(),
-        messages: Mutex::default(),
+        messages: amqp_datastructure::MessageQueue::new(),
         durable,
         exclusive: exclusive.then(|| channel.id),
         deletion: if auto_delete {

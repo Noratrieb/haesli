@@ -46,11 +46,12 @@ const DataPage: FC<Props> = ({ prefix }) => {
         <h2>Queues</h2>
         {data ? (
           <Table
-            headers={['Queue ID', 'Name', 'Durable']}
+            headers={['Queue ID', 'Name', 'Durable', 'Message Count']}
             rows={data.queues.map((queue) => [
               queue.id,
               queue.name,
               queue.durable ? 'Yes' : 'No',
+              queue.messages,
             ])}
           />
         ) : (

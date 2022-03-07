@@ -36,6 +36,7 @@ dependencies = [
 name = "amqp_core"
 version = "0.1.0"
 dependencies = [
+ "amqp_datastructure",
  "bytes",
  "parking_lot",
  "rand",
@@ -63,10 +64,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "amqp_datastructure"
+version = "0.1.0"
+
+[[package]]
 name = "amqp_messaging"
 version = "0.1.0"
 dependencies = [
  "amqp_core",
+ "amqp_datastructure",
  "parking_lot",
  "tokio",
  "tracing",

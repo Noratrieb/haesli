@@ -3,7 +3,9 @@ import { connectAmqp } from './utils/utils.js';
 const connection = await connectAmqp();
 const channel = await connection.createChannel();
 
-channel.publish('exchange-1', 'queue-1', Buffer.from('hello'));
+await channel.assertQueue('send-queue-352');
+
+channel.publish('', 'send-queue-352', Buffer.from('hello'));
 
 console.log('Published message');
 

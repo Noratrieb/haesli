@@ -13,6 +13,7 @@ export type Queue = {
   id: string;
   name: string;
   durable: boolean;
+  messages: number;
 };
 
 export type Data = {

@@ -1,5 +1,13 @@
 [workspace]
-members = [".", "amqp_core", "amqp_dashboard", "amqp_messaging", "amqp_transport","xtask"]
+members = [
+    ".",
+    "amqp_core",
+    "amqp_dashboard",
+    "amqp_datastructure",
+    "amqp_messaging",
+    "amqp_transport",
+    "xtask",
+]
 
 [package]
 name = "amqp"

@@ -498,7 +498,7 @@ impl TransportConnection {
 
             let channel = self.channels.get(&channel).ok_or(ConException::Todo)?;
 
-            amqp_messaging::methods::handle_basic_publish(channel.global_chan.clone(), message);
+            amqp_messaging::methods::handle_basic_publish(channel.global_chan.clone(), message)?;
             Ok(())
         } else {
             Err(ConException::Todo.into())
