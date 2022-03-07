@@ -3,12 +3,12 @@ use bytes::Bytes;
 use smallvec::SmallVec;
 use std::sync::Arc;
 
-pub type Message = Arc<RawMessage>;
+pub type Message = Arc<MessageInner>;
 
 newtype_id!(pub MessageId);
 
 #[derive(Debug)]
-pub struct RawMessage {
+pub struct MessageInner {
     pub id: MessageId,
     pub header: ContentHeader,
     pub routing: RoutingInformation,

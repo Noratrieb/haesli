@@ -9,7 +9,7 @@ use amqp_core::{
         Channel, ChannelInner, ChannelNum, ConEventReceiver, ConEventSender, Connection,
         ConnectionEvent, ConnectionId, ContentHeader,
     },
-    message::{MessageId, RawMessage, RoutingInformation},
+    message::{MessageId, MessageInner, RoutingInformation},
     methods::{
         BasicPublish, ChannelClose, ChannelCloseOk, ChannelOpenOk, ConnectionClose,
         ConnectionCloseOk, ConnectionOpen, ConnectionOpenOk, ConnectionStart, ConnectionStartOk,
@@ -198,9 +198,8 @@ impl TransportConnection {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self), level = "trace")]
     async fn send_method(&mut self, channel: ChannelNum, method: &Method) -> Result<()> {
-        trace!(%channel, ?method, "Sending method");
-
         let mut payload = Vec::with_capacity(64);
         methods::write::write_method(method, &mut payload)?;
         frame::write_frame(&mut self.stream, FrameType::Method, channel, &payload).await
@@ -324,6 +323,7 @@ impl TransportConnection {
         }
     }
 
+    #[tracing::instrument(skip(self), level = "debug")]
     async fn handle_frame(&mut self, frame: Frame) -> Result<()> {
         let channel = frame.channel;
         self.reset_timeout();
@@ -358,9 +358,9 @@ impl TransportConnection {
         }
     }
 
+    #[tracing::instrument(skip(self, frame), level = "trace")]
     async fn dispatch_method(&mut self, frame: Frame) -> Result<()> {
         let method = methods::parse_method(&frame.payload)?;
-        debug!(?method, "Received method");
 
         // Sending a method implicitly cancels the content frames that might be ongoing
         self.channels
@@ -483,7 +483,7 @@ impl TransportConnection {
             ..
         }) = method
         {
-            let message = RawMessage {
+            let message = MessageInner {
                 id: MessageId::random(),
                 header,
                 routing: RoutingInformation {
@@ -498,12 +498,7 @@ impl TransportConnection {
 
             let channel = self.channels.get(&channel).ok_or(ConException::Todo)?;
 
-            // Spawn the handler for the publish. The connection task goes back to handling
-            // just the connection.
-            tokio::spawn(amqp_messaging::methods::handle_basic_publish(
-                channel.global_chan.clone(),
-                message,
-            ));
+            amqp_messaging::methods::handle_basic_publish(channel.global_chan.clone(), message);
             Ok(())
         } else {
             Err(ConException::Todo.into())

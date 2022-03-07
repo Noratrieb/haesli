@@ -252,6 +252,7 @@ impl Debug for MaxFrameSize {
     }
 }
 
+#[tracing::instrument(skip(w), level = "trace")]
 pub async fn write_frame<W>(
     mut w: W,
     kind: FrameType,
@@ -261,8 +262,6 @@ pub async fn write_frame<W>(
 where
     W: AsyncWriteExt + Unpin + Send,
 {
-    trace!(?kind, ?channel, ?payload, "Sending frame");
-
     w.write_u8(kind as u8).await?;
     w.write_u16(channel.num()).await?;
     w.write_u32(u32::try_from(payload.len()).context("frame size too big")?)

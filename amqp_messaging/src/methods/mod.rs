@@ -6,8 +6,8 @@ use crate::Result;
 use amqp_core::{amqp_todo, connection::Channel, message::Message, methods::Method};
 use tracing::{error, info};
 
-pub async fn handle_basic_publish(channel_handle: Channel, message: Message) {
-    match publish::publish(channel_handle, message).await {
+pub fn handle_basic_publish(channel_handle: Channel, message: Message) {
+    match publish::publish(channel_handle, message) {
         Ok(()) => {}
         Err(err) => error!(%err, "publish error occurred"),
     }

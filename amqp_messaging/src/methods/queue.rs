@@ -1,4 +1,4 @@
-use crate::{queue::QueueTask, Result};
+use crate::{queue_worker::QueueTask, Result};
 use amqp_core::{
     amqp_todo,
     connection::Channel,
@@ -9,7 +9,6 @@ use amqp_core::{
 use parking_lot::Mutex;
 use std::sync::{atomic::AtomicUsize, Arc};
 use tokio::sync::mpsc;
-use tracing::{info_span, Instrument};
 
 pub fn declare(channel: Channel, queue_declare: QueueDeclare) -> Result<Method> {
     let QueueDeclare {
@@ -68,8 +67,7 @@ pub fn declare(channel: Channel, queue_declare: QueueDeclare) -> Result<Method> 
 
     let queue_task = QueueTask::new(global_data, event_recv, queue);
 
-    let queue_worker_span = info_span!(parent: None, "queue-worker", %queue_name);
-    tokio::spawn(queue_task.start().instrument(queue_worker_span));
+    tokio::spawn(async move { queue_task.start().await });
 
     Ok(Method::QueueDeclareOk(QueueDeclareOk {
         queue: queue_name.to_string(),

@@ -15,7 +15,10 @@ use tokio::sync::mpsc;
 pub type Queue = Arc<QueueInner>;
 
 #[derive(Debug)]
-pub enum QueueEvent {}
+pub enum QueueEvent {
+    PublishMessage(Message),
+    Shutdown,
+}
 
 pub type QueueEventSender = mpsc::Sender<QueueEvent>;
 pub type QueueEventReceiver = mpsc::Receiver<QueueEvent>;
