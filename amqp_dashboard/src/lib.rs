@@ -16,16 +16,26 @@ use tracing::{error, info};
 
 const DATA_ZIP: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/frontend.zip"));
 
-pub async fn dashboard(global_data: GlobalData) {
+pub async fn start_dashboard(global_data: GlobalData) {
+    match dashboard(global_data).await {
+        Ok(()) => {}
+        Err(err) => error!(%err, "Failed to start dashboard"),
+    }
+}
+
+#[tracing::instrument(skip(global_data))]
+pub async fn dashboard(global_data: GlobalData) -> anyhow::Result<()> {
     let cors = CorsLayer::new()
         .allow_methods(vec![Method::GET])
         .allow_origin(Any);
 
     let static_file_service =
-        get_service(StaticFileService::new(DATA_ZIP)).handle_error(|error| async move {
-            error!(?error, "Error in static file service");
-            StatusCode::INTERNAL_SERVER_ERROR
-        });
+        tokio::task::spawn_blocking(|| StaticFileService::new(DATA_ZIP)).await??;
+
+    let static_file_service = get_service(static_file_service).handle_error(|error| async move {
+        error!(?error, "Error in static file service");
+        StatusCode::INTERNAL_SERVER_ERROR
+    });
 
     let app = Router::new()
         .route("/api/data", get(move || get_data(global_data)).layer(cors))
@@ -37,8 +47,8 @@ pub async fn dashboard(global_data: GlobalData) {
 
     axum::Server::bind(&socket_addr)
         .serve(app.into_make_service())
-        .await
-        .unwrap();
+        .await?;
+    Ok(())
 }
 
 #[derive(Serialize)]

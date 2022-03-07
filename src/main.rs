@@ -3,7 +3,7 @@
 use anyhow::Result;
 use clap::Parser;
 use std::str::FromStr;
-use tracing::{info, info_span, Instrument};
+use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry};
 
 /// An AMQP 0-9-1 broker implementation.
@@ -28,11 +28,7 @@ async fn main() -> Result<()> {
 
     if args.dashboard {
         let global_data = global_data.clone();
-        tokio::spawn(async move {
-            amqp_dashboard::dashboard(global_data)
-                .instrument(info_span!("dashboard"))
-                .await
-        });
+        tokio::spawn(async move { amqp_dashboard::start_dashboard(global_data).await });
     }
 
     let res = amqp_transport::do_thing_i_guess(global_data, terminate()).await;

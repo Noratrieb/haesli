@@ -41,15 +41,17 @@ pub struct StaticFileService {
 }
 
 impl StaticFileService {
-    pub fn new(zip: &[u8]) -> Self {
-        let mut archive = ZipArchive::new(Cursor::new(zip)).unwrap();
+    /// Creates a new static file service from zip data. This is a blocking operation!
+    #[tracing::instrument(skip(zip))]
+    pub fn new(zip: &[u8]) -> anyhow::Result<Self> {
+        let mut archive = ZipArchive::new(Cursor::new(zip))?;
 
         let mut files = HashMap::with_capacity(archive.len());
 
         for i in 0..archive.len() {
-            let mut file = archive.by_index(i).unwrap();
-            let mut data = Vec::with_capacity(usize::try_from(file.size()).unwrap());
-            std::io::copy(&mut file, &mut data).unwrap();
+            let mut file = archive.by_index(i)?;
+            let mut data = Vec::with_capacity(usize::try_from(file.size())?);
+            std::io::copy(&mut file, &mut data)?;
 
             trace!(name = %file.name(), size = %file.size(),"Unpacking dashboard frontend file");
 
@@ -75,7 +77,7 @@ impl StaticFileService {
 
         trace!(?files, "Created StaticFileService");
 
-        Self { files }
+        Ok(Self { files })
     }
 
     fn call_inner(&mut self, req: Request<Body>) -> Result<Response<Body>, anyhow::Error> {
