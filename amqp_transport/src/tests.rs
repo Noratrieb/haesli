@@ -1,9 +1,11 @@
-use crate::{frame, frame::FrameType, methods};
+use std::collections::HashMap;
+
 use amqp_core::{
     connection::ChannelNum,
     methods::{ConnectionStart, ConnectionStartOk, FieldValue, Method},
 };
-use std::collections::HashMap;
+
+use crate::{frame, frame::FrameType, methods};
 
 #[tokio::test]
 async fn write_start_ok_frame() {

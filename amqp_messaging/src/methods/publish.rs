@@ -1,4 +1,3 @@
-use crate::Result;
 use amqp_core::{
     amqp_todo,
     connection::Channel,
@@ -7,6 +6,8 @@ use amqp_core::{
     queue::QueueEvent,
 };
 use tracing::{debug, error};
+
+use crate::Result;
 
 pub fn publish(channel_handle: Channel, message: Message) -> Result<()> {
     debug!(?message, "Publishing message");

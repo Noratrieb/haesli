@@ -2,7 +2,6 @@
 
 mod archive;
 
-use crate::archive::StaticFileService;
 use amqp_core::GlobalData;
 use axum::{
     http::{Method, StatusCode},
@@ -13,6 +12,8 @@ use axum::{
 use serde::Serialize;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info};
+
+use crate::archive::StaticFileService;
 
 const DATA_ZIP: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/frontend.zip"));
 

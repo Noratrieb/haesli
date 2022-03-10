@@ -4,8 +4,6 @@ mod parser;
 mod random;
 mod write;
 
-use anyhow::{bail, Context};
-use heck::ToUpperCamelCase;
 use std::{
     fs,
     fs::File,
@@ -15,6 +13,9 @@ use std::{
     process::Command,
     str::FromStr,
 };
+
+use anyhow::{bail, Context};
+use heck::ToUpperCamelCase;
 use strong_xml::XmlRead;
 
 #[derive(Debug, XmlRead)]

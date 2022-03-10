@@ -1,7 +1,9 @@
-use crate::{connection::ContentHeader, newtype_id};
+use std::sync::Arc;
+
 use bytes::Bytes;
 use smallvec::SmallVec;
-use std::sync::Arc;
+
+use crate::{connection::ContentHeader, newtype_id};
 
 pub type Message = Arc<MessageInner>;
 

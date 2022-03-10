@@ -1,7 +1,9 @@
-use crate::{error::TransError, methods::FieldValue};
+use std::io::Write;
+
 use amqp_core::methods::{Bit, Long, Longlong, Longstr, Octet, Short, Shortstr, Table, Timestamp};
 use anyhow::Context;
-use std::io::Write;
+
+use crate::{error::TransError, methods::FieldValue};
 
 pub fn octet<W: Write>(value: &Octet, writer: &mut W) -> Result<(), TransError> {
     writer.write_all(&[*value])?;

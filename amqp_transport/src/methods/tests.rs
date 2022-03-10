@@ -1,9 +1,11 @@
 // create random methods to test the ser/de code together. if they diverge, we have a bug
 // this is not perfect, if they both have the same bug it won't be found, but that's an ok tradeoff
 
-use crate::methods::{FieldValue, Method, RandomMethod};
-use rand::SeedableRng;
 use std::collections::HashMap;
+
+use rand::SeedableRng;
+
+use crate::methods::{FieldValue, Method, RandomMethod};
 
 #[test]
 fn pack_few_bits() {

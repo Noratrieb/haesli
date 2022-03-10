@@ -1,8 +1,3 @@
-use axum::{
-    body::Body,
-    http::{header, Request, Response, StatusCode},
-};
-use mime_guess::mime;
 use std::{
     collections::HashMap,
     fmt::{Debug, Formatter},
@@ -11,6 +6,12 @@ use std::{
     path::Path,
     task::{Context, Poll},
 };
+
+use axum::{
+    body::Body,
+    http::{header, Request, Response, StatusCode},
+};
+use mime_guess::mime;
 use tracing::trace;
 use zip::ZipArchive;
 

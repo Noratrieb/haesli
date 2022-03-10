@@ -1,6 +1,8 @@
-use crate::{project_root, yarn_install};
-use anyhow::{ensure, Context, Result};
 use std::{path::Path, process::Command, thread::sleep, time::Duration};
+
+use anyhow::{ensure, Context, Result};
+
+use crate::{project_root, yarn_install};
 
 pub fn main() -> Result<()> {
     let project_root = project_root();

@@ -1,16 +1,18 @@
-use crate::{
-    consumer::{Consumer, ConsumerId},
-    message::Message,
-    newtype, newtype_id, ChannelId,
-};
-use parking_lot::Mutex;
 use std::{
     borrow::Borrow,
     collections::HashMap,
     fmt::{Debug, Display, Formatter},
     sync::{atomic::AtomicUsize, Arc},
 };
+
+use parking_lot::Mutex;
 use tokio::sync::mpsc;
+
+use crate::{
+    consumer::{Consumer, ConsumerId},
+    message::Message,
+    newtype, newtype_id, ChannelId,
+};
 
 pub type Queue = Arc<QueueInner>;
 

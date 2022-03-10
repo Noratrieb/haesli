@@ -1,7 +1,8 @@
-use super::{Amqp, Assert, Class, Domain, Method};
-use crate::codegen::Codegen;
 use heck::{ToSnakeCase, ToUpperCamelCase};
 use itertools::Itertools;
+
+use super::{Amqp, Assert, Class, Domain, Method};
+use crate::codegen::Codegen;
 
 fn method_function_name(class_name: &str) -> impl Fn(&Method) -> String + '_ {
     move |method| {

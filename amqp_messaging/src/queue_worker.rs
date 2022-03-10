@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use amqp_core::{
     connection::ConnectionEvent,
     consumer::Consumer,
@@ -6,7 +8,6 @@ use amqp_core::{
     queue::{Queue, QueueEvent, QueueEventReceiver},
     GlobalData,
 };
-use std::borrow::Borrow;
 use tracing::info;
 
 #[derive(Debug)]

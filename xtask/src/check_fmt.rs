@@ -1,6 +1,8 @@
-use crate::{project_root, yarn_install};
-use anyhow::ensure;
 use std::process::Command;
+
+use anyhow::ensure;
+
+use crate::{project_root, yarn_install};
 
 pub fn main() -> anyhow::Result<()> {
     println!("$ cargo fmt --check");

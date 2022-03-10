@@ -1,9 +1,7 @@
-use crate::{
-    error::{ConException, ProtocolError, Result, TransError},
-    frame,
-    frame::{parse_content_header, Frame, FrameType, MaxFrameSize},
-    methods, sasl,
+use std::{
+    cmp::Ordering, collections::HashMap, net::SocketAddr, pin::Pin, sync::Arc, time::Duration,
 };
+
 use amqp_core::{
     connection::{
         Channel, ChannelInner, ChannelNum, ConEventReceiver, ConEventSender, Connection,
@@ -20,15 +18,18 @@ use amqp_core::{
 use anyhow::{anyhow, Context};
 use bytes::Bytes;
 use smallvec::SmallVec;
-use std::{
-    cmp::Ordering, collections::HashMap, net::SocketAddr, pin::Pin, sync::Arc, time::Duration,
-};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
     select, time,
 };
 use tracing::{debug, error, info, trace, warn};
+
+use crate::{
+    error::{ConException, ProtocolError, Result, TransError},
+    frame::{self, parse_content_header, Frame, FrameType, MaxFrameSize},
+    methods, sasl,
+};
 
 fn ensure_conn(condition: bool) -> Result<()> {
     if condition {

@@ -1,13 +1,15 @@
-use crate::error::{ConException, ProtocolError, Result};
-use amqp_core::connection::{ChannelNum, ContentHeader};
-use anyhow::Context;
-use bytes::Bytes;
 use std::{
     fmt::{Debug, Formatter},
     num::NonZeroUsize,
 };
+
+use amqp_core::connection::{ChannelNum, ContentHeader};
+use anyhow::Context;
+use bytes::Bytes;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::trace;
+
+use crate::error::{ConException, ProtocolError, Result};
 
 const REQUIRED_FRAME_END: u8 = 0xCE;
 
@@ -37,18 +39,21 @@ pub enum FrameType {
 }
 
 mod content_header_parse {
-    use crate::{
-        error::TransError,
-        methods::parse_helper::{octet, shortstr, table, timestamp},
-    };
     use amqp_core::{
         connection::ContentHeader,
-        methods,
-        methods::FieldValue::{FieldTable, ShortShortUInt, ShortString, Timestamp},
+        methods::{
+            self,
+            FieldValue::{FieldTable, ShortShortUInt, ShortString, Timestamp},
+        },
     };
     use nom::number::{
         complete::{u16, u64},
         Endianness::Big,
+    };
+
+    use crate::{
+        error::TransError,
+        methods::parse_helper::{octet, shortstr, table, timestamp},
     };
 
     type IResult<'a, T> = nom::IResult<&'a [u8], T, TransError>;
@@ -133,10 +138,8 @@ pub fn parse_content_header(input: &[u8]) -> Result<ContentHeader> {
 }
 
 mod content_header_write {
-    use crate::{
-        error::Result,
-        methods::write_helper::{longlong, octet, short, shortstr, table, timestamp},
-    };
+    use std::io::Write;
+
     use amqp_core::{
         connection::ContentHeader,
         methods::{
@@ -144,7 +147,11 @@ mod content_header_write {
             Table,
         },
     };
-    use std::io::Write;
+
+    use crate::{
+        error::Result,
+        methods::write_helper::{longlong, octet, short, shortstr, table, timestamp},
+    };
 
     pub fn write_content_header<W: Write>(buf: &mut W, header: &ContentHeader) -> Result<()> {
         short(&header.class_id, buf)?;
@@ -325,8 +332,9 @@ fn parse_frame_type(kind: u8, channel: ChannelNum) -> Result<FrameType> {
 
 #[cfg(test)]
 mod tests {
-    use crate::frame::{ChannelNum, Frame, FrameType, MaxFrameSize};
     use bytes::Bytes;
+
+    use crate::frame::{ChannelNum, Frame, FrameType, MaxFrameSize};
 
     #[tokio::test]
     async fn read_small_body() {

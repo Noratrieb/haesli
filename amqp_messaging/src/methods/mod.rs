@@ -2,9 +2,10 @@ mod consume;
 mod publish;
 mod queue;
 
-use crate::Result;
 use amqp_core::{amqp_todo, connection::Channel, message::Message, methods::Method};
 use tracing::info;
+
+use crate::Result;
 
 pub fn handle_basic_publish(channel_handle: Channel, message: Message) -> Result<()> {
     publish::publish(channel_handle, message)

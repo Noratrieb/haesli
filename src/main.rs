@@ -1,8 +1,9 @@
 #![warn(rust_2018_idioms)]
 
+use std::str::FromStr;
+
 use anyhow::Result;
 use clap::Parser;
-use std::str::FromStr;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry};
 

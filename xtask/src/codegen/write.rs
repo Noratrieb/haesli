@@ -1,5 +1,6 @@
-use crate::codegen::{Amqp, Codegen};
 use heck::ToUpperCamelCase;
+
+use crate::codegen::{Amqp, Codegen};
 
 impl Codegen {
     pub fn codegen_write(&mut self, amqp: &Amqp) {

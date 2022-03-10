@@ -1,4 +1,5 @@
-use crate::Result;
+use std::sync::Arc;
+
 use amqp_core::{
     amqp_todo,
     connection::Channel,
@@ -6,8 +7,9 @@ use amqp_core::{
     error::ChannelException,
     methods::{BasicConsume, BasicConsumeOk, Method},
 };
-use std::sync::Arc;
 use tracing::info;
+
+use crate::Result;
 
 pub fn consume(channel: Channel, basic_consume: BasicConsume) -> Result<Method> {
     let BasicConsume {

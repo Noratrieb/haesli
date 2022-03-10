@@ -1,4 +1,5 @@
-use crate::{queue_worker::QueueTask, Result};
+use std::sync::{atomic::AtomicUsize, Arc};
+
 use amqp_core::{
     amqp_todo,
     connection::Channel,
@@ -7,8 +8,9 @@ use amqp_core::{
     GlobalData,
 };
 use parking_lot::Mutex;
-use std::sync::{atomic::AtomicUsize, Arc};
 use tokio::sync::mpsc;
+
+use crate::{queue_worker::QueueTask, Result};
 
 pub fn declare(channel: Channel, queue_declare: QueueDeclare) -> Result<Method> {
     let QueueDeclare {

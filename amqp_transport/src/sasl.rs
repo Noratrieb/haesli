@@ -2,8 +2,9 @@
 //!
 //! Currently only supports PLAIN (see [RFC 4616](https://datatracker.ietf.org/doc/html/rfc4616))
 
-use crate::error::Result;
 use amqp_core::error::ConException;
+
+use crate::error::Result;
 
 pub struct PlainUser {
     pub authorization_identity: String,

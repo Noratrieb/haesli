@@ -10,12 +10,14 @@ mod tests;
 
 // TODO: handle big types
 
-use crate::connection::TransportConnection;
+use std::{future::Future, net::SocketAddr};
+
 use amqp_core::{connection::ConnectionEvent, queue::QueueEvent, GlobalData};
 use anyhow::Context;
-use std::{future::Future, net::SocketAddr};
 use tokio::{net, net::TcpStream, select};
 use tracing::{info, info_span, Instrument};
+
+use crate::connection::TransportConnection;
 
 pub async fn do_thing_i_guess(
     global_data: GlobalData,

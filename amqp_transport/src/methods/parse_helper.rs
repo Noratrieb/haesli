@@ -1,4 +1,3 @@
-use crate::{error::TransError, methods::generated::parse::IResult};
 use amqp_core::{
     error::{ConException, ProtocolError},
     methods::{
@@ -17,6 +16,8 @@ use nom::{
     },
     Err,
 };
+
+use crate::{error::TransError, methods::generated::parse::IResult};
 
 impl<T> nom::error::ParseError<T> for TransError {
     fn from_error_kind(_input: T, _kind: ErrorKind) -> Self {

@@ -1,14 +1,20 @@
-use crate::{consumer::Consumer, methods, methods::Method, newtype_id, GlobalData, Queue};
-use bytes::Bytes;
-use parking_lot::Mutex;
-use smallvec::SmallVec;
 use std::{
     collections::HashMap,
     fmt::{Display, Formatter},
     net::SocketAddr,
     sync::Arc,
 };
+
+use bytes::Bytes;
+use parking_lot::Mutex;
+use smallvec::SmallVec;
 use tokio::sync::mpsc;
+
+use crate::{
+    consumer::Consumer,
+    methods::{self, Method},
+    newtype_id, GlobalData, Queue,
+};
 
 newtype_id!(pub ConnectionId);
 newtype_id!(pub ChannelId);

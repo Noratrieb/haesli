@@ -1,9 +1,10 @@
-use crate::error::TransError;
 use amqp_core::{
     error::ConException,
     methods::{FieldValue, Method, Table},
 };
 use rand::Rng;
+
+use crate::error::TransError;
 
 mod generated;
 pub mod parse_helper;

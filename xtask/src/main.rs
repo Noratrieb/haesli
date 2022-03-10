@@ -1,8 +1,9 @@
-use anyhow::{ensure, Context, Result};
 use std::{
     path::{Path, PathBuf},
     process::Command,
 };
+
+use anyhow::{ensure, Context, Result};
 
 mod check_fmt;
 mod codegen;

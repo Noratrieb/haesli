@@ -8,18 +8,20 @@ pub mod message;
 pub mod methods;
 pub mod queue;
 
-use crate::{
-    connection::{Channel, Connection},
-    queue::{Queue, QueueName},
-};
-use connection::{ChannelId, ConnectionId};
-use parking_lot::Mutex;
 use std::{
     collections::HashMap,
     fmt::{Debug, Formatter},
     sync::Arc,
 };
+
+use connection::{ChannelId, ConnectionId};
+use parking_lot::Mutex;
 use uuid::Uuid;
+
+use crate::{
+    connection::{Channel, Connection},
+    queue::{Queue, QueueName},
+};
 
 #[derive(Clone)]
 pub struct GlobalData {
