@@ -1,2 +1,2 @@
-amqp_core/src/methods/generated.rs linguist-generated
-amqp_transport/src/methods/generated.rs linguist-generated
+haesli_core/src/methods/generated.rs linguist-generated
+haesli_transport/src/methods/generated.rs linguist-generated

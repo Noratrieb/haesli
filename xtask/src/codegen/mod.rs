@@ -127,13 +127,13 @@ pub fn main() -> anyhow::Result<()> {
         .context("src directory path")?
         .parent()
         .context("xtask root path")?;
-    let amqp_spec = xtask_root.join("amqp0-9-1.xml");
+    let haesli_spec = xtask_root.join("amqp0-9-1.xml");
     let project_root = xtask_root.parent().context("get project root parent")?;
 
-    let transport_generated_path = project_root.join("amqp_transport/src/methods/generated.rs");
-    let core_generated_path = project_root.join("amqp_core/src/methods/generated.rs");
+    let transport_generated_path = project_root.join("haesli_transport/src/methods/generated.rs");
+    let core_generated_path = project_root.join("haesli_core/src/methods/generated.rs");
 
-    let content = fs::read_to_string(amqp_spec).context("read amqp spec file")?;
+    let content = fs::read_to_string(haesli_spec).context("read amqp spec file")?;
 
     let amqp = Amqp::from_str(&content).context("parse amqp spec file")?;
 
@@ -202,7 +202,7 @@ impl Codegen {
                 self.output,
                 "pub type {} = {};\n",
                 domain.name.to_upper_camel_case(),
-                self.amqp_type_to_rust_type(&domain.kind),
+                self.haesli_type_to_rust_type(&domain.kind),
             )
             .ok();
         }
@@ -266,8 +266,8 @@ pub struct {class_name}{method_name}"
         }
     }
 
-    fn amqp_type_to_rust_type(&self, amqp_type: &str) -> &'static str {
-        match amqp_type {
+    fn haesli_type_to_rust_type(&self, haesli_type: &str) -> &'static str {
+        match haesli_type {
             "octet" => "u8",
             "short" => "u16",
             "long" => "u32",
@@ -277,7 +277,7 @@ pub struct {class_name}{method_name}"
             "longstr" => "Vec<u8>",
             "timestamp" => "u64",
             "table" => "super::Table",
-            _ => unreachable!("invalid type {}", amqp_type),
+            _ => unreachable!("invalid type {}", haesli_type),
         }
     }
 

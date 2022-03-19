@@ -7,7 +7,7 @@ impl Codegen {
         writeln!(
             self.output,
             "pub mod write {{
-use amqp_core::methods::*;
+use haesli_core::methods::*;
 use crate::error::TransError;
 use crate::methods::write_helper::*;
 use std::io::Write;

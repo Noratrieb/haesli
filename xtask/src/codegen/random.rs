@@ -9,7 +9,7 @@ impl Codegen {
             "
 mod random {{
 use rand::Rng;
-use amqp_core::methods::*;
+use haesli_core::methods::*;
 use crate::methods::RandomMethod;
 "
         )

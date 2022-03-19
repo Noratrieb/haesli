@@ -28,7 +28,7 @@ pub fn main() -> anyhow::Result<()> {
         "`yarn check-fmt` did not exist successfully"
     );
 
-    let frontend = project_root().join("amqp_dashboard/frontend");
+    let frontend = project_root().join("haesli_dashboard/frontend");
     yarn_install(&frontend)?;
     println!("$ yarn check-fmt");
     let status = Command::new("yarn")

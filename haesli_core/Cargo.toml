@@ -1,0 +1,18 @@
+[package]
+name = "haesli_core"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+haesli_datastructure = { path = "../haesli_datastructure" }
+bytes = "1.1.0"
+parking_lot = "0.12.0"
+rand = "0.8.5"
+smallvec = { version = "1.8.0", features = ["union"] }
+thiserror = "1.0.30"
+tokio = { version = "1.17.0", features = ["sync"] }
+uuid = "0.8.2"
+
+[features]

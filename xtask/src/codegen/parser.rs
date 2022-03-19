@@ -21,7 +21,7 @@ impl Codegen {
         writeln!(
             self.output,
             "pub mod parse {{
-use amqp_core::methods::*;
+use haesli_core::methods::*;
 use crate::error::TransError;
 use crate::methods::parse_helper::*;
 use nom::{{branch::alt, bytes::complete::tag}};

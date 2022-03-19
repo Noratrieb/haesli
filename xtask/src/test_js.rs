@@ -15,7 +15,7 @@ pub fn main() -> Result<()> {
         .context("cargo build")?;
     ensure!(status.success(), "cargo build failed");
 
-    let mut amqp_server = Command::new("target/debug/amqp")
+    let mut haesli_server = Command::new("target/debug/amqp")
         .env("RUST_LOG", "trace")
         .spawn()
         .context("target/debug/amqp run")?;
@@ -25,7 +25,7 @@ pub fn main() -> Result<()> {
 
     let test_result = run_js(&test_js_root);
 
-    amqp_server.kill().context("killing amqp server")?;
+    haesli_server.kill().context("killing amqp server")?;
 
     test_result
 }

@@ -25,14 +25,14 @@ async fn main() -> Result<()> {
 
     setup_tracing(&args);
 
-    let global_data = amqp_core::GlobalData::default();
+    let global_data = haesli_core::GlobalData::default();
 
     if args.dashboard {
         let global_data = global_data.clone();
-        tokio::spawn(async move { amqp_dashboard::start_dashboard(global_data).await });
+        tokio::spawn(async move { haesli_dashboard::start_dashboard(global_data).await });
     }
 
-    let res = amqp_transport::do_thing_i_guess(global_data, terminate()).await;
+    let res = haesli_transport::do_thing_i_guess(global_data, terminate()).await;
 
     info!("Bye!");
 

@@ -1,0 +1,15 @@
+[package]
+name = "haesli_messaging"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+haesli_core = { path = "../haesli_core" }
+haesli_datastructure = { path = "../haesli_datastructure" }
+parking_lot = "0.12.0"
+tracing = "0.1.31"
+tokio = { version = "1.17.0", features = ["full"] }
+
+[features]

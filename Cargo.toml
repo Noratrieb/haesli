@@ -1,11 +1,11 @@
 [workspace]
 members = [
     ".",
-    "amqp_core",
-    "amqp_dashboard",
-    "amqp_datastructure",
-    "amqp_messaging",
-    "amqp_transport",
+    "haesli_core",
+    "haesli_dashboard",
+    "haesli_datastructure",
+    "haesli_messaging",
+    "haesli_transport",
     "xtask",
 ]
 
@@ -18,9 +18,9 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.53"
-amqp_core = { path = "./amqp_core" }
-amqp_dashboard = { path = "./amqp_dashboard" }
-amqp_transport = { path = "./amqp_transport" }
+haesli_core = { path = "./haesli_core" }
+haesli_dashboard = { path = "./haesli_dashboard" }
+haesli_transport = { path = "./haesli_transport" }
 clap = { version = "3.1.5", features = ["derive"] }
 tokio = { version = "1.16.1", features = ["full"] }
 tracing = "0.1.30"
