@@ -2,7 +2,7 @@ mod consume;
 mod publish;
 mod queue;
 
-use haesli_core::{connection::Channel, haesli_todo, message::Message, methods::Method};
+use haesli_core::{amqp_todo, connection::Channel, message::Message, methods::Method};
 use tracing::info;
 
 use crate::Result;
@@ -15,42 +15,42 @@ pub async fn handle_method(channel_handle: Channel, method: Method) -> Result<Me
     info!(?method, "Handling method");
 
     let response = match method {
-        Method::ExchangeDeclare(_) => haesli_todo!(),
-        Method::ExchangeDeclareOk(_) => haesli_todo!(),
-        Method::ExchangeDelete(_) => haesli_todo!(),
-        Method::ExchangeDeleteOk(_) => haesli_todo!(),
+        Method::ExchangeDeclare(_) => amqp_todo!(),
+        Method::ExchangeDeclareOk(_) => amqp_todo!(),
+        Method::ExchangeDelete(_) => amqp_todo!(),
+        Method::ExchangeDeleteOk(_) => amqp_todo!(),
         Method::QueueDeclare(queue_declare) => queue::declare(channel_handle, queue_declare)?,
-        Method::QueueDeclareOk { .. } => haesli_todo!(),
+        Method::QueueDeclareOk { .. } => amqp_todo!(),
         Method::QueueBind(queue_bind) => queue::bind(channel_handle, queue_bind).await?,
-        Method::QueueBindOk(_) => haesli_todo!(),
-        Method::QueueUnbind { .. } => haesli_todo!(),
-        Method::QueueUnbindOk(_) => haesli_todo!(),
-        Method::QueuePurge { .. } => haesli_todo!(),
-        Method::QueuePurgeOk { .. } => haesli_todo!(),
-        Method::QueueDelete { .. } => haesli_todo!(),
-        Method::QueueDeleteOk { .. } => haesli_todo!(),
-        Method::BasicQos { .. } => haesli_todo!(),
-        Method::BasicQosOk(_) => haesli_todo!(),
+        Method::QueueBindOk(_) => amqp_todo!(),
+        Method::QueueUnbind { .. } => amqp_todo!(),
+        Method::QueueUnbindOk(_) => amqp_todo!(),
+        Method::QueuePurge { .. } => amqp_todo!(),
+        Method::QueuePurgeOk { .. } => amqp_todo!(),
+        Method::QueueDelete { .. } => amqp_todo!(),
+        Method::QueueDeleteOk { .. } => amqp_todo!(),
+        Method::BasicQos { .. } => amqp_todo!(),
+        Method::BasicQosOk(_) => amqp_todo!(),
         Method::BasicConsume(consume) => consume::consume(channel_handle, consume)?,
-        Method::BasicConsumeOk { .. } => haesli_todo!(),
-        Method::BasicCancel { .. } => haesli_todo!(),
-        Method::BasicCancelOk { .. } => haesli_todo!(),
-        Method::BasicReturn { .. } => haesli_todo!(),
-        Method::BasicDeliver { .. } => haesli_todo!(),
-        Method::BasicGet { .. } => haesli_todo!(),
-        Method::BasicGetOk { .. } => haesli_todo!(),
-        Method::BasicGetEmpty { .. } => haesli_todo!(),
-        Method::BasicAck { .. } => haesli_todo!(),
-        Method::BasicReject { .. } => haesli_todo!(),
-        Method::BasicRecoverAsync { .. } => haesli_todo!(),
-        Method::BasicRecover { .. } => haesli_todo!(),
-        Method::BasicRecoverOk(_) => haesli_todo!(),
+        Method::BasicConsumeOk { .. } => amqp_todo!(),
+        Method::BasicCancel { .. } => amqp_todo!(),
+        Method::BasicCancelOk { .. } => amqp_todo!(),
+        Method::BasicReturn { .. } => amqp_todo!(),
+        Method::BasicDeliver { .. } => amqp_todo!(),
+        Method::BasicGet { .. } => amqp_todo!(),
+        Method::BasicGetOk { .. } => amqp_todo!(),
+        Method::BasicGetEmpty { .. } => amqp_todo!(),
+        Method::BasicAck { .. } => amqp_todo!(),
+        Method::BasicReject { .. } => amqp_todo!(),
+        Method::BasicRecoverAsync { .. } => amqp_todo!(),
+        Method::BasicRecover { .. } => amqp_todo!(),
+        Method::BasicRecoverOk(_) => amqp_todo!(),
         Method::TxSelect(_)
         | Method::TxSelectOk(_)
         | Method::TxCommit(_)
         | Method::TxCommitOk(_)
         | Method::TxRollback(_)
-        | Method::TxRollbackOk(_) => haesli_todo!(),
+        | Method::TxRollbackOk(_) => amqp_todo!(),
         Method::BasicPublish { .. } => {
             unreachable!("Basic.Publish is handled somewhere else because it has a body")
         }

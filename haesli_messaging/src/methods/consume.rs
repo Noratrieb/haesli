@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use haesli_core::{
+    amqp_todo,
     connection::Channel,
     consumer::{Consumer, ConsumerId},
     error::ChannelException,
-    haesli_todo,
     methods::{BasicConsume, BasicConsumeOk, Method},
 };
 use tracing::info;
@@ -23,7 +23,7 @@ pub fn consume(channel: Channel, basic_consume: BasicConsume) -> Result<Method> 
     } = basic_consume;
 
     if no_wait || no_local || exclusive || no_ack {
-        haesli_todo!();
+        amqp_todo!();
     }
 
     let global_data = channel.global_data.clone();

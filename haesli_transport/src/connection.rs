@@ -109,12 +109,30 @@ impl TransportConnection {
     }
 
     pub async fn start_connection_processing(mut self) {
-        let process_result = self.process_connection().await;
+        self.process_connection().await;
+        if let Err(err) = self.stream.shutdown().await {
+            error!(%err, "Failed to shut down TCP stream");
+        }
+
+        // global connection is closed on drop
+    }
+
+    async fn process_connection(&mut self) {
+        let initialize_result = self.initialize_connection().await;
+
+        if let Err(err) = initialize_result {
+            // 2.2.4 - prior to sending or receiving Open or Open-Ok,
+            // a peer that detects an error MUST close the socket without sending any further data.
+            warn!(%err, "An error occurred during connection initialization");
+            return;
+        }
+
+        let process_result = self.main_loop().await;
 
         match process_result {
             Ok(()) => {}
-            Err(TransError::Protocol(ProtocolError::GracefullyClosed)) => {
-                /* do nothing, remove below */
+            Err(TransError::Protocol(ProtocolError::GracefullyClosed | ProtocolError::Fatal)) => {
+                /* do nothing, connection is closed on drop */
             }
             Err(TransError::Protocol(ProtocolError::ConException(ex))) => {
                 warn!(%ex, "Connection exception occurred. This indicates a faulty client.");
@@ -129,19 +147,18 @@ impl TransportConnection {
             }
             Err(err) => error!(%err, "Error during processing of connection"),
         }
-
-        // global connection is closed on drop
     }
 
-    pub async fn process_connection(&mut self) -> Result<()> {
+    async fn initialize_connection(&mut self) -> Result<()> {
+        // 2.2.4 - Initialize connection
         self.negotiate_version().await?;
         self.start().await?;
+        // todo should `secure` happen here?
         self.tune().await?;
         self.open().await?;
 
         info!("Connection is ready for usage!");
-
-        self.main_loop().await
+        Ok(())
     }
 
     async fn send_method_content(
@@ -332,7 +349,7 @@ impl TransportConnection {
         let result = match frame.kind {
             FrameType::Method => self.dispatch_method(frame).await,
             FrameType::Heartbeat => {
-                Ok(()) /* Nothing here, just the `reset_timeout` above  */
+                Ok(()) /* Nothing here, just the `reset_timeout` above */
             }
             FrameType::Header => self.dispatch_header(frame),
             FrameType::Body => self.dispatch_body(frame),
@@ -596,7 +613,7 @@ impl TransportConnection {
             .await
             .context("read protocol header")?;
 
-        debug!(received_header = ?read_header_buf,"Received protocol header");
+        trace!(received_header = ?read_header_buf, "Received protocol header");
 
         let protocol = &read_header_buf[0..4];
         let version = &read_header_buf[5..8];
@@ -606,19 +623,19 @@ impl TransportConnection {
                 .write_all(OWN_PROTOCOL_HEADER)
                 .await
                 .context("write protocol header")?;
-            debug!(?protocol, "Version negotiation failed");
+            trace!(?protocol, "Version negotiation failed");
             return Err(ProtocolError::ProtocolNegotiationFailed.into());
         }
 
         if &read_header_buf[0..5] == b"AMQP\0" && version == SUPPORTED_PROTOCOL_VERSION {
-            debug!(?version, "Version negotiation successful");
+            trace!(?version, "Version negotiation successful");
             Ok(())
         } else {
             self.stream
                 .write_all(OWN_PROTOCOL_HEADER)
                 .await
                 .context("write protocol header")?;
-            debug!(?version, expected_version = ?SUPPORTED_PROTOCOL_VERSION, "Version negotiation failed");
+            trace!(?version, expected_version = ?SUPPORTED_PROTOCOL_VERSION, "Version negotiation failed");
             Err(ProtocolError::ProtocolNegotiationFailed.into())
         }
     }
@@ -671,7 +688,7 @@ fn server_properties(host: SocketAddr) -> Table {
     let host_str = host.ip().to_string();
     HashMap::from([
         ("host".to_owned(), ls(host_str)),
-        ("product".to_owned(), ls("no name yet")),
+        ("product".to_owned(), ls("haesli")),
         ("version".to_owned(), ls("0.1.0")),
         ("platform".to_owned(), ls("microsoft linux")),
         ("copyright".to_owned(), ls("MIT")),

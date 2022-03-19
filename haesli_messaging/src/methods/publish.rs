@@ -1,7 +1,7 @@
 use haesli_core::{
+    amqp_todo,
     connection::Channel,
     error::{ChannelException, ConException},
-    haesli_todo,
     message::Message,
     queue::QueueEvent,
 };
@@ -17,7 +17,7 @@ pub fn publish(channel_handle: Channel, message: Message) -> Result<()> {
     let routing = &message.routing;
 
     if !routing.exchange.is_empty() {
-        haesli_todo!();
+        amqp_todo!();
     }
 
     let global_data = global_data.lock();

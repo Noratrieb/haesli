@@ -2,7 +2,7 @@ use std::io::Error;
 
 pub use haesli_core::error::{ConException, ProtocolError};
 
-type StdResult<T, E> = std::result::Result<T, E>;
+pub type StdResult<T, E> = std::result::Result<T, E>;
 
 pub type Result<T> = StdResult<T, TransError>;
 

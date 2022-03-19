@@ -1,7 +1,7 @@
 use std::{
     borrow::Borrow,
     collections::HashMap,
-    fmt::{Debug, Display, Formatter},
+    fmt::{Debug, Formatter},
     sync::{atomic::AtomicUsize, Arc},
 };
 
@@ -35,22 +35,21 @@ newtype!(
 
 impl Borrow<str> for QueueName {
     fn borrow(&self) -> &str {
-        std::borrow::Borrow::borrow(&self.0)
-    }
-}
-
-impl Display for QueueName {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        Display::fmt(&self.0, f)
+        Borrow::borrow(&self.0)
     }
 }
 
 #[derive(Debug)]
 pub struct QueueInner {
+    /// Internal ID, might actually be unused
     pub id: QueueId,
+    /// The visible name of the queue
     pub name: QueueName,
     pub messages: haesli_datastructure::MessageQueue<Message>,
+    /// Whether the queue should be kept when the server restarts
     pub durable: bool,
+    /// To which connection the queue belongs to it will be deleted when the connection closes
+    // todo: connection or channel?
     pub exclusive: Option<ChannelId>,
     /// Whether the queue will automatically be deleted when no consumers uses it anymore.
     /// The queue can always be manually deleted.

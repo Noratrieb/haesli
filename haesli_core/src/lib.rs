@@ -3,6 +3,7 @@
 pub mod connection;
 pub mod consumer;
 pub mod error;
+pub mod exchange;
 mod macros;
 pub mod message;
 pub mod methods;

@@ -1,8 +1,8 @@
 use std::sync::{atomic::AtomicUsize, Arc};
 
 use haesli_core::{
+    amqp_todo,
     connection::Channel,
-    haesli_todo,
     methods::{Method, QueueBind, QueueDeclare, QueueDeclareOk},
     queue::{QueueDeletion, QueueId, QueueInner, QueueName},
     GlobalData,
@@ -24,16 +24,23 @@ pub fn declare(channel: Channel, queue_declare: QueueDeclare) -> Result<Method> 
         ..
     } = queue_declare;
 
+    // 2.1.4.1 - If no queue name is given, chose a name
+    let queue_name = if queue_name.is_empty() {
+        queue_name
+    } else {
+        format!("q_{}", haesli_core::random_uuid())
+    };
+
     let queue_name = QueueName::new(queue_name.into());
 
     if !arguments.is_empty() {
-        haesli_todo!();
+        amqp_todo!();
     }
 
-    // todo: durable is technically spec-compliant, the spec doesn't really require it, but it's a todo
-    // not checked here because it's the default for amqplib which is annoying
+    // todo: implement durable, not checked here because it's the amqplib default
+
     if passive || no_wait {
-        haesli_todo!();
+        amqp_todo!();
     }
 
     let global_data = channel.global_data.clone();
@@ -79,7 +86,7 @@ pub fn declare(channel: Channel, queue_declare: QueueDeclare) -> Result<Method> 
 }
 
 pub async fn bind(_channel_handle: Channel, _queue_bind: QueueBind) -> Result<Method> {
-    haesli_todo!();
+    amqp_todo!();
 }
 
 fn bind_queue(global_data: GlobalData, _exchange: (), routing_key: Arc<str>) -> Result<()> {
