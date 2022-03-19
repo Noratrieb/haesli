@@ -9,6 +9,7 @@ use haesli_core::{
 };
 use parking_lot::Mutex;
 use tokio::sync::mpsc;
+use tracing::debug;
 
 use crate::{queue_worker::QueueTask, Result};
 
@@ -25,7 +26,7 @@ pub fn declare(channel: Channel, queue_declare: QueueDeclare) -> Result<Method> 
     } = queue_declare;
 
     // 2.1.4.1 - If no queue name is given, chose a name
-    let queue_name = if queue_name.is_empty() {
+    let queue_name = if !queue_name.is_empty() {
         queue_name
     } else {
         format!("q_{}", haesli_core::random_uuid())
@@ -62,6 +63,8 @@ pub fn declare(channel: Channel, queue_declare: QueueDeclare) -> Result<Method> 
         consumers: Mutex::default(),
         event_send,
     });
+
+    debug!(%queue_name, "Creating queue");
 
     {
         let mut global_data_lock = global_data.lock();

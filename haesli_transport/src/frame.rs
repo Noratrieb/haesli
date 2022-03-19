@@ -283,15 +283,15 @@ pub async fn read_frame<R>(r: &mut R, max_frame_size: MaxFrameSize) -> Result<Fr
 where
     R: AsyncReadExt + Unpin + Send,
 {
-    let kind = r.read_u8().await.context("read type")?;
-    let channel = r.read_u16().await.context("read channel")?;
+    let kind = r.read_u8().await?;
+    let channel = r.read_u16().await?;
     let channel = ChannelNum::new(channel);
-    let size = r.read_u32().await.context("read size")?;
+    let size = r.read_u32().await?;
 
     let mut payload = vec![0; size.try_into().unwrap()];
-    r.read_exact(&mut payload).await.context("read payload")?;
+    r.read_exact(&mut payload).await?;
 
-    let frame_end = r.read_u8().await.context("read frame end")?;
+    let frame_end = r.read_u8().await?;
 
     if frame_end != REQUIRED_FRAME_END {
         return Err(ProtocolError::Fatal.into());

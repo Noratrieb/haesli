@@ -224,7 +224,9 @@ impl TransportConnection {
     }
 
     async fn recv_method(&mut self) -> Result<Method> {
-        let start_ok_frame = frame::read_frame(&mut self.stream, self.max_frame_size).await?;
+        let start_ok_frame = frame::read_frame(&mut self.stream, self.max_frame_size)
+            .await
+            .context("read from stream, peer disconnected")?;
 
         ensure_conn(start_ok_frame.kind == FrameType::Method)?;
 
@@ -320,7 +322,7 @@ impl TransportConnection {
         loop {
             select! {
                 frame = frame::read_frame(&mut self.stream, self.max_frame_size) => {
-                    let frame = frame?;
+                    let frame = frame.context("read from stream, peer disconnected")?;
                     self.handle_frame(frame).await?;
                 }
                 queued_method = self.event_receiver.recv() => {

@@ -1,4 +1,4 @@
-use std::{path::Path, process::Command, thread::sleep, time::Duration};
+use std::{path::Path, process::Command, thread, time::Duration};
 
 use anyhow::{ensure, Context, Result};
 
@@ -15,17 +15,19 @@ pub fn main() -> Result<()> {
         .context("cargo build")?;
     ensure!(status.success(), "cargo build failed");
 
-    let mut haesli_server = Command::new("target/debug/amqp")
+    let server_binary = project_root.join("target/debug/haesli");
+    let mut server_process = Command::new(&server_binary)
         .env("RUST_LOG", "trace")
         .spawn()
-        .context("target/debug/amqp run")?;
+        .context(server_binary.display().to_string())
+        .context("run server binary")?;
 
     // give it time for startup
-    sleep(Duration::from_secs(1));
+    thread::sleep(Duration::from_secs(1));
 
     let test_result = run_js(&test_js_root);
 
-    haesli_server.kill().context("killing amqp server")?;
+    server_process.kill().context("killing amqp server")?;
 
     test_result
 }
