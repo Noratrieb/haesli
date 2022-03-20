@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use haesli_core::{
     exchange::{Exchange, ExchangeType, TopicSegment},
     queue::Queue,
@@ -7,7 +5,7 @@ use haesli_core::{
 
 fn parse_topic(topic: &str) -> Vec<TopicSegment> {
     topic
-        .split(".")
+        .split('.')
         .map(|segment| match segment {
             "*" => TopicSegment::SingleWildcard,
             "#" => TopicSegment::MultiWildcard,
