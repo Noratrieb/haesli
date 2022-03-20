@@ -11,7 +11,7 @@ use parking_lot::Mutex;
 use tokio::sync::mpsc;
 use tracing::debug;
 
-use crate::{queue_worker::QueueTask, Result};
+use crate::{queue_worker::QueueTask, routing, Result};
 
 pub fn declare(channel: Channel, queue_declare: QueueDeclare) -> Result<Method> {
     let QueueDeclare {
@@ -75,7 +75,7 @@ pub fn declare(channel: Channel, queue_declare: QueueDeclare) -> Result<Method> 
             .or_insert_with(|| queue.clone());
     }
 
-    bind_queue(global_data.clone(), (), queue_name.clone().into_inner())?;
+    bind_queue(global_data.clone(), (), queue_name.to_string())?;
 
     let queue_task = QueueTask::new(global_data, event_recv, queue);
 
@@ -92,18 +92,22 @@ pub async fn bind(_channel_handle: Channel, _queue_bind: QueueBind) -> Result<Me
     amqp_todo!();
 }
 
-fn bind_queue(global_data: GlobalData, _exchange: (), routing_key: Arc<str>) -> Result<()> {
+fn bind_queue(global_data: GlobalData, _exchange: (), routing_key: String) -> Result<()> {
     let mut global_data = global_data.lock();
 
     // todo: don't
     let queue = global_data
         .queues
-        .get(&QueueName::new(routing_key.clone()))
+        .get(&QueueName::new(routing_key.clone().into()))
         .unwrap()
         .clone();
-    global_data
-        .default_exchange
-        .insert(routing_key.to_string(), queue);
+
+    let exchange = global_data
+        .exchanges
+        .get_mut("")
+        .expect("default empty exchange");
+
+    routing::bind(exchange, routing_key, queue);
 
     Ok(())
 }

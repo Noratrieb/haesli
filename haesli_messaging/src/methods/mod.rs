@@ -2,15 +2,14 @@ mod consume;
 mod publish;
 mod queue;
 
-use haesli_core::{amqp_todo, connection::Channel, message::Message, methods::Method};
+use haesli_core::{amqp_todo, connection::Channel, methods::Method};
+pub use publish::publish;
 use tracing::info;
 
 use crate::Result;
 
-pub fn handle_basic_publish(channel_handle: Channel, message: Message) -> Result<()> {
-    publish::publish(channel_handle, message)
-}
-
+/// This is the entrypoint of methods not handled by the connection itself.
+/// Note that Basic.Publish is *not* sent here, but to [`handle_basic_publish`](crate::handle_basic_publish)
 pub async fn handle_method(channel_handle: Channel, method: Method) -> Result<Method> {
     info!(?method, "Handling method");
 

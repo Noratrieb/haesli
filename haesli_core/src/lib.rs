@@ -21,10 +21,12 @@ use uuid::Uuid;
 
 use crate::{
     connection::{Channel, Connection},
+    exchange::{Exchange, ExchangeName},
     queue::{Queue, QueueName},
 };
 
 #[derive(Clone)]
+// todo: what if this was downstream?
 pub struct GlobalData {
     inner: Arc<Mutex<GlobalDataInner>>,
 }
@@ -42,6 +44,7 @@ impl Default for GlobalData {
                 connections: HashMap::new(),
                 channels: HashMap::new(),
                 queues: HashMap::new(),
+                exchanges: exchange::default_exchanges(),
                 default_exchange: HashMap::new(),
             })),
         }
@@ -59,6 +62,7 @@ pub struct GlobalDataInner {
     pub connections: HashMap<ConnectionId, Connection>,
     pub channels: HashMap<ChannelId, Channel>,
     pub queues: HashMap<QueueName, Queue>,
+    pub exchanges: HashMap<ExchangeName, Exchange>,
     /// Todo: This is just for testing and will be removed later!
     pub default_exchange: HashMap<String, Queue>,
 }

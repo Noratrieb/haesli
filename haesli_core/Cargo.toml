@@ -10,7 +10,7 @@ haesli_datastructure = { path = "../haesli_datastructure" }
 bytes = "1.1.0"
 parking_lot = "0.12.0"
 rand = "0.8.5"
-smallvec = { version = "1.8.0", features = ["union"] }
+tinyvec = { version = "1.5.1", features = ["alloc", "rustc_1_55"] }
 thiserror = "1.0.30"
 tokio = { version = "1.17.0", features = ["sync"] }
 uuid = "0.8.2"

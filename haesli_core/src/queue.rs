@@ -1,7 +1,7 @@
 use std::{
     borrow::Borrow,
     collections::HashMap,
-    fmt::{Debug, Formatter},
+    fmt::Debug,
     sync::{atomic::AtomicUsize, Arc},
 };
 

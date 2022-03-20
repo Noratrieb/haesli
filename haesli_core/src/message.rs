@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bytes::Bytes;
-use smallvec::SmallVec;
+use tinyvec::TinyVec;
 
 use crate::{connection::ContentHeader, newtype_id};
 
@@ -14,7 +14,7 @@ pub struct MessageInner {
     pub id: MessageId,
     pub header: ContentHeader,
     pub routing: RoutingInformation,
-    pub content: SmallVec<[Bytes; 1]>,
+    pub content: TinyVec<[Bytes; 1]>,
 }
 
 #[derive(Debug)]

@@ -17,7 +17,7 @@ use haesli_core::{
     },
     GlobalData,
 };
-use smallvec::SmallVec;
+use tinyvec::TinyVec;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -75,7 +75,7 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 enum ChannelStatus {
     Default,
     NeedHeader(u16, Box<Method>),
-    NeedsBody(Box<Method>, ContentHeader, SmallVec<[Bytes; 1]>),
+    NeedsBody(Box<Method>, ContentHeader, TinyVec<[Bytes; 1]>),
 }
 
 impl ChannelStatus {
@@ -166,7 +166,7 @@ impl TransportConnection {
         channel: ChannelNum,
         method: &Method,
         header: ContentHeader,
-        body: &SmallVec<[Bytes; 1]>,
+        body: &TinyVec<[Bytes; 1]>,
     ) -> Result<()> {
         self.send_method(channel, method).await?;
 
@@ -177,11 +177,7 @@ impl TransportConnection {
         self.send_bodies(channel, body).await
     }
 
-    async fn send_bodies(
-        &mut self,
-        channel: ChannelNum,
-        body: &SmallVec<[Bytes; 1]>,
-    ) -> Result<()> {
+    async fn send_bodies(&mut self, channel: ChannelNum, body: &TinyVec<[Bytes; 1]>) -> Result<()> {
         // this is inefficient if it's a huge message sent by a client with big frames to one with
         // small frames
         // we assume that this won't happen that that the first branch will be taken in most cases,
@@ -442,7 +438,7 @@ impl TransportConnection {
                     let header = parse_content_header(&frame.payload)?;
                     ensure_conn(header.class_id == class_id)?;
 
-                    channel.status = ChannelStatus::NeedsBody(method, header, SmallVec::new());
+                    channel.status = ChannelStatus::NeedsBody(method, header, TinyVec::new());
                     Ok(())
                 }
                 ChannelStatus::NeedsBody(_, _, _) => {
@@ -489,7 +485,7 @@ impl TransportConnection {
         &mut self,
         method: Method,
         header: ContentHeader,
-        payloads: SmallVec<[Bytes; 1]>,
+        payloads: TinyVec<[Bytes; 1]>,
         channel: ChannelNum,
     ) -> Result<()> {
         // The only method with content that is sent to the server is Basic.Publish.
@@ -518,7 +514,7 @@ impl TransportConnection {
 
             let channel = self.channels.get(&channel).ok_or(ConException::Todo)?;
 
-            haesli_messaging::methods::handle_basic_publish(channel.global_chan.clone(), message)?;
+            haesli_messaging::methods::publish(channel.global_chan.clone(), message)?;
             Ok(())
         } else {
             Err(ConException::Todo.into())

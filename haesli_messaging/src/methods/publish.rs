@@ -7,7 +7,7 @@ use haesli_core::{
 };
 use tracing::{debug, error};
 
-use crate::Result;
+use crate::{routing, Result};
 
 pub fn publish(channel_handle: Channel, message: Message) -> Result<()> {
     debug!(?message, "Publishing message");
@@ -22,9 +22,14 @@ pub fn publish(channel_handle: Channel, message: Message) -> Result<()> {
 
     let global_data = global_data.lock();
 
-    let queue = global_data
-        .queues
-        .get(routing.routing_key.as_str())
+    let exchange = &message.routing.exchange;
+
+    let exchange = global_data
+        .exchanges
+        .get(exchange.as_str())
+        .ok_or(ChannelException::NotFound)?;
+
+    let queue = routing::route_message(exchange, &message.routing.routing_key)
         .ok_or(ChannelException::NotFound)?;
 
     queue
