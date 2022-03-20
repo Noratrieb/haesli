@@ -3,6 +3,7 @@ use std::sync::{atomic::AtomicUsize, Arc};
 use haesli_core::{
     amqp_todo,
     connection::Channel,
+    error::ChannelException,
     methods::{Method, QueueBind, QueueDeclare, QueueDeclareOk},
     queue::{QueueDeletion, QueueId, QueueInner, QueueName},
     GlobalData,
@@ -75,7 +76,7 @@ pub fn declare(channel: Channel, queue_declare: QueueDeclare) -> Result<Method> 
             .or_insert_with(|| queue.clone());
     }
 
-    bind_queue(global_data.clone(), (), queue_name.to_string())?;
+    bind_queue(global_data.clone(), "", queue_name.to_string())?;
 
     let queue_task = QueueTask::new(global_data, event_recv, queue);
 
@@ -92,7 +93,7 @@ pub fn bind(_channel_handle: Channel, _queue_bind: QueueBind) -> Result<Method> 
     amqp_todo!();
 }
 
-fn bind_queue(global_data: GlobalData, _exchange: (), routing_key: String) -> Result<()> {
+fn bind_queue(global_data: GlobalData, exchange: &str, routing_key: String) -> Result<()> {
     let mut global_data = global_data.lock();
 
     // todo: don't
@@ -104,8 +105,8 @@ fn bind_queue(global_data: GlobalData, _exchange: (), routing_key: String) -> Re
 
     let exchange = global_data
         .exchanges
-        .get_mut("")
-        .expect("default empty exchange");
+        .get_mut(exchange)
+        .ok_or(ChannelException::NotFound)?;
 
     routing::bind(exchange, routing_key, queue);
 
