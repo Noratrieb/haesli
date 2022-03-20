@@ -88,7 +88,7 @@ pub fn declare(channel: Channel, queue_declare: QueueDeclare) -> Result<Method> 
     }))
 }
 
-pub async fn bind(_channel_handle: Channel, _queue_bind: QueueBind) -> Result<Method> {
+pub fn bind(_channel_handle: Channel, _queue_bind: QueueBind) -> Result<Method> {
     amqp_todo!();
 }
 

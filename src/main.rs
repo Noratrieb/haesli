@@ -32,7 +32,12 @@ async fn main() -> Result<()> {
         tokio::spawn(async move { haesli_dashboard::start_dashboard(global_data).await });
     }
 
-    let res = haesli_transport::do_thing_i_guess(global_data, terminate()).await;
+    let handlers = haesli_transport::Handlers {
+        handle_method: haesli_messaging::methods::handle_method,
+        handle_basic_publish: haesli_messaging::methods::publish,
+    };
+
+    let res = haesli_transport::connection_loop(global_data, terminate(), handlers).await;
 
     info!("Bye!");
 

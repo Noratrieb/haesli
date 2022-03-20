@@ -427,6 +427,7 @@ dependencies = [
  "clap 3.1.6",
  "haesli_core",
  "haesli_dashboard",
+ "haesli_messaging",
  "haesli_transport",
  "tokio",
  "tracing",

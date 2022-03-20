@@ -10,7 +10,7 @@ use crate::Result;
 
 /// This is the entrypoint of methods not handled by the connection itself.
 /// Note that Basic.Publish is *not* sent here, but to [`handle_basic_publish`](crate::handle_basic_publish)
-pub async fn handle_method(channel_handle: Channel, method: Method) -> Result<Method> {
+pub fn handle_method(channel_handle: Channel, method: Method) -> Result<Method> {
     info!(?method, "Handling method");
 
     let response = match method {
@@ -20,7 +20,7 @@ pub async fn handle_method(channel_handle: Channel, method: Method) -> Result<Me
         Method::ExchangeDeleteOk(_) => amqp_todo!(),
         Method::QueueDeclare(queue_declare) => queue::declare(channel_handle, queue_declare)?,
         Method::QueueDeclareOk { .. } => amqp_todo!(),
-        Method::QueueBind(queue_bind) => queue::bind(channel_handle, queue_bind).await?,
+        Method::QueueBind(queue_bind) => queue::bind(channel_handle, queue_bind)?,
         Method::QueueBindOk(_) => amqp_todo!(),
         Method::QueueUnbind { .. } => amqp_todo!(),
         Method::QueueUnbindOk(_) => amqp_todo!(),

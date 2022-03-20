@@ -27,7 +27,7 @@ use tracing::{debug, error, info, trace, warn};
 use crate::{
     error::{ConException, ProtocolError, Result, TransError},
     frame::{self, parse_content_header, Frame, FrameType, MaxFrameSize},
-    methods, sasl,
+    methods, sasl, Handlers,
 };
 
 fn ensure_conn(condition: bool) -> Result<()> {
@@ -67,6 +67,8 @@ pub struct TransportConnection {
     event_sender: ConEventSender,
     /// To receive events from other futures
     event_receiver: ConEventReceiver,
+
+    handlers: Handlers,
 }
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
@@ -91,6 +93,7 @@ impl TransportConnection {
         global_data: GlobalData,
         method_queue_send: ConEventSender,
         method_queue_recv: ConEventReceiver,
+        handlers: Handlers,
     ) -> Self {
         Self {
             id,
@@ -104,6 +107,7 @@ impl TransportConnection {
             global_data,
             event_sender: method_queue_send,
             event_receiver: method_queue_recv,
+            handlers,
         }
     }
 
@@ -416,8 +420,10 @@ impl TransportConnection {
                 // call into haesli_messaging to handle the method
                 // it returns the response method that we are supposed to send
                 // maybe this might become an `Option` in the future
-                let return_method =
-                    haesli_messaging::methods::handle_method(channel_handle, method).await?;
+                let return_method = (self.handlers.handle_method)(channel_handle, method)?;
+
+                //let return_method =
+                //    haesli_messaging::methods::handle_method(channel_handle, method).await?;
                 self.send_method(frame.channel, &return_method).await?;
             }
         }
@@ -513,7 +519,8 @@ impl TransportConnection {
 
             let channel = self.channels.get(&channel).ok_or(ConException::Todo)?;
 
-            haesli_messaging::methods::publish(channel.global_chan.clone(), message)?;
+            (self.handlers.handle_basic_publish)(channel.global_chan.clone(), message)?;
+            //haesli_messaging::methods::publish(channel.global_chan.clone(), message)?;
             Ok(())
         } else {
             Err(ConException::Todo.into())

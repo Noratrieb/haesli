@@ -20,6 +20,7 @@ edition = "2021"
 anyhow = "1.0.53"
 haesli_core = { path = "./haesli_core" }
 haesli_dashboard = { path = "./haesli_dashboard" }
+haesli_messaging = { path = "./haesli_messaging" }
 haesli_transport = { path = "./haesli_transport" }
 clap = { version = "3.1.5", features = ["derive"] }
 tokio = { version = "1.16.1", features = ["full"] }

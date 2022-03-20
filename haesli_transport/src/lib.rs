@@ -13,18 +13,32 @@ mod tests;
 use std::{future::Future, net::SocketAddr};
 
 use anyhow::Context;
-use haesli_core::{connection::ConnectionEvent, queue::QueueEvent, GlobalData};
+use haesli_core::{
+    connection::{Channel, ConnectionEvent},
+    error::ProtocolError,
+    message::Message,
+    methods::Method,
+    queue::QueueEvent,
+    GlobalData,
+};
 use tokio::{net, net::TcpStream, select};
 use tracing::{info, info_span, Instrument};
 
 use crate::connection::TransportConnection;
 
-pub async fn do_thing_i_guess(
+#[derive(Clone, Copy)]
+pub struct Handlers {
+    pub handle_method: fn(Channel, Method) -> Result<Method, ProtocolError>,
+    pub handle_basic_publish: fn(Channel, Message) -> Result<(), ProtocolError>,
+}
+
+pub async fn connection_loop(
     global_data: GlobalData,
     terminate: impl Future + Send,
+    handlers: Handlers,
 ) -> anyhow::Result<()> {
     select! {
-        res = accept_cons(global_data.clone()) => {
+        res = accept_cons(global_data.clone(), handlers) => {
             res
         }
         _ = terminate => {
@@ -33,18 +47,18 @@ pub async fn do_thing_i_guess(
     }
 }
 
-async fn accept_cons(global_data: GlobalData) -> anyhow::Result<()> {
+async fn accept_cons(global_data: GlobalData, handlers: Handlers) -> anyhow::Result<()> {
     info!("Binding TCP listener...");
     let listener = net::TcpListener::bind(("127.0.0.1", 5672)).await?;
     info!(addr = ?listener.local_addr()?, "Successfully bound TCP listener");
 
     loop {
         let connection = listener.accept().await?;
-        handle_con(global_data.clone(), connection);
+        handle_con(global_data.clone(), connection, handlers);
     }
 }
 
-fn handle_con(global_data: GlobalData, connection: (TcpStream, SocketAddr)) {
+fn handle_con(global_data: GlobalData, connection: (TcpStream, SocketAddr), handlers: Handlers) {
     let (stream, peer_addr) = connection;
     let id = rand::random();
 
@@ -72,6 +86,7 @@ fn handle_con(global_data: GlobalData, connection: (TcpStream, SocketAddr)) {
         global_data.clone(),
         method_send,
         method_recv,
+        handlers,
     );
 
     tokio::spawn(connection.start_connection_processing().instrument(span));

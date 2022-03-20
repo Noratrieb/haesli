@@ -7,7 +7,7 @@ pub enum TopicSegment {
     Word(String),
     SingleWildcard,
     MultiWildcard,
-} 
+}
 
 #[derive(Debug)]
 pub enum ExchangeType {
@@ -16,7 +16,9 @@ pub enum ExchangeType {
     /// Always routes the message to a queue
     Fanout { bindings: Vec<Queue> },
     /// Routes a message to a queue if the routing key matches the pattern
-    Topic { bindings: Vec<(Vec<TopicSegment>, Queue)> },
+    Topic {
+        bindings: Vec<(Vec<TopicSegment>, Queue)>,
+    },
     /// Is bound with a table of headers and values, and matches if the message headers
     /// match up with the binding headers
     ///
