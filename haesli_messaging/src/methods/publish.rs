@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use haesli_core::{
     amqp_todo,
     connection::Channel,
@@ -29,16 +31,17 @@ pub fn publish(channel_handle: Channel, message: Message) -> Result<()> {
         .get(exchange.as_str())
         .ok_or(ChannelException::NotFound)?;
 
-    let queue = routing::route_message(exchange, &message.routing.routing_key)
-        .ok_or(ChannelException::NotFound)?;
+    let queues = routing::route_message(exchange, &message.routing.routing_key)
+        .ok_or(ChannelException::NotFound)?; // todo this isn't really correct but the tests pass ✔️
 
-    queue
-        .event_send
-        .try_send(QueueEvent::PublishMessage(message))
-        .map_err(|err| {
-            error!(?err, "Failed to send message to queue event queue");
-            ConException::InternalError
-        })?;
-
+    for queue in queues {
+        queue
+            .event_send
+            .try_send(QueueEvent::PublishMessage(Arc::clone(&message)))
+            .map_err(|err| {
+                error!(?err, "Failed to send message to queue event queue");
+                ConException::InternalError
+            })?;
+    }
     Ok(())
 }

@@ -7,13 +7,12 @@ use std::{
 
 use bytes::Bytes;
 use parking_lot::Mutex;
-use tinyvec::TinyVec;
 use tokio::sync::mpsc;
 
 use crate::{
     consumer::Consumer,
     methods::{self, Method},
-    newtype_id, GlobalData, Queue,
+    newtype_id, GlobalData, Queue, SingleVec,
 };
 
 newtype_id!(pub ConnectionId);
@@ -67,7 +66,7 @@ pub struct ConnectionInner {
 pub enum ConnectionEvent {
     Shutdown,
     Method(ChannelNum, Box<Method>),
-    MethodContent(ChannelNum, Box<Method>, ContentHeader, TinyVec<[Bytes; 1]>),
+    MethodContent(ChannelNum, Box<Method>, ContentHeader, SingleVec<Bytes>),
 }
 
 pub type ConEventSender = mpsc::Sender<ConnectionEvent>;

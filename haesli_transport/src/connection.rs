@@ -15,9 +15,8 @@ use haesli_core::{
         ConnectionCloseOk, ConnectionOpen, ConnectionOpenOk, ConnectionStart, ConnectionStartOk,
         ConnectionTune, ConnectionTuneOk, FieldValue, Longstr, Method, ReplyCode, ReplyText, Table,
     },
-    GlobalData,
+    GlobalData, SingleVec,
 };
-use tinyvec::TinyVec;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -75,7 +74,7 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 enum ChannelStatus {
     Default,
     NeedHeader(u16, Box<Method>),
-    NeedsBody(Box<Method>, ContentHeader, TinyVec<[Bytes; 1]>),
+    NeedsBody(Box<Method>, ContentHeader, SingleVec<Bytes>),
 }
 
 impl ChannelStatus {
@@ -166,7 +165,7 @@ impl TransportConnection {
         channel: ChannelNum,
         method: &Method,
         header: ContentHeader,
-        body: &TinyVec<[Bytes; 1]>,
+        body: &SingleVec<Bytes>,
     ) -> Result<()> {
         self.send_method(channel, method).await?;
 
@@ -177,7 +176,7 @@ impl TransportConnection {
         self.send_bodies(channel, body).await
     }
 
-    async fn send_bodies(&mut self, channel: ChannelNum, body: &TinyVec<[Bytes; 1]>) -> Result<()> {
+    async fn send_bodies(&mut self, channel: ChannelNum, body: &SingleVec<Bytes>) -> Result<()> {
         // this is inefficient if it's a huge message sent by a client with big frames to one with
         // small frames
         // we assume that this won't happen that that the first branch will be taken in most cases,
@@ -438,7 +437,7 @@ impl TransportConnection {
                     let header = parse_content_header(&frame.payload)?;
                     ensure_conn(header.class_id == class_id)?;
 
-                    channel.status = ChannelStatus::NeedsBody(method, header, TinyVec::new());
+                    channel.status = ChannelStatus::NeedsBody(method, header, SingleVec::new());
                     Ok(())
                 }
                 ChannelStatus::NeedsBody(_, _, _) => {
@@ -485,7 +484,7 @@ impl TransportConnection {
         &mut self,
         method: Method,
         header: ContentHeader,
-        payloads: TinyVec<[Bytes; 1]>,
+        payloads: SingleVec<Bytes>,
         channel: ChannelNum,
     ) -> Result<()> {
         // The only method with content that is sent to the server is Basic.Publish.

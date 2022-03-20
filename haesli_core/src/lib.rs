@@ -25,6 +25,8 @@ use crate::{
     queue::{Queue, QueueName},
 };
 
+pub type SingleVec<T> = smallvec::SmallVec<[T; 1]>;
+
 #[derive(Clone)]
 // todo: what if this was downstream?
 pub struct GlobalData {

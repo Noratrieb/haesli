@@ -442,8 +442,8 @@ dependencies = [
  "haesli_datastructure",
  "parking_lot",
  "rand",
+ "smallvec",
  "thiserror",
- "tinyvec",
  "tokio",
  "uuid",
 ]
@@ -494,7 +494,6 @@ dependencies = [
  "rand",
  "regex",
  "thiserror",
- "tinyvec",
  "tokio",
  "tracing",
 ]
@@ -1290,21 +1289,6 @@ dependencies = [
  "serde",
  "serde_json",
 ]
-
-[[package]]
-name = "tinyvec"
-version = "1.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c1c1d5a42b6245520c249549ec267180beaffcc0615401ac8e31853d4b6d8d2"
-dependencies = [
- "tinyvec_macros",
-]
-
-[[package]]
-name = "tinyvec_macros"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
