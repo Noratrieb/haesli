@@ -28,7 +28,7 @@ use crate::connection::TransportConnection;
 
 #[derive(Clone, Copy)]
 pub struct Handlers {
-    pub handle_method: fn(Channel, Method) -> Result<Method, ProtocolError>,
+    pub handle_method: fn(Channel, Method) -> Result<Option<Method>, ProtocolError>,
     pub handle_basic_publish: fn(Channel, Message) -> Result<(), ProtocolError>,
 }
 

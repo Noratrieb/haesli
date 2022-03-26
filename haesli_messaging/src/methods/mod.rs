@@ -9,9 +9,11 @@ use tracing::{info, warn};
 
 use crate::Result;
 
+type MethodResponse = Result<Option<Method>>;
+
 /// This is the entrypoint of methods not handled by the connection itself.
 /// Note that Basic.Publish is *not* sent here, but to [`handle_basic_publish`](crate::handle_basic_publish)
-pub fn handle_method(channel: Channel, method: Method) -> Result<Method> {
+pub fn handle_method(channel: Channel, method: Method) -> Result<Option<Method>> {
     use Method::*;
 
     info!(?method, "Handling method");

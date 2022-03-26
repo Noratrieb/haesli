@@ -26,7 +26,7 @@ pub fn bind(exchange: &mut Exchange, routing_key: String, queue: Queue) {
     }
 }
 
-/// Route a message to a queue. Returns the queue to send it to, or `None` if it can't be matched
+/// Route a message to a queue. Returns the queues to send it to, or `None` if it can't be matched
 pub fn route_message(exchange: &Exchange, routing_key: &str) -> Option<Vec<Queue>> {
     match &exchange.kind {
         ExchangeType::Direct { bindings } => {

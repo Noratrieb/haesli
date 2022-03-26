@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ops::Not, sync::Arc};
 
 use haesli_core::{
     amqp_todo,
@@ -9,9 +9,9 @@ use haesli_core::{
 };
 use tracing::info;
 
-use crate::Result;
+use crate::methods::MethodResponse;
 
-pub fn consume(channel: Channel, basic_consume: BasicConsume) -> Result<Method> {
+pub fn consume(channel: Channel, basic_consume: BasicConsume) -> MethodResponse {
     let BasicConsume {
         queue: queue_name,
         consumer_tag,
@@ -22,7 +22,7 @@ pub fn consume(channel: Channel, basic_consume: BasicConsume) -> Result<Method> 
         ..
     } = basic_consume;
 
-    if no_wait || no_local || exclusive || no_ack {
+    if no_local || exclusive || no_ack {
         amqp_todo!();
     }
 
@@ -54,7 +54,7 @@ pub fn consume(channel: Channel, basic_consume: BasicConsume) -> Result<Method> 
 
     info!(%queue_name, %consumer_tag, "Consumer started consuming");
 
-    let method = Method::BasicConsumeOk(BasicConsumeOk { consumer_tag });
-
-    Ok(method)
+    Ok(no_wait
+        .not()
+        .then(|| Method::BasicConsumeOk(BasicConsumeOk { consumer_tag })))
 }

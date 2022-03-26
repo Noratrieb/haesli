@@ -46,10 +46,8 @@ impl Borrow<str> for ExchangeName {
 pub struct Exchange {
     pub name: ExchangeName,
     pub kind: ExchangeType,
+    pub durable: bool,
 }
-
-#[derive(Debug)]
-pub struct Binding {}
 
 pub fn default_exchanges() -> HashMap<ExchangeName, Exchange> {
     // 3.1.3 - The spec requires a few default exchanges to exist
@@ -60,6 +58,7 @@ pub fn default_exchanges() -> HashMap<ExchangeName, Exchange> {
         kind: ExchangeType::Direct {
             bindings: HashMap::new(),
         },
+        durable: true,
     };
 
     let direct_name = ExchangeName::new("amqp.direct".to_owned().into());
@@ -68,6 +67,7 @@ pub fn default_exchanges() -> HashMap<ExchangeName, Exchange> {
         kind: ExchangeType::Direct {
             bindings: HashMap::new(),
         },
+        durable: true,
     };
 
     let fanout_name = ExchangeName::new("amqp.fanout".to_owned().into());
@@ -76,6 +76,7 @@ pub fn default_exchanges() -> HashMap<ExchangeName, Exchange> {
         kind: ExchangeType::Fanout {
             bindings: Vec::new(),
         },
+        durable: true,
     };
 
     let topic_name = ExchangeName::new("amqp.topic".to_owned().into());
@@ -84,6 +85,7 @@ pub fn default_exchanges() -> HashMap<ExchangeName, Exchange> {
         kind: ExchangeType::Topic {
             bindings: Vec::new(),
         },
+        durable: true,
     };
 
     // we don't implement headers (yet), so don't provide the default exchange for it

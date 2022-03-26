@@ -419,12 +419,11 @@ impl TransportConnection {
 
                 // call into haesli_messaging to handle the method
                 // it returns the response method that we are supposed to send
-                // maybe this might become an `Option` in the future
                 let return_method = (self.handlers.handle_method)(channel_handle, method)?;
 
-                //let return_method =
-                //    haesli_messaging::methods::handle_method(channel_handle, method).await?;
-                self.send_method(frame.channel, &return_method).await?;
+                if let Some(method) = return_method {
+                    self.send_method(frame.channel, &method).await?;
+                }
             }
         }
         Ok(())
