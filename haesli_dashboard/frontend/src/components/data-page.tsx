@@ -1,7 +1,7 @@
 import React, { FC, useCallback, useEffect, useState } from 'react';
 import Table from './table';
 import type { Data } from '../types';
-import EntityGraph from './EntityGraph';
+import EntityGraph from './entity-graph';
 
 const fetchData = async (prefix: string): Promise<Data> => {
   const url = `${prefix}api/data`;
@@ -74,12 +74,19 @@ const DataPage: FC<Props> = ({ prefix }) => {
         <h2>Queues</h2>
         {data ? (
           <Table
-            headers={['Queue ID', 'Name', 'Durable', 'Message Count']}
+            headers={[
+              'Queue ID',
+              'Name',
+              'Durable',
+              'Message Count',
+              'Consumer Count',
+            ]}
             rows={data.queues.map((queue) => [
               queue.id,
               queue.name,
               queue.durable ? 'Yes' : 'No',
               queue.messages,
+              queue.consumers.length,
             ])}
           />
         ) : (

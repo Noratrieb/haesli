@@ -79,6 +79,13 @@ struct Queue {
     name: String,
     durable: bool,
     messages: usize,
+    consumers: Vec<Consumer>,
+}
+
+#[derive(Serialize)]
+struct Consumer {
+    tag: String,
+    channel: String,
 }
 
 #[derive(Serialize)]
@@ -124,6 +131,15 @@ async fn get_data(global_data: GlobalData) -> impl IntoResponse {
             name: queue.name.to_string(),
             durable: queue.durable,
             messages: queue.messages.len(),
+            consumers: queue
+                .consumers
+                .lock()
+                .values()
+                .map(|consumer| Consumer {
+                    tag: consumer.tag.to_string(),
+                    channel: consumer.channel.id.to_string(),
+                })
+                .collect(),
         })
         .collect();
 

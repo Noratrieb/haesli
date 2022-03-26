@@ -9,11 +9,17 @@ export type Connection = {
   channels: ReadonlyArray<Channel>;
 };
 
+export type Consumer = {
+  tag: string;
+  channel: string;
+};
+
 export type Queue = {
   id: string;
   name: string;
   durable: boolean;
   messages: number;
+  consumers: ReadonlyArray<Consumer>;
 };
 
 export type Binding = {
