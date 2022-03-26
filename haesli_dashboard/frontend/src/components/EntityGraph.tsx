@@ -37,7 +37,7 @@ const graphConfig = {
       shapeId: '#empty', // relates to the type property of a node
       shape: (
         <symbol viewBox="0 0 100 100" id="empty" key="0">
-          <circle cx='50' cy='50' r='45'/>
+          <circle cx="50" cy="50" r="45" />
         </symbol>
       ),
     },
@@ -47,7 +47,7 @@ const graphConfig = {
       shapeId: '#empty', // relates to the type property of a node
       shape: (
         <symbol viewBox="0 0 100 100" id="empty" key="0">
-          <circle cx='50' cy='50' r='45'/>
+          <circle cx="50" cy="50" r="45" />
         </symbol>
       ),
     },
@@ -63,20 +63,20 @@ type Props = {
 const SPACE = 200;
 
 const EntityGraph = ({ data }: Props) => {
-  const queueTotal = data.queues.length * SPACE / 2;
+  const queueTotal = (data.queues.length * SPACE) / 2;
   const queues = data.queues.map((q, i) => ({
     id: q.name,
     title: q.name,
     y: 300,
-    x: (i * SPACE) - queueTotal,
+    x: i * SPACE - queueTotal,
     type: 'queue',
   }));
-  const exchTotal = data.exchanges.length * SPACE / 2;
+  const exchTotal = (data.exchanges.length * SPACE) / 2;
   const exchanges = data.exchanges.map((e, i) => ({
     id: e.name,
     title: e.name,
     y: 0,
-    x: (i * SPACE) - exchTotal,
+    x: i * SPACE - exchTotal,
     type: 'exchange',
   }));
 
@@ -88,7 +88,7 @@ const EntityGraph = ({ data }: Props) => {
       source: b.queue,
       target: e.name,
       label_to: `'${b.routingKey}'`,
-      type: 'emptyEdge'
+      type: 'emptyEdge',
     }));
 
   const nodeTypes = graphConfig.nodeTypes;
