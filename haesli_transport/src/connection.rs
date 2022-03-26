@@ -693,7 +693,7 @@ fn server_properties(host: SocketAddr) -> Table {
         ("host".to_owned(), ls(host_str)),
         ("product".to_owned(), ls("haesli")),
         ("version".to_owned(), ls("0.1.0")),
-        ("platform".to_owned(), ls("microsoft linux")),
+        ("platform".to_owned(), ls("linux superiority")),
         ("copyright".to_owned(), ls("MIT")),
         ("information".to_owned(), ls("hello reader")),
         ("uwu".to_owned(), ls("owo")),
