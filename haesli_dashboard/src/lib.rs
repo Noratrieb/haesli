@@ -8,7 +8,7 @@ use axum::{
     routing::{get, get_service},
     Json, Router,
 };
-use haesli_core::GlobalData;
+use haesli_core::{exchange::ExchangeType, GlobalData};
 use serde::Serialize;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info};
@@ -56,6 +56,7 @@ pub async fn dashboard(global_data: GlobalData) -> anyhow::Result<()> {
 struct Data {
     connections: Vec<Connection>,
     queues: Vec<Queue>,
+    exchanges: Vec<Exchange>,
 }
 
 #[derive(Serialize)]
@@ -78,6 +79,20 @@ struct Queue {
     name: String,
     durable: bool,
     messages: usize,
+}
+
+#[derive(Serialize)]
+struct Exchange {
+    name: String,
+    durable: bool,
+    bindings: Vec<Binding>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Binding {
+    queue: String,
+    routing_key: String,
 }
 
 async fn get_data(global_data: GlobalData) -> impl IntoResponse {
@@ -112,10 +127,49 @@ async fn get_data(global_data: GlobalData) -> impl IntoResponse {
         })
         .collect();
 
+    let exchanges = global_data.exchanges.values().map(map_exchange).collect();
+
     let data = Data {
         connections,
         queues,
+        exchanges,
     };
 
     Json(data)
+}
+
+fn map_exchange(exch: &haesli_core::exchange::Exchange) -> Exchange {
+    Exchange {
+        name: exch.name.to_string(),
+        durable: exch.durable,
+        bindings: match &exch.kind {
+            ExchangeType::Direct { bindings } => bindings
+                .iter()
+                .map(|(name, _)| Binding {
+                    queue: name.clone(),
+                    routing_key: name.clone(),
+                })
+                .collect(),
+            ExchangeType::Fanout { bindings } => bindings
+                .iter()
+                .map(|q| Binding {
+                    queue: q.name.to_string(),
+                    routing_key: "".to_owned(),
+                })
+                .collect(),
+            ExchangeType::Topic { bindings } => bindings
+                .iter()
+                .map(|(segs, q)| Binding {
+                    queue: q.name.to_string(),
+                    routing_key: segs
+                        .iter()
+                        .map(|seg| seg.to_string())
+                        .collect::<Vec<_>>()
+                        .join("."),
+                })
+                .collect(),
+            ExchangeType::Headers => Vec::new(),
+            ExchangeType::System => Vec::new(),
+        },
+    }
 }

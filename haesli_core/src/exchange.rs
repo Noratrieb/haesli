@@ -1,4 +1,9 @@
-use std::{borrow::Borrow, collections::HashMap, sync::Arc};
+use std::{
+    borrow::Borrow,
+    collections::HashMap,
+    fmt::{Display, Formatter},
+    sync::Arc,
+};
 
 use crate::{newtype, Queue};
 
@@ -7,6 +12,16 @@ pub enum TopicSegment {
     Word(String),
     SingleWildcard,
     MultiWildcard,
+}
+
+impl Display for TopicSegment {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Word(str) => str.fmt(f),
+            Self::SingleWildcard => f.write_str("*"),
+            Self::MultiWildcard => f.write_str("#"),
+        }
+    }
 }
 
 #[derive(Debug)]
