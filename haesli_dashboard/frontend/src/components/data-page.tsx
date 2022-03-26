@@ -1,6 +1,7 @@
 import React, { FC, useCallback, useEffect, useState } from 'react';
 import Table from './table';
 import type { Data } from '../types';
+import EntityGraph from './EntityGraph';
 
 const fetchData = async (prefix: string): Promise<Data> => {
   const url = `${prefix}api/data`;
@@ -28,6 +29,10 @@ const DataPage: FC<Props> = ({ prefix }) => {
   return (
     <div>
       <section>
+        <h2>Graph</h2>
+        {data ? <EntityGraph data={data} /> : <div>Loading...</div>}
+      </section>
+      <section>
         <h2>Connections</h2>
         {data ? (
           <Table
@@ -36,22 +41,6 @@ const DataPage: FC<Props> = ({ prefix }) => {
               connection.id,
               connection.peerAddr,
               connection.channels.length,
-            ])}
-          />
-        ) : (
-          <div>Loading...</div>
-        )}
-      </section>
-      <section>
-        <h2>Queues</h2>
-        {data ? (
-          <Table
-            headers={['Queue ID', 'Name', 'Durable', 'Message Count']}
-            rows={data.queues.map((queue) => [
-              queue.id,
-              queue.name,
-              queue.durable ? 'Yes' : 'No',
-              queue.messages,
             ])}
           />
         ) : (
@@ -76,6 +65,37 @@ const DataPage: FC<Props> = ({ prefix }) => {
                 channel.connectionId,
                 channel.number,
               ])}
+          />
+        ) : (
+          <div>Loading...</div>
+        )}
+      </section>
+      <section>
+        <h2>Queues</h2>
+        {data ? (
+          <Table
+            headers={['Queue ID', 'Name', 'Durable', 'Message Count']}
+            rows={data.queues.map((queue) => [
+              queue.id,
+              queue.name,
+              queue.durable ? 'Yes' : 'No',
+              queue.messages,
+            ])}
+          />
+        ) : (
+          <div>Loading...</div>
+        )}
+      </section>
+      <section>
+        <h2>Exchanges</h2>
+        {data ? (
+          <Table
+            headers={['Name', 'Durable', 'Bindings']}
+            rows={data.exchanges.map((exchange) => [
+              exchange.name,
+              exchange.durable ? 'Yes' : 'No',
+              exchange.bindings.length,
+            ])}
           />
         ) : (
           <div>Loading...</div>

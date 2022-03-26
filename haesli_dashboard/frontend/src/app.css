@@ -15,3 +15,7 @@ td {
   border-collapse: collapse;
   padding: 10px;
 }
+
+.graph {
+  height: 50vh;
+}

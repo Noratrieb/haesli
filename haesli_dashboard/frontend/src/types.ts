@@ -16,7 +16,19 @@ export type Queue = {
   messages: number;
 };
 
+export type Binding = {
+  queue: string;
+  routingKey: string;
+};
+
+export type Exchange = {
+  name: string;
+  durable: boolean;
+  bindings: ReadonlyArray<Binding>;
+};
+
 export type Data = {
   connections: ReadonlyArray<Connection>;
   queues: ReadonlyArray<Queue>;
+  exchanges: ReadonlyArray<Exchange>;
 };
