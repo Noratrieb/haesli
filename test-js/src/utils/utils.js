@@ -1,7 +1,5 @@
 import { connect } from 'amqplib';
 
-export const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-
 export const connectAmqp = async () => {
   return connect(
     {
@@ -22,3 +20,19 @@ export const assert = (cond, msg) => {
     throw new Error(`Assertion failed: ${msg}`);
   }
 };
+
+export const waitForMessage = (channel, queue, message) =>
+  new Promise((resolve) => {
+    channel
+      .consume(queue, (msg) => {
+        if (msg.content.toString() === message) {
+          console.log(`Received '${message}'!`);
+          resolve();
+        }
+      })
+      .then((response) =>
+        console.log(
+          `Registered consumer, consumerTag: "${response.consumerTag}"`
+        )
+      );
+  });

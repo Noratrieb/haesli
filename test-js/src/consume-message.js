@@ -1,28 +1,23 @@
-import { connectAmqp } from './utils/utils.js';
+/*
+This test consumes from a queue and then sends a message to it, expecting it to arrive.
+ */
+
+import { connectAmqp, waitForMessage } from './utils/utils.js';
 
 const connection = await connectAmqp();
 const channel = await connection.createChannel();
 
-await channel.assertQueue('consume-queue-1415');
+const QUEUE = 'consume-queue-1415';
 
-const consumePromise = new Promise((resolve) => {
-  channel
-    .consume('consume-queue-1415', (msg) => {
-      if (msg.content.toString() === 'STOP') {
-        resolve();
-      }
-    })
-    .then((response) =>
-      console.log(`Registered consumer, consumerTag: "${response.consumerTag}"`)
-    );
-});
+await channel.assertQueue(QUEUE);
 
-await channel.sendToQueue('consume-queue-1415', Buffer.from('STOP'));
+const consumer = waitForMessage(channel, QUEUE, 'STOP');
+
+await channel.sendToQueue(QUEUE, Buffer.from('STOP'));
+
 console.log('Sent STOP message to queue');
 
-await consumePromise;
-
-console.log('Received STOP!');
+await consumer;
 
 await channel.close();
 await connection.close();

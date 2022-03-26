@@ -1,3 +1,8 @@
+/*
+This test creates a queue with an empty name and asserts that the generated
+queue name is not empty.
+ */
+
 import { assert, connectAmqp } from './utils/utils.js';
 
 const connection = await connectAmqp();

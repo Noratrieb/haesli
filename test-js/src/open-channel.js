@@ -1,3 +1,6 @@
+/*
+This queue opens a channel and closes it again.
+ */
 import { connectAmqp } from './utils/utils.js';
 
 const connection = await connectAmqp();

@@ -1,11 +1,16 @@
+/*
+This test just sends a message to a new queue.
+ */
 import { connectAmqp } from './utils/utils.js';
 
 const connection = await connectAmqp();
 const channel = await connection.createChannel();
 
-await channel.assertQueue('send-queue-352');
+const QUEUE = 'send-queue-352';
 
-channel.publish('', 'send-queue-352', Buffer.from('hello'));
+await channel.assertQueue(QUEUE);
+
+channel.publish('', QUEUE, Buffer.from('hello'));
 
 console.log('Published message');
 
