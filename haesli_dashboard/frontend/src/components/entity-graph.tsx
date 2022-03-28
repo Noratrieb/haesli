@@ -1,6 +1,6 @@
 import React from 'react';
 import { GraphView } from 'react-digraph';
-import { Binding, Data, Exchange } from '../types';
+import { Data } from '../types';
 
 const shape = (
   <symbol viewBox="0 0 100 100" id="empty" key="0">
