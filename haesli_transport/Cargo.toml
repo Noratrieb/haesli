@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 haesli_core = { path = "../haesli_core" }
-haesli_messaging = { path = "../haesli_messaging" }
 anyhow = "1.0.53"
 bytes = "1.1.0"
 nom = "7.1.0"
