@@ -17,15 +17,15 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.53"
+anyhow = "1.0.69"
 haesli_core = { path = "./haesli_core" }
 haesli_dashboard = { path = "./haesli_dashboard" }
 haesli_messaging = { path = "./haesli_messaging" }
 haesli_transport = { path = "./haesli_transport" }
-clap = { version = "3.1.5", features = ["derive"] }
-tokio = { version = "1.16.1", features = ["full"] }
-tracing = "0.1.30"
-tracing-subscriber = { version = "0.3.8", features = ["env-filter"] }
-tracing-tree = "0.2.0"
+clap = { version = "3.2.23", features = ["derive"] }
+tokio = { version = "1.26.0", features = ["full"] }
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+tracing-tree = "0.2.2"
 
 [features]
